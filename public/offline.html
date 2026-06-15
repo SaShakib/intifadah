@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>অফলাইন — ইনতিফাদাহ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans Bengali', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: oklch(98% 0.004 354);
+      color: oklch(12% 0.01 300);
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid oklch(91% 0.005 354);
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 4px 24px oklch(50% 0.26 354 / 0.10);
+    }
+    .icon {
+      width: 80px; height: 80px;
+      background: oklch(97% 0.04 354);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 40px;
+    }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    p { color: oklch(55% 0.01 300); font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+    button {
+      background: oklch(50% 0.26 354);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      width: 100%;
+    }
+    button:hover { background: oklch(42% 0.24 354); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>ইন্টারনেট নেই</h1>
+    <p>আপনার ডিভাইসে ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না। সংযোগ পুনরায় স্থাপন করে আবার চেষ্টা করুন।</p>
+    <button onclick="window.location.reload()">আবার চেষ্টা করুন</button>
+  </div>
+</body>
+</html>

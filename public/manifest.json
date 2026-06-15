@@ -1,39 +1,56 @@
 {
-  "name": "ইনতিফাদাহ",
+  "name": "ইনতিফাদাহ — কর্যে হাসানাঃ",
   "short_name": "ইনতিফাদাহ",
-  "description": "কর্যে হাসানাঃ — সুদমুক্ত আর্থিক সহযোগিতা প্ল্যাটফর্ম",
-  "start_url": "/",
+  "description": "সুদমুক্ত আর্থিক সহযোগিতা — দান, সঞ্চয় ও ঋণ ব্যবস্থাপনা",
+  "start_url": "/login",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
-  "theme_color": "#DD1D66",
+  "theme_color": "#c01155",
   "orientation": "portrait-primary",
   "lang": "bn",
   "dir": "ltr",
   "categories": ["finance", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
+      "src": "/icon",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
-      "name": "ড্যাশবোর্ড",
+      "name": "আমার ড্যাশবোর্ড",
+      "short_name": "ড্যাশবোর্ড",
       "url": "/user/dashboard",
-      "description": "আপনার আর্থিক সারাংশ দেখুন"
+      "description": "আপনার আর্থিক সারাংশ"
     },
     {
       "name": "লেনদেন",
+      "short_name": "লেনদেন",
       "url": "/user/transactions",
-      "description": "সব লেনদেন দেখুন"
+      "description": "সব লেনদেনের ইতিহাস"
+    },
+    {
+      "name": "অ্যাডমিন ড্যাশবোর্ড",
+      "short_name": "অ্যাডমিন",
+      "url": "/admin/dashboard",
+      "description": "সংগঠনের আর্থিক সারাংশ"
     }
   ]
 }
