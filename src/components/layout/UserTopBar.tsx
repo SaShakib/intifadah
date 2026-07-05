@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { getOrFetchCached, getUserNotifications, queryKeys } from '@/lib/api';
+import { Avatar } from '@/components/base/Avatar';
 
 interface UserTopBarProps {
   title: string;
@@ -13,53 +16,76 @@ interface UserTopBarProps {
 
 export function UserTopBar({ title, subtitle, onMenuToggle, notifCount = 2, showProfile = true }: UserTopBarProps) {
   const { user } = useAuth();
+  const [liveNotifCount, setLiveNotifCount] = useState(notifCount);
+  const today = useMemo(
+    () => new Intl.DateTimeFormat('bn-BD', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date()),
+    [],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const rows = await getOrFetchCached(
+          queryKeys.user.notifications({ unread: true, limit: 50 }),
+          () => getUserNotifications({ unread: true, limit: 50 }),
+          30_000,
+        );
+        if (active) {
+          setLiveNotifCount(rows.length);
+        }
+      } catch {
+        // keep previous count on failure
+      }
+    };
+
+    void load();
+    const timer = window.setInterval(() => void load(), 45000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
-    <header className="topbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Hamburger */}
+    <header className="sticky top-0 z-30 flex h-[var(--topbar-h)] items-center justify-between border-b border-border bg-white/90 px-3 backdrop-blur md:px-6">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           aria-label="মেনু"
           onClick={onMenuToggle}
-          className="hide-desktop"
-          style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', border: 'none', background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-2)', flexShrink: 0 }}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-fg-2 md:hidden"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-          </svg>
+          ☰
         </button>
 
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.02em' }}>{title}</div>
-          {subtitle && <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{subtitle}</div>}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-fg md:text-base">{title}</p>
+          {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Date chip */}
-        <span className="hide-mobile" style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, padding: '5px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 99 }}>
-          ১৫ জুন ২০২৬
+      <div className="flex items-center gap-2">
+        <span className="hidden rounded-full border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-muted md:inline-flex">
+          {today}
         </span>
 
-        {/* Notification */}
-        <button style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: 'var(--fg-2)' }} aria-label="বিজ্ঞপ্তি">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2a6 6 0 016 6v3l1.5 2.5h-15L4 11V8a6 6 0 016-6z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 15.5a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          {notifCount > 0 && (
-            <span style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: '50%', background: 'var(--danger)', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--surface)' }}>
-              {notifCount}
+        <button
+          className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-2 text-fg-2"
+          aria-label="বিজ্ঞপ্তি"
+        >
+          🔔
+          {liveNotifCount > 0 && (
+            <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+              {liveNotifCount}
             </span>
           )}
         </button>
 
-        {/* Avatar */}
         {showProfile && (
-          <Link href="/user/profile" style={{ textDecoration: 'none' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, var(--brand-mid), var(--brand))', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--brand-light)', transition: 'box-shadow 0.15s', cursor: 'pointer' }}>
-              {user?.initials ?? 'র'}
-            </div>
+          <Link href="/user/profile" aria-label="প্রোফাইল">
+            <Avatar initials={user?.initials ?? 'র'} className="border-2 border-brand-light bg-brand text-white" />
           </Link>
         )}
       </div>

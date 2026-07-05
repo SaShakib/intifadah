@@ -3,18 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-
-const NAV_ITEMS = [
-  { href: '/user/dashboard',    label: 'ড্যাশবোর্ড',    section: 'মূল' },
-  { href: '/user/donations',    label: 'দান করুন',       section: 'আর্থিক' },
-  { href: '/user/savings',      label: 'সঞ্চয়',         section: 'আর্থিক' },
-  { href: '/user/loan',         label: 'ঋণ',             section: 'আর্থিক' },
-  { href: '/user/transactions', label: 'লেনদেন',         section: 'আর্থিক' },
-  { href: '/user/categories',   label: 'খাতসূচি',       section: 'তথ্য' },
-  { href: '/user/expenses',     label: 'খরচের হিসাব',   section: 'তথ্য' },
-  { href: '/user/comments',     label: 'মন্তব্য',       section: 'তথ্য' },
-  { href: '/user/profile',      label: 'প্রোফাইল',      section: 'অ্যাকাউন্ট' },
-];
+import { Avatar } from '@/components/base/Avatar';
+import { USER_NAV_ITEMS } from '@/components/layout/config/navigation';
+import { cn } from '@/lib/utils/cn';
 
 interface UserSidebarProps {
   isOpen: boolean;
@@ -24,76 +15,83 @@ interface UserSidebarProps {
 export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-
-  const sections = [...new Set(NAV_ITEMS.map(i => i.section))];
+  const sections = [...new Set(USER_NAV_ITEMS.map((item) => item.section))];
 
   return (
     <>
-      <div className={`sidebar-overlay ${isOpen ? 'show' : ''}`} onClick={onClose} />
+      <button
+        className={cn(
+          'fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition md:hidden',
+          isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        onClick={onClose}
+        aria-label="সাইডবার বন্ধ করুন"
+      />
 
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-
-        {/* Brand */}
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid oklch(100% 0 0 / 0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%)', color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px oklch(50% 0.26 354 / 0.40)' }}>
-              ই
-            </div>
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-60 border-r border-white/10 bg-sidebar text-white transition-transform md:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="border-b border-white/10 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white">ই</div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2 }}>ইনতিফাদাহ</div>
-              <div style={{ fontSize: 10, color: 'oklch(100% 0 0 / 0.45)', letterSpacing: '0.02em', marginTop: 1 }}>কর্যে হাসানাঃ</div>
+              <p className="text-sm font-semibold">ইনতিফাদাহ</p>
+              <p className="text-xs text-white/60">কর্যে হাসানাঃ</p>
             </div>
           </div>
         </div>
 
-        {/* User */}
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid oklch(100% 0 0 / 0.07)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, var(--brand) 0%, oklch(60% 0.20 354) 100%)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2px solid oklch(100% 0 0 / 0.12)' }}>
-            {user?.initials ?? 'র'}
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'oklch(100% 0 0 / 0.90)', lineHeight: 1.3 }}>{user?.name ?? 'রহিমা খাতুন'}</div>
-            <div style={{ fontSize: 11, color: 'oklch(100% 0 0 / 0.40)', marginTop: 1 }}>সাধারণ সদস্য</div>
+        <div className="border-b border-white/10 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Avatar initials={user?.initials ?? 'র'} className="bg-brand-light text-brand" />
+            <div>
+              <p className="text-sm font-medium text-white">{user?.name ?? 'রহিমা খাতুন'}</p>
+              <p className="text-xs text-white/60">সাধারণ সদস্য</p>
+            </div>
           </div>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '10px 0' }}>
-          {sections.map(section => (
-            <div key={section}>
-              <div style={{ padding: '14px 20px 6px', fontSize: 10, fontWeight: 600, color: 'oklch(100% 0 0 / 0.28)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                {section}
+        <nav className="h-[calc(100%-11.5rem)] overflow-y-auto px-2 py-2">
+          {sections.map((section) => (
+            <div key={section} className="mb-4">
+              <p className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{section}</p>
+              <div className="space-y-1">
+                {USER_NAV_ITEMS.filter((item) => item.section === section).map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
+                        active ? 'bg-white/20 font-semibold text-white' : 'text-white/75 hover:bg-white/10 hover:text-white',
+                      )}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center text-xs">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
-              {NAV_ITEMS.filter(i => i.section === section).map(item => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 20px',
-                      color: active ? '#fff' : 'oklch(100% 0 0 / 0.55)',
-                      textDecoration: 'none', fontSize: 13.5, fontWeight: active ? 600 : 500,
-                      background: active ? 'oklch(100% 0 0 / 0.08)' : 'transparent',
-                      borderLeft: active ? '3px solid var(--brand)' : '3px solid transparent',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
             </div>
           ))}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid oklch(100% 0 0 / 0.07)' }}>
-          <div style={{ fontSize: 10, color: 'oklch(100% 0 0 / 0.22)', textAlign: 'center' }}>
-            ইনতিফাদাহ — কর্যে হাসানাঃ
-          </div>
+        <div className="space-y-2 border-t border-white/10 p-3">
+          <p className="text-center text-[11px] text-white/50">ইনতিফাদাহ — সদস্য পোর্টাল</p>
+          <button
+            onClick={() => {
+              logout();
+              window.location.href = '/login';
+            }}
+            className="flex w-full items-center justify-center rounded-xl border border-white/20 px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+          >
+            লগআউট
+          </button>
         </div>
       </aside>
     </>

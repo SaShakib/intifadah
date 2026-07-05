@@ -1,0 +1,40 @@
+const TX_TYPE = {
+  COLLECTION: 1,
+  DONATION: 2,
+  SAVINGS: 3,
+  LOAN_DISBURSE: 4,
+  LOAN_REPAYMENT: 5,
+  EXPENSE: 6,
+  TRANSFER_OUT: 7,
+  TRANSFER_IN: 8,
+  ORG_FUND: 9,
+};
+
+const TX_STATUS = {
+  PENDING: 0,
+  APPROVED: 1,
+  REJECTED: 2,
+};
+
+const LOAN_STATUS = {
+  PENDING: 0,
+  ACTIVE: 1,
+  REPAID: 2,
+  OVERDUE: 3,
+  CANCELLED: 4,
+};
+
+const CATEGORY_TYPE = {
+  DONATION: 1,
+  SAVINGS: 2,
+  LOAN: 3,
+  EXPENSE: 4,
+  ORGANIZATION: 5,
+};
+
+module.exports = {
+  TX_TYPE,
+  TX_STATUS,
+  LOAN_STATUS,
+  CATEGORY_TYPE,
+};

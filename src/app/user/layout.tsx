@@ -1,45 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { UserSidebar } from '@/components/layout/UserSidebar';
 import { UserTopBar } from '@/components/layout/UserTopBar';
 import { UserBottomNav } from '@/components/layout/UserBottomNav';
-import { usePathname } from 'next/navigation';
-
-const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-  '/user/dashboard':    { title: 'আমার ড্যাশবোর্ড', subtitle: 'আপনার আর্থিক সারাংশ' },
-  '/user/donations':    { title: 'দান করুন', subtitle: 'আপনার দানের হিসাব' },
-  '/user/savings':      { title: 'সঞ্চয়', subtitle: 'আপনার সঞ্চয়ের বিবরণ' },
-  '/user/loan':         { title: 'ঋণ', subtitle: 'ঋণ ও কিস্তির তথ্য' },
-  '/user/transactions': { title: 'লেনদেন', subtitle: 'সব লেনদেনের ইতিহাস' },
-  '/user/categories':   { title: 'খাতসূচি', subtitle: 'সকল খাতের বিবরণ' },
-  '/user/expenses':     { title: 'খরচের হিসাব', subtitle: 'ব্যক্তিগত ব্যয়ের বিবরণ' },
-  '/user/comments':     { title: 'মন্তব্য', subtitle: 'যোগাযোগ ও মন্তব্য' },
-  '/user/profile':      { title: 'প্রোফাইল', subtitle: 'আপনার তথ্য পরিচালনা' },
-};
+import { USER_PAGE_TITLES } from '@/components/layout/config/pageTitles';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const pageInfo = PAGE_TITLES[pathname] ?? { title: 'ইনতিফাদাহ' };
+  const router = useRouter();
+  const { isReady, isAuthenticated } = useAuth();
+  const pageInfo = USER_PAGE_TITLES[pathname] ?? { title: 'ইনতিফাদাহ' };
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isReady, isAuthenticated, router]);
+
+  if (!isReady || !isAuthenticated) {
+    return <div className="flex min-h-screen items-center justify-center text-sm text-muted">লোড হচ্ছে...</div>;
+  }
 
   return (
-    <>
+    <div className="min-h-screen">
       <UserSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="main-area">
+      <div className="min-h-screen pb-[calc(var(--bottomnav-h)+0.5rem)] md:ml-60 md:pb-0">
         <UserTopBar
           title={pageInfo.title}
           subtitle={pageInfo.subtitle}
-          onMenuToggle={() => setSidebarOpen(prev => !prev)}
+          onMenuToggle={() => setSidebarOpen((prev) => !prev)}
         />
-
-        <main className="page-content" style={{ padding: '24px 24px 40px', flex: 1 }}>
-          {children}
-        </main>
-
-        <UserBottomNav />
+        <main className="p-3 md:p-6">{children}</main>
       </div>
-    </>
+      <UserBottomNav />
+    </div>
   );
 }

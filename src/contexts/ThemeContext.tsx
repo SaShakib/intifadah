@@ -19,17 +19,21 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId['id']>('default');
-  const [mode, setModeState] = useState<ColorMode>('light'); // always light by default
+  const [theme, setThemeState] = useState<ThemeId['id']>(() => {
+    if (typeof window === 'undefined') {
+      return 'default';
+    }
 
-  /* Load from localStorage on mount — default to 'light' if nothing saved */
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('intifadah-theme') as ThemeId['id'] | null;
-    const savedMode  = localStorage.getItem('intifadah-mode') as ColorMode | null;
-    if (savedTheme) setThemeState(savedTheme);
-    // Only restore dark mode if user explicitly chose it before
-    if (savedMode && savedMode === 'dark') setModeState('dark');
-  }, []);
+    return (localStorage.getItem('intifadah-theme') as ThemeId['id'] | null) ?? 'default';
+  });
+  const [mode, setModeState] = useState<ColorMode>(() => {
+    if (typeof window === 'undefined') {
+      return 'light';
+    }
+
+    const savedMode = localStorage.getItem('intifadah-mode') as ColorMode | null;
+    return savedMode === 'dark' ? 'dark' : 'light';
+  });
 
   /* Apply theme to <html> data-theme attribute */
   useEffect(() => {
