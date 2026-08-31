@@ -17,7 +17,7 @@ const USER_TX_TYPES = [
   TX_TYPE.SAVINGS,
   TX_TYPE.ORG_FUND,
 ];
-const MANAGER_ROLE_KEYS = ['super_admin', 'admin', 'manager'];
+const MANAGER_ROLE_KEYS = ['super_admin', 'admin', 'manager', 'member_internal'];
 
 function parseMinorAmount(value, field = 'amountMinor') {
   const amount = Number(value);
@@ -175,6 +175,39 @@ async function listLoanRepayments(userId, loanId) {
   return loansRepository.listLoanRepayments(loanId);
 }
 
+async function createLoanRepayment(userId, loanId, input) {
+  const loan = await loansRepository.getLoanById(loanId);
+  if (!loan || Number(loan.borrower_user_id) !== Number(userId)) {
+    const error = new Error('Loan not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const amountMinor = parseMinorAmount(input.amountMinor);
+  const result = await loansRepository.createRepayment({
+    loanId,
+    actorUserId: userId,
+    approvedByUserId: userId,
+    amountMinor,
+    paidOn: input.paidOn,
+    note: input.note,
+  });
+
+  await notificationsRepository.createForRoleKeys({
+    roleKeys: MANAGER_ROLE_KEYS,
+    notifType: 5,
+    payloadJson: {
+      event: 'loan_repayment_created',
+      loanId,
+      userId,
+      amountMinor,
+    },
+    excludeUserId: userId,
+  });
+
+  return result;
+}
+
 async function listExpenses(userId, filters = {}) {
   return transactionsRepository.listTransactions({
     ...filters,
@@ -308,11 +341,41 @@ async function updateProfile(userId, input) {
 
   await authRepository.updateUserProfile(userId, {
     fullName: input.fullName,
+    mobile: input.mobile !== undefined ? String(input.mobile || '').trim() || undefined : undefined,
     email,
     gender: input.gender !== undefined ? Number(input.gender) : undefined,
     addressLine: input.addressLine,
     wardNo: input.wardNo !== undefined ? Number(input.wardNo) : undefined,
     photoUrl: input.photoUrl,
+  });
+
+  return getProfile(userId);
+}
+
+async function completeProfile(userId, input) {
+  const fullName = String(input.fullName || '').trim();
+  const mobile = String(input.mobile || '').trim();
+  const addressLine = String(input.addressLine || '').trim();
+
+  if (!fullName || !mobile || !addressLine) {
+    const error = new Error('fullName, mobile and addressLine are required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existing = await authRepository.getUserByIdentifier(mobile);
+  if (existing && existing.id !== userId) {
+    const error = new Error('This mobile number is already in use');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  await authRepository.updateUserProfile(userId, {
+    fullName,
+    mobile,
+    addressLine,
+    gender: input.gender !== undefined ? Number(input.gender) : undefined,
+    wardNo: input.wardNo !== undefined && input.wardNo !== '' ? Number(input.wardNo) : undefined,
   });
 
   return getProfile(userId);
@@ -341,6 +404,7 @@ module.exports = {
   listLoans,
   createLoanRequest,
   listLoanRepayments,
+  createLoanRepayment,
   listExpenses,
   createExpense,
   listCommentThreads,
@@ -351,6 +415,7 @@ module.exports = {
   getLoanSummary,
   getProfile,
   updateProfile,
+  completeProfile,
   listMyNotifications,
   markMyNotificationRead,
 };

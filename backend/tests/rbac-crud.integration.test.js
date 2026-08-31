@@ -91,6 +91,35 @@ async function loginUser(identifier, password = PASSWORD) {
   return response.body;
 }
 
+async function setUserRole(userId, roleKey, userKind) {
+  const roleResponse = await pool.query(
+    'SELECT id, role_key, role_name FROM roles WHERE role_key = $1 LIMIT 1',
+    [roleKey],
+  );
+  const role = roleResponse.rows[0];
+  assert.ok(role, `${roleKey} role should exist`);
+
+  await pool.query(
+    `UPDATE app_users
+     SET role_id = $2,
+         user_kind = COALESCE($3, user_kind),
+         updated_at = NOW()
+     WHERE id = $1`,
+    [userId, role.id, userKind ?? null],
+  );
+
+  return role;
+}
+
+function applyActorRole(actor, role, userKind) {
+  actor.user.roleId = role.id;
+  actor.user.roleKey = role.role_key;
+  actor.user.roleName = role.role_name;
+  if (userKind !== undefined && userKind !== null) {
+    actor.user.userKind = userKind;
+  }
+}
+
 function collectRoleEvents(notifications, targetUserId) {
   return new Set(
     notifications
@@ -140,6 +169,20 @@ before(async () => {
     userKind: 3,
   });
 
+  actors.publicDefaults = {
+    superAdminRoleKey: actors.superAdmin.user.roleKey,
+    adminRoleKey: actors.admin.user.roleKey,
+    memberInternalRoleKey: actors.memberInternal.user.roleKey,
+    orgUserRoleKey: actors.orgUser.user.roleKey,
+    memberInternalUserKind: actors.memberInternal.user.userKind,
+    orgUserUserKind: actors.orgUser.user.userKind,
+  };
+
+  applyActorRole(actors.superAdmin, await setUserRole(actors.superAdmin.user.id, 'super_admin', 1), 1);
+  applyActorRole(actors.admin, await setUserRole(actors.admin.user.id, 'admin', 1), 1);
+  applyActorRole(actors.memberInternal, await setUserRole(actors.memberInternal.user.id, 'member_internal', 1), 1);
+  applyActorRole(actors.orgUser, await setUserRole(actors.orgUser.user.id, 'org_user', 3), 3);
+
   const promoteManager = await api(
     'patch',
     `/admin/access-control/users/${actors.managerCandidate.user.id}/role`,
@@ -158,7 +201,14 @@ after(async () => {
 });
 
 test('PRD role and CRUD integration coverage', async (t) => {
-  await t.test('maps default role from user kind and env overrides', async () => {
+  await t.test('public registration defaults to normal user before admin promotion', async () => {
+    assert.equal(actors.publicDefaults.superAdminRoleKey, 'general_user');
+    assert.equal(actors.publicDefaults.adminRoleKey, 'general_user');
+    assert.equal(actors.publicDefaults.memberInternalRoleKey, 'general_user');
+    assert.equal(actors.publicDefaults.orgUserRoleKey, 'general_user');
+    assert.equal(actors.publicDefaults.memberInternalUserKind, 2);
+    assert.equal(actors.publicDefaults.orgUserUserKind, 2);
+
     assert.equal(actors.memberInternal.user.roleKey, 'member_internal');
     assert.equal(actors.generalUser.user.roleKey, 'general_user');
     assert.equal(actors.orgUser.user.roleKey, 'org_user');
@@ -178,7 +228,7 @@ test('PRD role and CRUD integration coverage', async (t) => {
     const adminModules = await api('get', '/admin/access-control/modules', {
       token: actors.admin.tokens.accessToken,
     });
-    assertStatus(adminModules, 403, 'admin should be forbidden from super-admin-only endpoint');
+    assertStatus(adminModules, 200, 'admin should access permission management endpoint');
 
     const generalAdminDashboard = await api('get', '/admin/dashboard/summary', {
       token: actors.generalUser.tokens.accessToken,

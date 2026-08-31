@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { NavIcon } from '@/components/layout/NavIcon';
 import { USER_BOTTOM_NAV } from '@/components/layout/config/navigation';
 import { cn } from '@/lib/utils/cn';
 
@@ -21,7 +22,7 @@ export function UserBottomNav() {
               active ? 'text-brand' : 'text-muted',
             )}
           >
-            <span className="text-base leading-none">{item.icon}</span>
+            <NavIcon name={item.icon} className="h-5 w-5" />
             <span>{item.label}</span>
           </Link>
         );

@@ -43,21 +43,43 @@ export function UserCategoriesTopSection({ metrics = USER_CATEGORY_METRICS }: Us
 }
 
 export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS }: UserCategoriesMiddleSectionProps) {
-  const rows = categories.map((category) => [
-    category.name,
-    TYPE_LABEL[category.type],
-    RECUR_LABEL[category.recurrence],
-    category.isVariable ? 'পরিবর্তনশীল' : category.amount ? `৳${category.amount}` : '-',
-    <Badge key={category.id} variant={category.isActive ? 'success' : 'muted'}>
-      {category.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
-    </Badge>,
-  ]);
+  const rows = categories.map((category) => ({
+    id: category.id,
+    tabValue: category.type,
+    filterValues: { recurrence: category.recurrence, status: category.isActive ? 'active' : 'inactive' },
+    searchText: `${category.name} ${TYPE_LABEL[category.type]} ${RECUR_LABEL[category.recurrence]} ${category.description ?? ''}`,
+    sortValues: [category.name, TYPE_LABEL[category.type], RECUR_LABEL[category.recurrence], category.amount ?? 0, category.isActive ? 1 : 0],
+    cells: [
+      category.name,
+      TYPE_LABEL[category.type],
+      RECUR_LABEL[category.recurrence],
+      category.isVariable ? 'পরিবর্তনশীল' : category.amount ? `৳${category.amount}` : '-',
+      <Badge key={category.id} variant={category.isActive ? 'success' : 'muted'}>
+        {category.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+      </Badge>,
+    ],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="খাত তালিকা" subtitle="ধরণ ও নিয়মসহ বিস্তারিত" />
-        <DataTable headers={['খাত', 'ধরণ', 'পুনরাবৃত্তি', 'পরিমাণ', 'স্ট্যাটাস']} rows={rows} />
+        <DataTable
+          headers={['খাত', 'ধরণ', 'পুনরাবৃত্তি', 'পরিমাণ', 'স্ট্যাটাস']}
+          rows={rows}
+          tabs={[
+            { value: 'all', label: 'সব' },
+            ...Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label })),
+          ]}
+          filters={[
+            {
+              id: 'recurrence',
+              label: 'সব পুনরাবৃত্তি',
+              options: Object.entries(RECUR_LABEL).map(([value, label]) => ({ value, label })),
+            },
+          ]}
+          searchPlaceholder="খাত, ধরণ বা নিয়ম..."
+        />
       </Card>
     </section>
   );

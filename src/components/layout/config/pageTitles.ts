@@ -6,6 +6,8 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/fund-collection': 'ফান্ড / কালেকশন',
   '/admin/categories': 'খাত পরিচালনা',
   '/admin/reports': 'প্রতিবেদন',
+  '/admin/quran': 'Quran রিপোর্ট',
+  '/admin/settings': 'সেটিংস',
   '/admin/roles-permissions': 'ভূমিকা ও অনুমতি',
 };
 
@@ -14,6 +16,7 @@ export const USER_PAGE_TITLES: Record<string, { title: string; subtitle?: string
   '/user/donations': { title: 'দান করুন', subtitle: 'আপনার দানের হিসাব' },
   '/user/savings': { title: 'সঞ্চয়', subtitle: 'আপনার সঞ্চয়ের বিবরণ' },
   '/user/loan': { title: 'ঋণ', subtitle: 'ঋণ ও কিস্তির তথ্য' },
+  '/user/quran': { title: 'Quran', subtitle: 'দৈনিক পড়ার অগ্রগতি' },
   '/user/transactions': { title: 'লেনদেন', subtitle: 'সব লেনদেনের ইতিহাস' },
   '/user/categories': { title: 'খাতসূচি', subtitle: 'সকল খাতের বিবরণ' },
   '/user/expenses': { title: 'খরচের হিসাব', subtitle: 'ব্যক্তিগত ব্যয়ের বিবরণ' },

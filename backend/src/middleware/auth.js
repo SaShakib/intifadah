@@ -1,6 +1,7 @@
 const { verifyAccessToken } = require('../lib/jwt');
 const { getUserById } = require('../services/user.service');
 const { hasPermission, hasAnyPermission } = require('../services/permission.service');
+const { needsProfileCompletion } = require('../services/auth.service');
 
 function getBearerToken(req) {
   const header = req.headers.authorization || '';
@@ -30,6 +31,7 @@ async function requireAuth(req, res, next) {
       roleKey: user.role_key,
       userKind: user.user_kind,
       email: user.email,
+      needsProfileCompletion: needsProfileCompletion(user),
       user,
       tokenPayload: payload,
     };
@@ -38,6 +40,18 @@ async function requireAuth(req, res, next) {
   } catch (_error) {
     return res.status(401).json({ message: 'Invalid or expired access token' });
   }
+}
+
+function requireCompletedProfile(req, res, next) {
+  if (!req.auth) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  if (req.auth.needsProfileCompletion) {
+    return res.status(403).json({ message: 'Profile completion is required' });
+  }
+
+  return next();
 }
 
 function requireRoles(...allowedRoles) {
@@ -140,6 +154,7 @@ function requireSelfOrPermission(options) {
 
 module.exports = {
   requireAuth,
+  requireCompletedProfile,
   requireRoles,
   requireAnyRoles,
   requireSuperAdmin,

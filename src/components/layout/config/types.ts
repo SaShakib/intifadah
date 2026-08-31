@@ -3,4 +3,5 @@ export interface NavItem {
   label: string;
   icon: string;
   section: string;
+  permissionOnly?: boolean;
 }

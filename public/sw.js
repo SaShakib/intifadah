@@ -7,7 +7,7 @@
  *  - Stale-while-revalidate for everything else
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v3';
 const SHELL_CACHE  = `intifadah-shell-${CACHE_VERSION}`;
 const ASSET_CACHE  = `intifadah-assets-${CACHE_VERSION}`;
 const DATA_CACHE   = `intifadah-data-${CACHE_VERSION}`;
@@ -51,12 +51,20 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/_next/webpack-hmr')) return;
 
+  /* React Server Component payloads must never be cached across deployments. */
+  if (
+    request.headers.has('RSC') ||
+    request.headers.has('Next-Router-State-Tree') ||
+    url.searchParams.has('_rsc')
+  ) return;
+
+  /* Only immutable Next static assets are cacheable. */
+  if (url.pathname.startsWith('/_next/') && !url.pathname.startsWith('/_next/static/')) return;
+
   /* Static assets: JS, CSS, fonts, images → cache-first */
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/icons/') ||
-    url.pathname === '/icon' ||
-    url.pathname === '/apple-icon' ||
     /\.(woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/.test(url.pathname)
   ) {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
@@ -71,6 +79,39 @@ self.addEventListener('fetch', event => {
 
   /* Everything else → stale-while-revalidate */
   event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
+});
+
+/* ── Web Push: works while the installed app is closed ───── */
+self.addEventListener('push', event => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = payload.title || 'ইনতিফাদাহ';
+  const options = {
+    body: payload.body || 'আপনার জন্য নতুন একটি বিজ্ঞপ্তি আছে।',
+    icon: '/icons/intifadah.jpeg',
+    badge: '/icons/intifadah.jpeg',
+    tag: payload.tag || 'intifadah-notification',
+    data: { url: payload.url || '/user/dashboard' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const matchingClient = clients.find(client => client.url === targetUrl);
+    if (matchingClient) return matchingClient.focus();
+    return self.clients.openWindow(targetUrl);
+  })());
 });
 
 /* ── Strategies ───────────────────────────────────────────── */

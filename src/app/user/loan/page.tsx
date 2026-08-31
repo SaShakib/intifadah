@@ -10,9 +10,10 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getUserLoans, mapLoanRow } from '@/lib/api';
 
 const initialData = {
-  metrics: USER_LOAN_METRICS,
-  scheduleRows: USER_LOAN_SCHEDULE_ROWS,
-  loanHistory: USER_LOAN_HISTORY_ROWS,
+      metrics: [] as typeof USER_LOAN_METRICS,
+      scheduleRows: [] as typeof USER_LOAN_SCHEDULE_ROWS,
+      loanHistory: [] as typeof USER_LOAN_HISTORY_ROWS,
+  activeLoans: [],
 };
 
 export default function UserLoanPage() {
@@ -42,6 +43,7 @@ export default function UserLoanPage() {
         { label: 'পরবর্তী কিস্তি', value: formatCurrencyBn(nextInstallment), hint: activeOrOverdue[0]?.dueDate ?? 'তথ্য নেই' },
       ],
       scheduleRows,
+      activeLoans: activeOrOverdue,
       loanHistory: loans.map((loan) => ({
         purpose: loan.purpose,
         amount: loan.amount,
@@ -57,13 +59,16 @@ export default function UserLoanPage() {
     staleTimeMs: 30_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <LoanTopSection metrics={data.metrics} />
-      <LoanMiddleSection scheduleRows={data.scheduleRows} />
+      <LoanMiddleSection scheduleRows={data.scheduleRows} activeLoans={data.activeLoans} onMutationSuccess={() => void refetch()} />
       <LoanBottomSection loanHistory={data.loanHistory} />
     </PageStack>
   );

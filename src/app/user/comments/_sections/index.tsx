@@ -40,20 +40,35 @@ export function CommentsTopSection({ threads = COMMENT_THREADS }: CommentsTopSec
 }
 
 export function CommentsMiddleSection({ threads = COMMENT_THREADS }: CommentsMiddleSectionProps) {
-  const rows = threads.map((thread) => [
-    thread.subject,
-    thread.lastMessage,
-    thread.date,
-    <Badge key={thread.id} variant={thread.status === 'pending' ? 'warning' : 'success'}>
-      {thread.status === 'pending' ? 'অপেক্ষমাণ' : 'উত্তরপ্রাপ্ত'}
-    </Badge>,
-  ]);
+  const rows = threads.map((thread) => ({
+    id: thread.id,
+    tabValue: thread.status,
+    searchText: `${thread.subject} ${thread.lastMessage} ${thread.date}`,
+    sortValues: [thread.subject, thread.lastMessage, thread.date, thread.status],
+    cells: [
+      thread.subject,
+      thread.lastMessage,
+      thread.date,
+      <Badge key={thread.id} variant={thread.status === 'pending' ? 'warning' : 'success'}>
+        {thread.status === 'pending' ? 'অপেক্ষমাণ' : 'উত্তরপ্রাপ্ত'}
+      </Badge>,
+    ],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="থ্রেড তালিকা" subtitle="সর্বশেষ বার্তাগুলো" />
-        <DataTable headers={['বিষয়', 'শেষ বার্তা', 'তারিখ', 'অবস্থা']} rows={rows} />
+        <DataTable
+          headers={['বিষয়', 'শেষ বার্তা', 'তারিখ', 'অবস্থা']}
+          rows={rows}
+          tabs={[
+            { value: 'all', label: 'সব' },
+            { value: 'pending', label: 'অপেক্ষমাণ' },
+            { value: 'answered', label: 'উত্তরপ্রাপ্ত' },
+          ]}
+          searchPlaceholder="বিষয়, বার্তা বা তারিখ..."
+        />
       </Card>
     </section>
   );

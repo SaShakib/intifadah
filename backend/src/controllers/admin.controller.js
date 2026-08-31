@@ -10,6 +10,9 @@ const {
   getMemberFinancialSummary,
   listMembers,
   getMemberDetails,
+  createMember,
+  updateMember,
+  deactivateMember,
   listCategories,
   createCategory,
   updateCategory,
@@ -109,6 +112,35 @@ async function memberDetails(req, res, next) {
   }
 }
 
+async function membersCreate(req, res, next) {
+  try {
+    const row = await createMember(req.body || {});
+    res.status(201).json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function membersUpdate(req, res, next) {
+  try {
+    const userId = parseRequiredId(req.params.userId, 'userId');
+    const row = await updateMember(userId, req.body || {});
+    res.json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function membersDeactivate(req, res, next) {
+  try {
+    const userId = parseRequiredId(req.params.userId, 'userId');
+    const row = await deactivateMember(userId);
+    res.json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function categoriesList(req, res, next) {
   try {
     const rows = await listCategories({
@@ -135,6 +167,16 @@ async function categoriesUpdate(req, res, next) {
   try {
     const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
     const updated = await updateCategory(categoryId, req.body || {});
+    res.json({ row: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function categoriesDelete(req, res, next) {
+  try {
+    const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
+    const updated = await updateCategory(categoryId, { isActive: false });
     res.json({ row: updated });
   } catch (error) {
     next(error);
@@ -426,10 +468,14 @@ module.exports = {
   dashboardSummary,
   memberFinancialSummary,
   membersList,
+  membersCreate,
   memberDetails,
+  membersUpdate,
+  membersDeactivate,
   categoriesList,
   categoriesCreate,
   categoriesUpdate,
+  categoriesDelete,
   collectionsList,
   collectionsCreate,
   loansList,

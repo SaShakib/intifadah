@@ -2,7 +2,7 @@ import { ApiError } from './error';
 import { clearAuthSession, getAuthSession, setAuthSession } from './storage';
 import type { ApiClientOptions, ApiAuthResponse, ApiRequestErrorBody } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
 
 let refreshPromise: Promise<ApiAuthResponse | null> | null = null;
 

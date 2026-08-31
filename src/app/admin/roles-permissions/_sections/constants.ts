@@ -1,10 +1,10 @@
 import type { RoleSummary } from './types';
 
 export const ROLE_ROWS: RoleSummary[] = [
-  { role: 'সুপার অ্যাডমিন', members: 1, modules: 'সকল মডিউল', level: 'high' },
-  { role: 'ম্যানেজার', members: 2, modules: 'সদস্য, ঋণ, কালেকশন, রিপোর্ট', level: 'high' },
-  { role: 'অ্যাকাউন্ট্যান্ট', members: 1, modules: 'কালেকশন, সঞ্চয়, রিপোর্ট', level: 'medium' },
-  { role: 'সদস্য', members: 138, modules: 'ড্যাশবোর্ড, সঞ্চয়, দান, মন্তব্য', level: 'low' },
+  { roleKey: 'super_admin', role: 'সুপার অ্যাডমিন', members: 1, modules: 'সকল মডিউল', level: 'high' },
+  { roleKey: 'manager', role: 'ম্যানেজার', members: 2, modules: 'সদস্য, ঋণ, কালেকশন, রিপোর্ট', level: 'high' },
+  { roleKey: 'member_internal', role: 'ইনতিফাদাহ সদস্য', members: 1, modules: 'কালেকশন, সঞ্চয়, রিপোর্ট', level: 'medium' },
+  { roleKey: 'general_user', role: 'সদস্য', members: 138, modules: 'ড্যাশবোর্ড, সঞ্চয়, দান, মন্তব্য', level: 'low' },
 ];
 
 export const MODULE_ROWS = [

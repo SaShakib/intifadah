@@ -2,7 +2,7 @@
    SHARED TYPES
    ───────────────────────────────────────────── */
 
-export type UserRole = 'super_admin' | 'manager' | 'accountant' | 'user' | 'org';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'member_internal' | 'accountant' | 'user' | 'org';
 
 export type TransactionType = 'collection' | 'loan' | 'repayment' | 'savings' | 'donation' | 'expense';
 

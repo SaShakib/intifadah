@@ -13,8 +13,18 @@ import type {
   ApiReportDueRow,
   ApiRolePermissionRow,
   ApiRowsResponse,
+  ApiQuranWeeklyReportResponse,
+  ApiQuranPenaltyReportResponse,
+  ApiQuranPenaltyRunResponse,
   ApiSummaryResponse,
   ApiTransactionRow,
+  AdminMemberInput,
+  CategoryInput,
+  CollectionInput,
+  LoanInput,
+  LoanRepaymentInput,
+  ApiRowResponse,
+  ApiDataResponse,
 } from '../types';
 
 export function getAdminDashboardSummary() {
@@ -25,6 +35,29 @@ export async function getAdminMembers(params: { limit?: number; offset?: number;
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiAdminMemberRow>>(`/admin/members${query}`);
   return data.rows;
+}
+
+export async function createAdminMember(input: AdminMemberInput) {
+  const data = await apiRequest<ApiRowResponse<ApiAdminMemberRow>>('/admin/members', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function updateAdminMember(userId: string | number, input: Partial<AdminMemberInput>) {
+  const data = await apiRequest<ApiRowResponse<ApiAdminMemberRow>>(`/admin/members/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function deactivateAdminMember(userId: string | number) {
+  const data = await apiRequest<ApiRowResponse<ApiAdminMemberRow>>(`/admin/members/${userId}`, {
+    method: 'DELETE',
+  });
+  return data.row;
 }
 
 export async function getMemberFinancialSummary() {
@@ -38,10 +71,41 @@ export async function getAdminCategories(params: { active?: boolean; categoryTyp
   return data.rows;
 }
 
+export async function createAdminCategory(input: CategoryInput) {
+  const data = await apiRequest<ApiRowResponse<ApiCategoryRow>>('/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function updateAdminCategory(categoryId: string | number, input: Partial<CategoryInput>) {
+  const data = await apiRequest<ApiRowResponse<ApiCategoryRow>>(`/admin/categories/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function deleteAdminCategory(categoryId: string | number) {
+  const data = await apiRequest<ApiRowResponse<ApiCategoryRow>>(`/admin/categories/${categoryId}`, {
+    method: 'DELETE',
+  });
+  return data.row;
+}
+
 export async function getAdminCollections(params: { limit?: number; offset?: number; status?: number; fromDate?: string; toDate?: string } = {}) {
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiTransactionRow>>(`/admin/collections${query}`);
   return data.rows;
+}
+
+export async function createAdminCollection(input: CollectionInput) {
+  const data = await apiRequest<ApiRowResponse<ApiTransactionRow>>('/admin/collections', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
 }
 
 export async function getAdminLoans(params: { status?: number | string; fromDate?: string; toDate?: string } = {}) {
@@ -50,9 +114,33 @@ export async function getAdminLoans(params: { status?: number | string; fromDate
   return data.rows;
 }
 
+export async function createAdminLoan(input: LoanInput) {
+  const data = await apiRequest<ApiRowResponse<ApiLoanRow>>('/admin/loans', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function approveAdminLoan(loanId: string | number, input: { issuedOn?: string; note?: string } = {}) {
+  const data = await apiRequest<ApiDataResponse<{ loanId: string | number; disbursementTxId: string | number }>>(`/admin/loans/${loanId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.data;
+}
+
 export async function getLoanRepayments(loanId: string | number) {
   const data = await apiRequest<ApiRowsResponse<ApiLoanRepaymentRow>>(`/admin/loans/${loanId}/repayments`);
   return data.rows;
+}
+
+export async function createAdminLoanRepayment(loanId: string | number, input: LoanRepaymentInput) {
+  const data = await apiRequest<ApiDataResponse<{ loanId: string | number; repaymentTxId: string | number; totalRepaidMinor: number; status: number }>>(`/admin/loans/${loanId}/repayments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.data;
 }
 
 export async function getAdminReportPeriodCollections(params: { fromDate?: string; toDate?: string } = {}) {
@@ -81,6 +169,22 @@ export async function getAccessModules() {
   return data.rows;
 }
 
+export async function assignAdminUserRole(userId: string | number, roleKey: string) {
+  const data = await apiRequest<ApiDataResponse<{ userId: string | number; roleId: number; roleKey: string; roleName: string; changed: boolean }>>(`/admin/access-control/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roleKey }),
+  });
+  return data.data;
+}
+
+export async function updateAdminRolePermissions(roleKey: string, permissions: Array<{ moduleKey: string; actions: Array<'read' | 'write' | 'update' | 'delete'> }>) {
+  const data = await apiRequest<{ message: string; roleKey: string; replaceAll: boolean; rows: unknown[] }>(`/admin/access-control/roles/${roleKey}/permissions`, {
+    method: 'PUT',
+    body: JSON.stringify({ permissions, replaceAll: false }),
+  });
+  return data.rows;
+}
+
 export async function getCommentThreads() {
   const data = await apiRequest<ApiRowsResponse<ApiCommentThreadRow>>('/admin/comments/threads');
   return data.rows;
@@ -89,4 +193,21 @@ export async function getCommentThreads() {
 export async function getCommentMessages(threadId: string | number) {
   const data = await apiRequest<ApiRowsResponse<ApiCommentMessageRow>>(`/admin/comments/threads/${threadId}/messages`);
   return data.rows;
+}
+
+export function getAdminQuranWeeklyReport(params: { fromDate?: string; toDate?: string } = {}) {
+  const query = createQueryString(params);
+  return apiRequest<ApiQuranWeeklyReportResponse>(`/admin/quran/weekly-report${query}`);
+}
+
+export function getAdminQuranPenalties(params: { fromDate?: string; toDate?: string; limit?: number } = {}) {
+  const query = createQueryString(params);
+  return apiRequest<ApiQuranPenaltyReportResponse>(`/admin/quran/penalties${query}`);
+}
+
+export function runAdminQuranPenalties(input: { fromDate?: string; toDate?: string } = {}) {
+  return apiRequest<ApiQuranPenaltyRunResponse>('/admin/quran/run-penalties', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }

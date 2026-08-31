@@ -41,21 +41,46 @@ export function TransactionsTopSection({ metrics = TRANSACTION_METRICS }: Transa
 }
 
 export function TransactionsMiddleSection({ rows: transactions = TRANSACTION_ROWS }: TransactionsMiddleSectionProps) {
-  const rows = transactions.map((item) => [
-    item.date,
-    TYPE_LABEL[item.type] ?? item.type,
-    item.categoryName ?? '-',
-    formatCurrencyBn(item.amount),
-    <Badge key={item.id} variant={item.status === 'pending' ? 'warning' : 'success'}>
-      {item.status === 'pending' ? 'অপেক্ষমাণ' : 'সম্পন্ন'}
-    </Badge>,
-  ]);
+  const rows = transactions.map((item) => ({
+    id: item.id,
+    tabValue: item.type,
+    filterValues: { type: item.type, status: item.status },
+    searchText: `${item.date} ${TYPE_LABEL[item.type] ?? item.type} ${item.categoryName ?? ''}`,
+    sortValues: [item.date, TYPE_LABEL[item.type] ?? item.type, item.categoryName ?? '', item.amount, item.status],
+    cells: [
+      item.date,
+      TYPE_LABEL[item.type] ?? item.type,
+      item.categoryName ?? '-',
+      <span key={`${item.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(item.amount)}</span>,
+      <Badge key={item.id} variant={item.status === 'pending' ? 'warning' : 'success'}>
+        {item.status === 'pending' ? 'অপেক্ষমাণ' : 'সম্পন্ন'}
+      </Badge>,
+    ],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="লেনদেন তালিকা" subtitle="তারিখ অনুযায়ী সাজানো" />
-        <DataTable headers={['তারিখ', 'ধরণ', 'খাত', 'পরিমাণ', 'স্ট্যাটাস']} rows={rows} />
+        <DataTable
+          headers={['তারিখ', 'ধরণ', 'খাত', 'পরিমাণ', 'স্ট্যাটাস']}
+          rows={rows}
+          tabs={[
+            { value: 'all', label: 'সব' },
+            ...Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label })),
+          ]}
+          filters={[
+            {
+              id: 'status',
+              label: 'সব স্ট্যাটাস',
+              options: [
+                { value: 'completed', label: 'সম্পন্ন' },
+                { value: 'pending', label: 'অপেক্ষমাণ' },
+              ],
+            },
+          ]}
+          searchPlaceholder="তারিখ, ধরণ বা খাত..."
+        />
       </Card>
     </section>
   );

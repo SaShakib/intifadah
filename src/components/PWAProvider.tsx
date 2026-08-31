@@ -15,14 +15,22 @@ function useServiceWorker() {
       return;
     }
 
+    let updateTimer: number | undefined;
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((registration) => {
-        setInterval(() => registration.update(), 60 * 60 * 1000);
+        void registration.update();
+        updateTimer = window.setInterval(() => void registration.update(), 60 * 60 * 1000);
       })
       .catch(() => {
         // silent
       });
+
+    return () => {
+      if (updateTimer) {
+        window.clearInterval(updateTimer);
+      }
+    };
   }, []);
 }
 

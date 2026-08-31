@@ -14,8 +14,8 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getAdminLoans, mapLoanRow } from '@/lib/api';
 
 const initialData = {
-  metrics: REPAYMENT_METRICS,
-  rows: REPAYMENT_ROWS,
+  metrics: [] as typeof REPAYMENT_METRICS,
+  rows: [] as typeof REPAYMENT_ROWS,
 };
 
 export default function LoanRepaymentPage() {
@@ -43,13 +43,16 @@ export default function LoanRepaymentPage() {
     staleTimeMs: 30_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <LoanRepaymentTopSection metrics={data.metrics} />
-      <LoanRepaymentMiddleSection rows={data.rows} />
+      <LoanRepaymentMiddleSection rows={data.rows} onMutationSuccess={() => void refetch()} />
       <LoanRepaymentBottomSection />
     </PageStack>
   );

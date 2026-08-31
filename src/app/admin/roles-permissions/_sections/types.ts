@@ -1,4 +1,5 @@
 export interface RoleSummary {
+  roleKey: string;
   role: string;
   members: number;
   modules: string;

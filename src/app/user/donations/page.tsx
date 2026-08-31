@@ -10,9 +10,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getUserCategories, getUserTransactions, mapCategoryRow, mapTransactionRow } from '@/lib/api';
 
 const initialData = {
-  metrics: DONATION_METRICS,
-  categories: DONATION_CATEGORY_ROWS,
-  history: DONATION_HISTORY_ROWS,
+  metrics: [] as typeof DONATION_METRICS,
+  categories: [] as typeof DONATION_CATEGORY_ROWS,
+  history: [] as typeof DONATION_HISTORY_ROWS,
 };
 
 export default function DonationsPage() {
@@ -43,13 +43,16 @@ export default function DonationsPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <DonationsTopSection metrics={data.metrics} />
-      <DonationsMiddleSection categories={data.categories} />
+      <DonationsMiddleSection categories={data.categories} onMutationSuccess={() => void refetch()} />
       <DonationsBottomSection history={data.history} />
     </PageStack>
   );

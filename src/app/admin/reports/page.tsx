@@ -15,9 +15,9 @@ import {
 } from '@/lib/api';
 
 const initialData = {
-  metrics: REPORT_METRICS,
-  monthlyRows: MONTHLY_REPORT_ROWS,
-  memberRows: MEMBER_REPORT_ROWS,
+  metrics: [] as typeof REPORT_METRICS,
+  monthlyRows: [] as typeof MONTHLY_REPORT_ROWS,
+  memberRows: [] as typeof MEMBER_REPORT_ROWS,
 };
 
 function monthLabel(year: number, month: number) {
@@ -80,9 +80,12 @@ export default function ReportsPage() {
     staleTimeMs: 60_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <ReportsTopSection metrics={data.metrics} />

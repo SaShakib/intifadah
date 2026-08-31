@@ -14,9 +14,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getUserTransactions, mapTransactionRow } from '@/lib/api';
 
 const initialData = {
-  metrics: TRANSACTION_METRICS,
-  rows: TRANSACTION_ROWS,
-  summary: TRANSACTION_TYPE_SUMMARY,
+  metrics: [] as typeof TRANSACTION_METRICS,
+  rows: [] as typeof TRANSACTION_ROWS,
+  summary: [] as typeof TRANSACTION_TYPE_SUMMARY,
 };
 
 export default function TransactionsPage() {
@@ -49,9 +49,12 @@ export default function TransactionsPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <TransactionsTopSection metrics={data.metrics} />

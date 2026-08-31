@@ -9,7 +9,7 @@ import { invalidateApiCache, queryKeys, useApiMutation, useApiQuery } from '@/li
 import { createUserCommentThread, getUserCommentThreads, sendUserCommentMessage, toBanglaDate } from '@/lib/api';
 
 const initialData = {
-  threads: COMMENT_THREADS,
+  threads: [] as typeof COMMENT_THREADS,
 };
 
 export default function CommentsPage() {
@@ -72,9 +72,12 @@ export default function CommentsPage() {
     await sendMessageMutation.mutate({ subject, message });
   }, [sendMessageMutation]);
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
       {sendMessageMutation.error && <ApiErrorNotice message={sendMessageMutation.error} />}
 

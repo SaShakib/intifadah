@@ -7,18 +7,38 @@ import { LoansBottomSection, LoansMiddleSection, LoansTopSection } from './_sect
 import { ALL_LOAN_ROWS, LOAN_METRICS, OVERDUE_LOAN_ROWS } from './_sections/constants';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
-import { getAdminLoans, mapLoanRow } from '@/lib/api';
+import { getAdminCategories, getAdminLoans, getAdminMembers, mapCategoryRow, mapLoanRow, toBanglaDate, toInitials, toMinorNumber, toUserRole } from '@/lib/api';
 
 const initialData = {
-  metrics: LOAN_METRICS,
-  loans: ALL_LOAN_ROWS,
-  overdueLoans: OVERDUE_LOAN_ROWS,
+  metrics: [] as typeof LOAN_METRICS,
+  loans: [] as typeof ALL_LOAN_ROWS,
+  overdueLoans: [] as typeof OVERDUE_LOAN_ROWS,
+  members: [],
+  categories: [],
 };
 
 export default function LoansPage() {
   const loadLoans = useCallback(async () => {
-    const rows = await getAdminLoans();
+    const [rows, memberRows, categoryRows] = await Promise.all([
+      getAdminLoans(),
+      getAdminMembers({ limit: 500, active: true }),
+      getAdminCategories({ active: true, categoryType: 3 }),
+    ]);
     const loans = rows.map(mapLoanRow);
+    const members = memberRows.map((row) => ({
+      id: String(row.id),
+      memberId: `INT-${String(row.id).padStart(3, '0')}`,
+      name: row.full_name,
+      phone: row.mobile,
+      ...(row.email ? { email: row.email } : {}),
+      role: toUserRole(row.role_key),
+      initials: toInitials(row.full_name),
+      joinDate: toBanglaDate(row.joined_on),
+      isActive: row.is_active,
+      totalSavings: toMinorNumber(row.total_deposit_minor),
+      totalDonations: 0,
+    }));
+    const categories = categoryRows.map(mapCategoryRow);
 
     const totalLoanAmount = loans.reduce((total, loan) => total + loan.amount, 0);
     const activeLoans = loans.filter((loan) => loan.status === 'active');
@@ -34,6 +54,8 @@ export default function LoansPage() {
       ],
       loans,
       overdueLoans,
+      members,
+      categories,
     };
   }, []);
 
@@ -42,13 +64,16 @@ export default function LoansPage() {
     staleTimeMs: 30_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <LoansTopSection metrics={data.metrics} />
-      <LoansMiddleSection loans={data.loans} />
+      <LoansMiddleSection loans={data.loans} members={data.members} categories={data.categories} onMutationSuccess={() => void refetch()} />
       <LoansBottomSection overdueLoans={data.overdueLoans} />
     </PageStack>
   );

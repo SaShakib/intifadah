@@ -3,6 +3,11 @@ const { clearPermissionCache, getRolePermissions } = require('./permission.servi
 const { repositories } = require('../repositories');
 
 const { accessRepository, authRepository } = repositories;
+const USER_KIND_BY_ROLE_KEY = {
+  member_internal: 1,
+  general_user: 2,
+  org_user: 3,
+};
 
 async function listRoles() {
   return accessRepository.listRoles();
@@ -97,12 +102,17 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     throw error;
   }
 
-  if (user.role_id === targetRole.id) {
+  const targetUserKind = USER_KIND_BY_ROLE_KEY[targetRole.role_key] ?? null;
+  const roleChanged = user.role_id !== targetRole.id;
+  const userKindChanged = targetUserKind !== null && Number(user.user_kind) !== targetUserKind;
+
+  if (!roleChanged && !userKindChanged) {
     return {
       userId: user.id,
       roleId: user.role_id,
       roleKey: user.role_key,
       roleName: user.role_name,
+      userKind: user.user_kind,
       changed: false,
     };
   }
@@ -122,8 +132,10 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     userId: user.id,
     beforeRoleId: user.role_id,
     beforeRoleKey: user.role_key,
+    beforeUserKind: user.user_kind,
     newRoleId: targetRole.id,
     newRoleKey: targetRole.role_key,
+    newUserKind: targetUserKind,
   });
 
   return {
@@ -131,6 +143,7 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     roleId: targetRole.id,
     roleKey: targetRole.role_key,
     roleName: targetRole.role_name,
+    userKind: targetUserKind ?? user.user_kind,
     changed: true,
   };
 }

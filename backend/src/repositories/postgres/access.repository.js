@@ -153,9 +153,25 @@ async function countActiveUsersByRoleKey(roleKey) {
   return Number(res.rows[0]?.count || 0);
 }
 
-async function assignUserRoleWithAudit({ actorUserId, userId, beforeRoleId, beforeRoleKey, newRoleId, newRoleKey }) {
+async function assignUserRoleWithAudit({
+  actorUserId,
+  userId,
+  beforeRoleId,
+  beforeRoleKey,
+  beforeUserKind,
+  newRoleId,
+  newRoleKey,
+  newUserKind,
+}) {
   await withTransaction(async (client) => {
-    await client.query('UPDATE app_users SET role_id = $2, updated_at = NOW() WHERE id = $1', [userId, newRoleId]);
+    await client.query(
+      `UPDATE app_users
+       SET role_id = $2,
+           user_kind = COALESCE($3, user_kind),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId, newRoleId, newUserKind ?? null],
+    );
 
     await client.query(
       `INSERT INTO audit_logs (
@@ -171,8 +187,8 @@ async function assignUserRoleWithAudit({ actorUserId, userId, beforeRoleId, befo
         2,
         2,
         userId,
-        JSON.stringify({ roleId: beforeRoleId, roleKey: beforeRoleKey }),
-        JSON.stringify({ roleId: newRoleId, roleKey: newRoleKey }),
+        JSON.stringify({ roleId: beforeRoleId, roleKey: beforeRoleKey, userKind: beforeUserKind }),
+        JSON.stringify({ roleId: newRoleId, roleKey: newRoleKey, userKind: newUserKind ?? beforeUserKind }),
       ],
     );
   });

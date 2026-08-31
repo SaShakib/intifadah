@@ -24,20 +24,22 @@ function buildSslConfig() {
 
 function createPool() {
   const max = env.pgConnectionLimit ?? (env.isVercel ? 1 : 10);
-
-  return new Pool({
+  const config = {
     connectionString: env.databaseUrl,
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
     ssl: buildSslConfig(),
     max,
     idleTimeoutMillis: env.isVercel ? 5000 : 30000,
     connectionTimeoutMillis: 10000,
     allowExitOnIdle: env.isVercel,
-  });
+  };
+
+  if (env.dbHost) config.host = env.dbHost;
+  if (env.dbPort) config.port = env.dbPort;
+  if (env.dbName) config.database = env.dbName;
+  if (env.dbUser) config.user = env.dbUser;
+  if (env.dbPassword) config.password = env.dbPassword;
+
+  return new Pool(config);
 }
 
 const globalScope = global;

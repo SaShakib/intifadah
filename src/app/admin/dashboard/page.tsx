@@ -18,9 +18,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getAdminCollections, getAdminDashboardSummary, getAdminLoans, mapLoanRow, mapTransactionRow, toMinorNumber } from '@/lib/api';
 
 const initialData = {
-  metrics: DASHBOARD_METRICS,
-  pendingLoans: DASHBOARD_PENDING_LOANS,
-  recentTransactions: DASHBOARD_RECENT_TRANSACTIONS,
+  metrics: [] as typeof DASHBOARD_METRICS,
+  pendingLoans: [] as typeof DASHBOARD_PENDING_LOANS,
+  recentTransactions: [] as typeof DASHBOARD_RECENT_TRANSACTIONS,
 };
 
 export default function DashboardPage() {
@@ -55,9 +55,12 @@ export default function DashboardPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <AdminDashboardTopSection metrics={data.metrics} />

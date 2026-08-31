@@ -13,8 +13,8 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getUserCategories, mapCategoryRow } from '@/lib/api';
 
 const initialData = {
-  metrics: USER_CATEGORY_METRICS,
-  categories: USER_CATEGORY_ROWS,
+  metrics: [] as typeof USER_CATEGORY_METRICS,
+  categories: [] as typeof USER_CATEGORY_ROWS,
 };
 
 export default function UserCategoriesPage() {
@@ -38,9 +38,12 @@ export default function UserCategoriesPage() {
     staleTimeMs: 120_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <UserCategoriesTopSection metrics={data.metrics} />

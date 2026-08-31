@@ -8,6 +8,8 @@ import {
   clearAuthSession,
   getAuthSession,
   isAdminRoleKey,
+  canManagePermissions,
+  googleLoginApi,
   loginApi,
   logoutApi,
   mapAuthUserToMember,
@@ -15,6 +17,7 @@ import {
   registerApi,
   setAuthSession,
   type BackendRoleKey,
+  type GoogleLoginInput,
   type LoginInput,
   type RegisterInput,
 } from '@/lib/api';
@@ -24,10 +27,13 @@ interface AuthContextValue {
   role: UserRole | null;
   roleKey: BackendRoleKey | null;
   isAdmin: boolean;
+  canManagePermissions: boolean;
+  needsProfileCompletion: boolean;
   isAuthenticated: boolean;
   isReady: boolean;
   authError: string | null;
   login: (input: LoginInput) => Promise<void>;
+  loginWithGoogle: (input: GoogleLoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -40,10 +46,13 @@ const AuthContext = createContext<AuthContextValue>({
   role: null,
   roleKey: null,
   isAdmin: false,
+  canManagePermissions: false,
+  needsProfileCompletion: false,
   isAuthenticated: false,
   isReady: false,
   authError: null,
   login: noopAsync,
+  loginWithGoogle: noopAsync,
   register: noopAsync,
   logout: noopAsync,
   refreshMe: noopAsync,
@@ -65,6 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsReady(true);
         }
         return;
+      }
+
+      if (!cancelled) {
+        setSessionUser(current.user);
+        setIsReady(true);
       }
 
       try {
@@ -115,14 +129,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSessionUser(response.user);
   };
 
+  const loginWithGoogle = async (input: GoogleLoginInput) => {
+    setAuthError(null);
+    clearApiCache();
+    const response = await googleLoginApi(input);
+    setSessionUser(response.user);
+  };
+
   const logout = async () => {
     setAuthError(null);
+    const refreshToken = getAuthSession()?.tokens.refreshToken;
+    clearApiCache();
+    clearAuthSession();
+    setSessionUser(null);
 
     try {
-      await logoutApi();
-    } finally {
-      clearApiCache();
-      setSessionUser(null);
+      await logoutApi(refreshToken);
+    } catch {
+      // A local sign-out must still succeed when the network is unavailable.
     }
   };
 
@@ -155,10 +179,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role,
       roleKey,
       isAdmin: roleKey ? isAdminRoleKey(roleKey) : false,
+      canManagePermissions: canManagePermissions(roleKey),
+      needsProfileCompletion: Boolean(sessionUser?.needsProfileCompletion),
       isAuthenticated: Boolean(sessionUser),
       isReady,
       authError,
       login,
+      loginWithGoogle,
       register,
       logout,
       refreshMe,

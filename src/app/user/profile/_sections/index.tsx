@@ -30,9 +30,9 @@ export function ProfileTopSection() {
         <div className="flex flex-wrap items-center gap-4">
           <Avatar initials={user?.initials ?? 'র'} size="lg" className="bg-brand text-white" />
           <div className="space-y-1">
-            <p className="text-lg font-bold text-fg">{user?.name ?? 'রহিমা খাতুন'}</p>
-            <p className="text-sm text-fg-2">সদস্য আইডি: {user?.memberId ?? 'INT-002'}</p>
-            <p className="text-sm text-muted">ফোন: {user?.phone ?? '01812-345678'}</p>
+            <p className="text-lg font-bold text-fg">{user?.name ?? 'ব্যবহারকারী'}</p>
+            <p className="text-sm text-fg-2">সদস্য আইডি: {user?.memberId ?? '-'}</p>
+            <p className="text-sm text-muted">ফোন: {user?.phone ?? '-'}</p>
           </div>
         </div>
       </Card>

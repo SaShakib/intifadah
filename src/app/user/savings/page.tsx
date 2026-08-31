@@ -7,19 +7,24 @@ import { SavingsBottomSection, SavingsMiddleSection, SavingsTopSection } from '.
 import { SAVINGS_HISTORY_ROWS, SAVINGS_METRICS } from './_sections/constants';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
-import { getUserTransactions, mapTransactionRow } from '@/lib/api';
+import { getUserCategories, getUserTransactions, mapCategoryRow, mapTransactionRow } from '@/lib/api';
 
 const initialData = {
-  metrics: SAVINGS_METRICS,
-  history: SAVINGS_HISTORY_ROWS,
+  metrics: [] as typeof SAVINGS_METRICS,
+  history: [] as typeof SAVINGS_HISTORY_ROWS,
+  categories: [],
 };
 
 const MONTHLY_TARGET = 2000;
 
 export default function SavingsPage() {
   const loadSavings = useCallback(async () => {
-    const txRows = await getUserTransactions({ limit: 300 });
+    const [txRows, categoryRows] = await Promise.all([
+      getUserTransactions({ limit: 300 }),
+      getUserCategories({ active: true }),
+    ]);
     const history = txRows.map(mapTransactionRow).filter((tx) => tx.type === 'savings');
+    const categories = categoryRows.map(mapCategoryRow).filter((category) => category.type === 'savings');
 
     const totalSavings = history.reduce((sum, tx) => sum + tx.amount, 0);
 
@@ -42,6 +47,7 @@ export default function SavingsPage() {
         { label: 'বাকি লক্ষ্য', value: formatCurrencyBn(Math.max(0, MONTHLY_TARGET - monthlyPaid)), hint: 'এই মাসে বাকি' },
       ],
       history,
+      categories,
     };
   }, []);
 
@@ -50,13 +56,16 @@ export default function SavingsPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <SavingsTopSection metrics={data.metrics} />
-      <SavingsMiddleSection />
+      <SavingsMiddleSection categories={data.categories} onMutationSuccess={() => void refetch()} />
       <SavingsBottomSection history={data.history} />
     </PageStack>
   );

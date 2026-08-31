@@ -8,6 +8,7 @@ const loansRepository = require('./loans.repository');
 const commentsRepository = require('./comments.repository');
 const reportsRepository = require('./reports.repository');
 const notificationsRepository = require('./notifications.repository');
+const quranRepository = require('./quran.repository');
 
 module.exports = {
   authRepository,
@@ -20,4 +21,5 @@ module.exports = {
   commentsRepository,
   reportsRepository,
   notificationsRepository,
+  quranRepository,
 };

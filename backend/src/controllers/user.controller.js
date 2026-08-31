@@ -9,6 +9,7 @@ const {
   listLoans,
   createLoanRequest,
   listLoanRepayments,
+  createLoanRepayment,
   listExpenses,
   createExpense,
   listCommentThreads,
@@ -19,9 +20,12 @@ const {
   getLoanSummary,
   getProfile,
   updateProfile,
+  completeProfile,
   listMyNotifications,
   markMyNotificationRead,
 } = require('../services/api/user-api.service');
+const { authorizeUserChannel } = require('../services/pusher.service');
+const { saveSubscription, removeSubscription } = require('../services/web-push.service');
 
 function parseBoolean(value) {
   if (value === undefined) return undefined;
@@ -150,6 +154,16 @@ async function loanRepayments(req, res, next) {
   }
 }
 
+async function createUserLoanRepayment(req, res, next) {
+  try {
+    const loanId = parseRequiredId(req.params.loanId, 'loanId');
+    const data = await createLoanRepayment(req.auth.userId, loanId, req.body || {});
+    res.status(201).json({ data });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function expenses(req, res, next) {
   try {
     const rows = await listExpenses(req.auth.userId, {
@@ -256,6 +270,15 @@ async function updateUserProfile(req, res, next) {
   }
 }
 
+async function completeUserProfile(req, res, next) {
+  try {
+    const user = await completeProfile(req.auth.userId, req.body || {});
+    res.json({ user: sanitizeUser(user) });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function notifications(req, res, next) {
   try {
     const rows = await listMyNotifications(req.auth.userId, {
@@ -279,6 +302,37 @@ async function markNotificationRead(req, res, next) {
   }
 }
 
+async function pusherAuth(req, res, next) {
+  try {
+    const auth = authorizeUserChannel({
+      userId: req.auth.userId,
+      socketId: req.body?.socket_id,
+      channelName: req.body?.channel_name,
+    });
+    res.json(auth);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function savePushSubscription(req, res, next) {
+  try {
+    const subscription = await saveSubscription(req.auth.userId, req.body || {});
+    res.status(201).json({ subscription });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function removePushSubscription(req, res, next) {
+  try {
+    await removeSubscription(req.auth.userId, req.body?.endpoint);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   dashboard,
   categories,
@@ -287,6 +341,7 @@ module.exports = {
   loans,
   createUserLoanRequest,
   loanRepayments,
+  createUserLoanRepayment,
   expenses,
   createUserExpense,
   commentThreads,
@@ -297,6 +352,10 @@ module.exports = {
   reportLoans,
   profile,
   updateUserProfile,
+  completeUserProfile,
   notifications,
   markNotificationRead,
+  pusherAuth,
+  savePushSubscription,
+  removePushSubscription,
 };

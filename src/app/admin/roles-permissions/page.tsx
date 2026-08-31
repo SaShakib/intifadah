@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageStack } from '@/components/custom/PageStack';
 import { ApiErrorNotice, ApiLoadingNotice } from '@/components/custom/ApiNotice';
 import { RolesBottomSection, RolesMiddleSection, RolesTopSection } from './_sections';
-import { MODULE_ROWS, ROLE_ROWS } from './_sections/constants';
 import type { RoleSummary } from './_sections/types';
-import { queryKeys, useApiQuery } from '@/lib/api';
+import { queryKeys, toInitials, useApiQuery } from '@/lib/api';
 import { getAccessModules, getAdminMembers, getRolesPermissions } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import type { ApiAccessModuleRow, ApiRolePermissionRow } from '@/lib/api';
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'সুপার অ্যাডমিন',
@@ -19,8 +21,11 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const initialData = {
-  roleRows: ROLE_ROWS,
-  moduleRows: MODULE_ROWS,
+  roleRows: [] as RoleSummary[],
+  moduleRows: [] as string[][],
+  matrix: [] as ApiRolePermissionRow[],
+  modules: [] as ApiAccessModuleRow[],
+  assignableMembers: [] as Array<{ id: string; name: string; mobile: string; initials: string; roleKey: string }>,
 };
 
 function toRoleLevel(permMasks: number[]): RoleSummary['level'] {
@@ -43,6 +48,14 @@ function toRoleLevel(permMasks: number[]): RoleSummary['level'] {
 }
 
 export default function RolesPermissionsPage() {
+  const router = useRouter();
+  const { canManagePermissions, isReady } = useAuth();
+  useEffect(() => {
+    if (isReady && !canManagePermissions) {
+      router.replace('/admin/settings');
+    }
+  }, [canManagePermissions, isReady, router]);
+
   const loadRoles = useCallback(async () => {
     const [matrix, modules, members] = await Promise.all([
       getRolesPermissions(),
@@ -62,6 +75,7 @@ export default function RolesPermissionsPage() {
         : 'কোন মডিউল নেই';
 
       return {
+        roleKey: item.roleKey,
         role: ROLE_LABEL[item.roleKey] ?? item.roleName,
         members: roleCount[item.roleKey] ?? 0,
         modules: modulesText,
@@ -81,6 +95,15 @@ export default function RolesPermissionsPage() {
     return {
       roleRows,
       moduleRows,
+      matrix,
+      modules,
+      assignableMembers: members.map((member) => ({
+        id: String(member.id),
+        name: member.full_name,
+        mobile: member.mobile,
+        initials: toInitials(member.full_name),
+        roleKey: member.role_key,
+      })),
     };
   }, []);
 
@@ -89,13 +112,26 @@ export default function RolesPermissionsPage() {
     staleTimeMs: 90_000,
   });
 
+  if (!isReady || !canManagePermissions) {
+    return <div className="text-sm text-muted">সেটিংসে নিয়ে যাওয়া হচ্ছে...</div>;
+  }
+
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <RolesTopSection roleRows={data.roleRows} />
-      <RolesMiddleSection roleRows={data.roleRows} />
+      <RolesMiddleSection
+        roleRows={data.roleRows}
+        matrix={data.matrix}
+        modules={data.modules}
+        assignableMembers={data.assignableMembers}
+        onMutationSuccess={() => void refetch()}
+      />
       <RolesBottomSection moduleRows={data.moduleRows} />
     </PageStack>
   );

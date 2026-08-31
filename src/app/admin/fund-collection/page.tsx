@@ -11,19 +11,25 @@ import {
 import { FUND_COLLECTION_ROWS, FUND_METRICS, FUND_TYPE_SUMMARY } from './_sections/constants';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
-import { getAdminCollections, mapTransactionRow } from '@/lib/api';
+import { getAdminCategories, getAdminCollections, getAdminMembers, mapCategoryRow, mapTransactionRow, toBanglaDate, toInitials, toMinorNumber, toUserRole } from '@/lib/api';
 
 const initialData = {
-  metrics: FUND_METRICS,
-  rows: FUND_COLLECTION_ROWS,
-  summary: FUND_TYPE_SUMMARY,
+  metrics: [] as typeof FUND_METRICS,
+  rows: [] as typeof FUND_COLLECTION_ROWS,
+  summary: [] as typeof FUND_TYPE_SUMMARY,
+  members: [],
+  categories: [],
 };
 
 const FUND_TYPES = new Set(['collection', 'donation', 'savings']);
 
 export default function FundCollectionPage() {
   const loadCollections = useCallback(async () => {
-    const rows = await getAdminCollections({ limit: 300 });
+    const [rows, memberRows, categoryRows] = await Promise.all([
+      getAdminCollections({ limit: 300 }),
+      getAdminMembers({ limit: 500, active: true }),
+      getAdminCategories({ active: true }),
+    ]);
     const collections = rows
       .map(mapTransactionRow)
       .filter((item) => FUND_TYPES.has(item.type));
@@ -38,6 +44,20 @@ export default function FundCollectionPage() {
         return acc;
       }, {}),
     ).map(([type, amount]) => ({ type, amount }));
+    const members = memberRows.map((row) => ({
+      id: String(row.id),
+      memberId: `INT-${String(row.id).padStart(3, '0')}`,
+      name: row.full_name,
+      phone: row.mobile,
+      ...(row.email ? { email: row.email } : {}),
+      role: toUserRole(row.role_key),
+      initials: toInitials(row.full_name),
+      joinDate: toBanglaDate(row.joined_on),
+      isActive: row.is_active,
+      totalSavings: toMinorNumber(row.total_deposit_minor),
+      totalDonations: 0,
+    }));
+    const categories = categoryRows.map(mapCategoryRow);
 
     return {
       metrics: [
@@ -48,6 +68,8 @@ export default function FundCollectionPage() {
       ],
       rows: collections,
       summary,
+      members,
+      categories,
     };
   }, []);
 
@@ -56,13 +78,16 @@ export default function FundCollectionPage() {
     staleTimeMs: 30_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <FundCollectionTopSection metrics={data.metrics} />
-      <FundCollectionMiddleSection rows={data.rows} />
+      <FundCollectionMiddleSection rows={data.rows} members={data.members} categories={data.categories} onMutationSuccess={() => void refetch()} />
       <FundCollectionBottomSection summary={data.summary} />
     </PageStack>
   );

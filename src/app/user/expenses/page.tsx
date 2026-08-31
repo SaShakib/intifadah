@@ -10,9 +10,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getUserExpenses, mapTransactionRow } from '@/lib/api';
 
 const initialData = {
-  metrics: EXPENSE_METRICS,
-  budgetRows: EXPENSE_BUDGET_ROWS,
-  expenseRows: EXPENSE_ROWS,
+  metrics: [] as typeof EXPENSE_METRICS,
+  budgetRows: [] as typeof EXPENSE_BUDGET_ROWS,
+  expenseRows: [] as typeof EXPENSE_ROWS,
 };
 
 export default function ExpensesPage() {
@@ -57,9 +57,12 @@ export default function ExpensesPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <ExpensesTopSection metrics={data.metrics} />

@@ -23,19 +23,19 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'ইনতিফাদাহ',
     startupImage: [
-      { url: '/icon', media: '(device-width: 390px) and (device-height: 844px)' },
+      { url: '/icons/intifadah.jpeg', media: '(device-width: 390px) and (device-height: 844px)' },
     ],
   },
 
   /* Chrome / Android — icon auto-discovery */
   icons: {
     icon: [
-      { url: '/icon', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/intifadah.jpeg', sizes: '640x640', type: 'image/jpeg' },
     ],
     apple: [
-      { url: '/apple-icon', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/intifadah.jpeg', sizes: '640x640', type: 'image/jpeg' },
     ],
-    shortcut: '/icon',
+    shortcut: '/icons/intifadah.jpeg',
   },
 
   /* Open Graph (nice when sharing) */

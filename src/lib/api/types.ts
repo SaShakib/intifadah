@@ -16,6 +16,9 @@ export interface ApiAuthUser {
   addressLine: string | null;
   wardNo: number | null;
   photoUrl: string | null;
+  authProvider: string;
+  googleSub: string | null;
+  needsProfileCompletion: boolean;
   isActive: boolean;
   joinedOn: string;
   lastLoginAt: string | null;
@@ -78,6 +81,8 @@ export interface ApiAdminMemberRow {
   total_deposit_minor: string | number;
   total_withdraw_minor: string | number;
   total_repaid_minor: string | number;
+  temporary_password?: string;
+  email_send_error?: string;
 }
 
 export interface ApiMemberFinancialSummaryRow {
@@ -230,6 +235,65 @@ export interface ApiNotificationRow {
   created_at: string;
 }
 
+export interface ApiQuranProgressRow {
+  id: string | number;
+  user_id: number;
+  progress_date: string;
+  pages_read: number | null;
+  surah_name: string | null;
+  minutes_read: number | null;
+  note: string | null;
+  is_done: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiQuranWeeklyReportRow {
+  user_id: number;
+  full_name: string;
+  mobile: string;
+  days: Record<string, {
+    done: boolean;
+    pagesRead: number | null;
+    surahName: string | null;
+    minutesRead: number | null;
+    note: string | null;
+  }> | null;
+}
+
+export interface ApiQuranWeeklyReportResponse {
+  fromDate: string;
+  toDate: string;
+  rows: ApiQuranWeeklyReportRow[];
+}
+
+export interface ApiQuranPenaltyRow {
+  id: string | number;
+  run_id: string | number;
+  user_id: number;
+  full_name: string;
+  mobile: string;
+  from_date: string;
+  to_date: string;
+  missed_days: number;
+  penalty_minor: string | number;
+  transaction_id: string | number | null;
+  created_at: string;
+}
+
+export interface ApiQuranPenaltyReportResponse {
+  rows: ApiQuranPenaltyRow[];
+  totalPenaltyMinor: number;
+  totalMissedDays: number;
+}
+
+export interface ApiQuranPenaltyRunResponse {
+  skipped: boolean;
+  fromDate: string;
+  toDate: string;
+  penalties: ApiQuranPenaltyRow[];
+}
+
 export interface LoginInput {
   identifier: string;
   password: string;
@@ -239,18 +303,124 @@ export interface RegisterInput {
   fullName: string;
   mobile: string;
   email?: string;
-  password: string;
+  password?: string;
   userKind?: 1 | 2 | 3;
   gender?: number;
+  addressLine?: string;
+  wardNo?: number;
+  photoUrl?: string;
+}
+
+export interface GoogleLoginInput {
+  idToken: string;
+  fullName?: string;
+  mobile?: string;
+  addressLine?: string;
+  wardNo?: number;
+  photoUrl?: string;
 }
 
 export interface UpdateProfileInput {
   fullName?: string;
+  mobile?: string;
   email?: string;
   gender?: number;
   addressLine?: string;
   wardNo?: number;
   photoUrl?: string;
+}
+
+export interface CompleteProfileInput {
+  fullName: string;
+  mobile: string;
+  addressLine: string;
+  gender?: number;
+  wardNo?: number;
+}
+
+export interface AdminMemberInput {
+  fullName: string;
+  mobile: string;
+  email?: string;
+  password?: string;
+  userKind?: 1 | 2 | 3;
+  roleKey?: BackendRoleKey;
+  organizationId?: number;
+  gender?: number;
+  addressLine?: string;
+  wardNo?: number;
+  photoUrl?: string;
+  isActive?: boolean;
+}
+
+export interface CategoryInput {
+  categoryName: string;
+  categoryType: number;
+  recurrenceType?: number;
+  dueIntervalDays?: number | null;
+  amountFixed?: number | null;
+  isAmountVariable?: boolean;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface CollectionInput {
+  subjectUserId: number;
+  txType?: number;
+  status?: number;
+  categoryId?: number | null;
+  amountMinor: number;
+  occurredOn?: string;
+  note?: string;
+}
+
+export interface LoanInput {
+  borrowerUserId: number;
+  categoryId: number;
+  principalMinor: number;
+  purpose: string;
+  requestedOn?: string;
+  dueOn: string;
+  termDays?: number | null;
+  status?: number;
+}
+
+export interface LoanRepaymentInput {
+  amountMinor: number;
+  paidOn?: string;
+  note?: string;
+}
+
+export interface UserTransactionInput {
+  txType?: number;
+  categoryId?: number | null;
+  amountMinor: number;
+  occurredOn?: string;
+  note?: string;
+}
+
+export interface UserLoanInput {
+  categoryId: number;
+  principalMinor: number;
+  purpose: string;
+  requestedOn?: string;
+  dueOn: string;
+  termDays?: number | null;
+}
+
+export interface UserExpenseInput {
+  categoryId?: number | null;
+  amountMinor: number;
+  occurredOn?: string;
+  note?: string;
+}
+
+export interface QuranProgressInput {
+  progressDate?: string;
+  pagesRead?: number | null;
+  surahName?: string;
+  minutesRead?: number | null;
+  note?: string;
 }
 
 export interface ApiClientOptions {

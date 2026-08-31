@@ -1,5 +1,7 @@
 const { repositories } = require('../../repositories');
 const { TX_TYPE, TX_STATUS } = require('../../config/domain');
+const { hashPassword, randomToken } = require('../../lib/hash');
+const { sendTemporaryPasswordEmail } = require('../mail.service');
 
 const {
   membersRepository,
@@ -8,7 +10,14 @@ const {
   loansRepository,
   commentsRepository,
   reportsRepository,
+  authRepository,
 } = repositories;
+
+const ROLE_BY_KIND = {
+  1: 'member_internal',
+  2: 'general_user',
+  3: 'org_user',
+};
 
 function parseMinorAmount(value) {
   const amount = Number(value);
@@ -53,6 +62,126 @@ async function getMemberDetails(userId) {
 
   const ledger = await membersRepository.getMemberLedger(userId);
   return { member, ledger };
+}
+
+function normalizeEmail(email) {
+  return email ? String(email).trim().toLowerCase() : null;
+}
+
+function generateTemporaryPassword() {
+  return `Int-${randomToken(9)}1a`;
+}
+
+async function resolveRoleId({ userKind, roleKey }) {
+  const nextRoleKey = roleKey || ROLE_BY_KIND[Number(userKind)] || 'general_user';
+  const role = await authRepository.getRoleByKey(nextRoleKey);
+  if (!role) {
+    const error = new Error(`Role not found: ${nextRoleKey}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return role.id;
+}
+
+async function createMember(input) {
+  const fullName = String(input.fullName || '').trim();
+  const mobile = String(input.mobile || '').trim();
+  const providedPassword = String(input.password || '').trim();
+  const password = providedPassword || generateTemporaryPassword();
+  const userKind = Number(input.userKind || 2);
+  const email = normalizeEmail(input.email);
+
+  if (!fullName || !mobile) {
+    const error = new Error('fullName and mobile are required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (![1, 2, 3].includes(userKind)) {
+    const error = new Error('userKind must be 1, 2 or 3');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (password.length < 8) {
+    const error = new Error('password must be at least 8 characters');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingByEmail = email ? await authRepository.getUserByIdentifier(email) : null;
+  const existingByMobile = await authRepository.getUserByIdentifier(mobile);
+  if (existingByEmail || existingByMobile) {
+    const error = new Error('User already exists with email/mobile');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const roleId = await resolveRoleId({ userKind, roleKey: input.roleKey });
+  const created = await authRepository.createUser({
+    userKind,
+    roleId,
+    organizationId: input.organizationId ? Number(input.organizationId) : null,
+    fullName,
+    mobile,
+    email,
+    passwordHash: hashPassword(password),
+    gender: input.gender !== undefined ? Number(input.gender) : 0,
+    addressLine: input.addressLine,
+    wardNo: input.wardNo ? Number(input.wardNo) : null,
+    photoUrl: input.photoUrl,
+  });
+
+  const member = await membersRepository.getMemberById(created.id);
+  let emailSendError;
+  if (email) {
+    try {
+      await sendTemporaryPasswordEmail({
+        to: email,
+        fullName,
+        password,
+      });
+    } catch (error) {
+      emailSendError = error.message;
+    }
+  }
+
+  return {
+    ...member,
+    password_generated: !providedPassword,
+    temporary_password: providedPassword ? undefined : password,
+    email_send_error: emailSendError,
+  };
+}
+
+async function updateMember(userId, input) {
+  const roleId = input.roleKey ? await resolveRoleId({ userKind: input.userKind, roleKey: input.roleKey }) : undefined;
+  await authRepository.updateUserAdmin(userId, {
+    userKind: input.userKind !== undefined ? Number(input.userKind) : undefined,
+    roleId,
+    organizationId: input.organizationId !== undefined ? Number(input.organizationId) || null : undefined,
+    fullName: input.fullName,
+    mobile: input.mobile,
+    email: input.email !== undefined ? normalizeEmail(input.email) : undefined,
+    gender: input.gender !== undefined ? Number(input.gender) : undefined,
+    addressLine: input.addressLine,
+    wardNo: input.wardNo !== undefined ? Number(input.wardNo) : undefined,
+    photoUrl: input.photoUrl,
+    isActive: input.isActive,
+  });
+
+  const member = await membersRepository.getMemberById(userId);
+  if (!member) {
+    const error = new Error('Member not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return member;
+}
+
+async function deactivateMember(userId) {
+  return updateMember(userId, { isActive: false });
 }
 
 async function listCategories(filters) {
@@ -284,6 +413,9 @@ module.exports = {
   getDashboardSummary,
   getMemberFinancialSummary,
   listMembers,
+  createMember,
+  updateMember,
+  deactivateMember,
   getMemberDetails,
   listCategories,
   createCategory,

@@ -60,18 +60,23 @@ export function ReportsMiddleSection({ monthlyRows = MONTHLY_REPORT_ROWS }: Repo
 }
 
 export function ReportsBottomSection({ memberRows = MEMBER_REPORT_ROWS }: ReportsBottomSectionProps) {
-  const rows = memberRows.map((row) => [
-    row.name,
-    formatCurrencyBn(row.savings),
-    formatCurrencyBn(row.donations),
-    formatCurrencyBn(row.activeLoan),
-  ]);
+  const rows = memberRows.map((row) => ({
+    id: row.name,
+    searchText: row.name,
+    sortValues: [row.name, row.savings, row.donations, row.activeLoan],
+    cells: [
+      row.name,
+      <span key={`${row.name}-savings`} className="font-semibold tabular-nums">{formatCurrencyBn(row.savings)}</span>,
+      <span key={`${row.name}-donations`} className="font-semibold tabular-nums">{formatCurrencyBn(row.donations)}</span>,
+      <span key={`${row.name}-activeLoan`} className="font-semibold tabular-nums">{formatCurrencyBn(row.activeLoan)}</span>,
+    ],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="সদস্যভিত্তিক রিপোর্ট" subtitle="সঞ্চয়, দান ও ঋণের সারাংশ" />
-        <DataTable headers={['সদস্য', 'সঞ্চয়', 'দান', 'সক্রিয় ঋণ']} rows={rows} />
+        <DataTable headers={['সদস্য', 'সঞ্চয়', 'দান', 'সক্রিয় ঋণ']} rows={rows} searchPlaceholder="সদস্য খুঁজুন..." />
       </Card>
     </section>
   );

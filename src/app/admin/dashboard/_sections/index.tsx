@@ -32,21 +32,36 @@ export function AdminDashboardTopSection({ metrics = DASHBOARD_METRICS }: AdminD
 }
 
 export function AdminDashboardMiddleSection({ pendingLoans = DASHBOARD_PENDING_LOANS }: AdminDashboardMiddleSectionProps) {
-  const rows = pendingLoans.map((loan) => [
-    loan.borrowerName,
-    loan.purpose,
-    formatCurrencyBn(loan.amount),
-    loan.dueDate,
-    <Badge key={loan.id} variant={loan.status === 'overdue' ? 'danger' : 'warning'}>
-      {loan.status === 'overdue' ? 'ওভারডিউ' : 'অনুমোদন অপেক্ষায়'}
-    </Badge>,
-  ]);
+  const rows = pendingLoans.map((loan) => ({
+    id: loan.id,
+    tabValue: loan.status,
+    searchText: `${loan.borrowerName} ${loan.purpose} ${loan.dueDate}`,
+    sortValues: [loan.borrowerName, loan.purpose, loan.amount, loan.dueDate, loan.status],
+    cells: [
+      loan.borrowerName,
+      loan.purpose,
+      <span key={`${loan.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(loan.amount)}</span>,
+      loan.dueDate,
+      <Badge key={loan.id} variant={loan.status === 'overdue' ? 'danger' : 'warning'}>
+        {loan.status === 'overdue' ? 'ওভারডিউ' : 'অনুমোদন অপেক্ষায়'}
+      </Badge>,
+    ],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="বকেয়া ও অনুমোদন অপেক্ষমান ঋণ" subtitle="যেগুলো এখনই রিভিউ করা দরকার" />
-        <DataTable headers={['সদস্য', 'উদ্দেশ্য', 'পরিমাণ', 'শেষ তারিখ', 'স্ট্যাটাস']} rows={rows} />
+        <DataTable
+          headers={['সদস্য', 'উদ্দেশ্য', 'পরিমাণ', 'শেষ তারিখ', 'স্ট্যাটাস']}
+          rows={rows}
+          tabs={[
+            { value: 'all', label: 'সব' },
+            { value: 'pending_approval', label: 'অপেক্ষমাণ' },
+            { value: 'overdue', label: 'ওভারডিউ', tone: 'danger' },
+          ]}
+          searchPlaceholder="সদস্য বা উদ্দেশ্য..."
+        />
       </Card>
     </section>
   );

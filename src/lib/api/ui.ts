@@ -44,13 +44,29 @@ export function toInitials(fullName: string) {
 
 export function toUserRole(roleKey: BackendRoleKey): UserRole {
   if (roleKey === 'super_admin') return 'super_admin';
-  if (roleKey === 'admin' || roleKey === 'manager' || roleKey === 'member_internal') return 'manager';
+  if (roleKey === 'admin') return 'admin';
+  if (roleKey === 'manager') return 'manager';
+  if (roleKey === 'member_internal') return 'member_internal';
   if (roleKey === 'org_user') return 'org';
   return 'user';
 }
 
 export function isAdminRoleKey(roleKey: BackendRoleKey) {
   return roleKey === 'super_admin' || roleKey === 'admin' || roleKey === 'manager' || roleKey === 'member_internal';
+}
+
+export function canManagePermissions(roleKey: BackendRoleKey | null | undefined) {
+  return roleKey === 'super_admin' || roleKey === 'admin';
+}
+
+export function getRoleLabel(roleKey: BackendRoleKey | null | undefined, userKind?: number | null) {
+  if (roleKey === 'super_admin') return 'সুপার অ্যাডমিন';
+  if (roleKey === 'admin') return 'অ্যাডমিন';
+  if (roleKey === 'manager') return 'ম্যানেজার';
+  if (roleKey === 'member_internal') return 'ইনতিফাদাহ সদস্য';
+  if (roleKey === 'org_user' || userKind === 3) return 'সংগঠন সদস্য';
+  if (userKind === 1) return 'ইনতিফাদাহ সদস্য';
+  return 'সাধারণ সদস্য';
 }
 
 export function mapAuthUserToMember(user: ApiAuthUser): Member {

@@ -43,13 +43,30 @@ export function ExpensesMiddleSection({ budgetRows = EXPENSE_BUDGET_ROWS }: Expe
 }
 
 export function ExpensesBottomSection({ rows: expenseRows = EXPENSE_ROWS }: ExpensesBottomSectionProps) {
-  const rows = expenseRows.map((row) => [row.date, row.category, formatCurrencyBn(row.amount), row.note]);
+  const rows = expenseRows.map((row) => ({
+    id: `${row.date}-${row.category}-${row.amount}`,
+    filterValues: { category: row.category },
+    searchText: `${row.date} ${row.category} ${row.note}`,
+    sortValues: [row.date, row.category, row.amount, row.note],
+    cells: [row.date, row.category, <span key={`${row.date}-${row.category}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(row.amount)}</span>, row.note],
+  }));
 
   return (
     <section>
       <Card>
         <SectionHeader title="সাম্প্রতিক খরচ" subtitle="সর্বশেষ ব্যয় এন্ট্রি" />
-        <DataTable headers={['তারিখ', 'খাত', 'পরিমাণ', 'নোট']} rows={rows} />
+        <DataTable
+          headers={['তারিখ', 'খাত', 'পরিমাণ', 'নোট']}
+          rows={rows}
+          filters={[
+            {
+              id: 'category',
+              label: 'সব খাত',
+              options: Array.from(new Set(expenseRows.map((row) => row.category))).map((category) => ({ value: category, label: category })),
+            },
+          ]}
+          searchPlaceholder="খাত, নোট বা তারিখ..."
+        />
       </Card>
     </section>
   );

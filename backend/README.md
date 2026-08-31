@@ -1,4 +1,4 @@
-# Intifadah Backend (Express + PostgreSQL on Aiven)
+# Intifadah Backend (Express + PostgreSQL on Neon)
 
 Storage-optimized, memory-conscious backend for Vercel free deployment.
 
@@ -10,6 +10,7 @@ Storage-optimized, memory-conscious backend for Vercel free deployment.
   - partial/targeted indexes for common filters
   - permission bitmask (`read/write/update/delete`)
 - JWT access token + rotating refresh token auth
+- Email OTP password reset via Resend
 - Role-based + module-permission-based access control
 - Super admin / admin auto-assignment by email from `.env`
 - Request interceptor middleware (request ID + slow request logs)
@@ -39,10 +40,38 @@ If email matches env list, role is assigned automatically on login/registration.
 cd backend
 npm install
 cp .env.example .env
-# update JWT secrets before production
+# set the full Neon connection string, including password, and update JWT secrets
 npm run db:migrate
 npm run dev
 ```
+
+Demo seed accounts created by `002_seed_demo_data.sql`:
+
+- Admin: `superadmin@intifadah.org` / `Passw0rd!123`
+- User: `01700000002` / `Passw0rd!123`
+- Internal type-1 member: `01700000003` / `Passw0rd!123`
+
+Email settings:
+
+- `RESEND_API_KEY`
+- `MAIL_FROM=Intifadah <noreply@mail.intifadah.org>`
+- `PASSWORD_RESET_OTP_TTL_MINUTES=10`
+
+Google sign-in:
+
+- Backend: `GOOGLE_CLIENT_ID`
+- Frontend: `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+
+Realtime notifications:
+
+- Backend: `PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`
+- Frontend: `NEXT_PUBLIC_PUSHER_KEY`, `NEXT_PUBLIC_PUSHER_CLUSTER`
+
+Quran tracking scheduler:
+
+- Daily reminder: every day at 9:00 PM in `QURAN_CRON_TIMEZONE`
+- Weekly penalty: every Friday at 12:10 AM, for the previous seven days excluding the current Friday
+- Penalty amount: `QURAN_PENALTY_PER_MISSED_DAY_MINOR=5`
 
 ## Endpoints
 
@@ -54,18 +83,25 @@ npm run dev
 ### Auth
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/google`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
 - `GET /auth/me`
 
 ### Admin (protected)
 - `GET /admin/dashboard/summary`
 - `GET /admin/members`
+- `POST /admin/members`
 - `GET /admin/members/:userId`
+- `PATCH /admin/members/:userId`
+- `DELETE /admin/members/:userId`
 - `GET /admin/members/financial-summary`
 - `GET /admin/categories`
 - `POST /admin/categories`
 - `PATCH /admin/categories/:categoryId`
+- `DELETE /admin/categories/:categoryId`
 - `GET /admin/collections`
 - `POST /admin/collections`
 - `GET /admin/loans`
@@ -83,12 +119,15 @@ npm run dev
 - `GET /admin/reports/period-collections`
 - `GET /admin/reports/members/financial-summary`
 - `GET /admin/reports/categories/due-summary`
-- `GET /admin/roles-permissions` (super admin only)
-- `GET /admin/access-control/modules` (super admin only)
-- `GET /admin/access-control/roles` (super admin only)
-- `GET /admin/access-control/matrix` (super admin only)
-- `PUT /admin/access-control/roles/:roleKey/permissions` (super admin only)
-- `PATCH /admin/access-control/users/:userId/role` (super admin only)
+- `GET /admin/quran/weekly-report`
+- `GET /admin/quran/penalties`
+- `POST /admin/quran/run-penalties`
+- `GET /admin/roles-permissions` (admin/super admin only)
+- `GET /admin/access-control/modules` (admin/super admin only)
+- `GET /admin/access-control/roles` (admin/super admin only)
+- `GET /admin/access-control/matrix` (admin/super admin only)
+- `PUT /admin/access-control/roles/:roleKey/permissions` (admin/super admin only)
+- `PATCH /admin/access-control/users/:userId/role` (admin/super admin only)
 
 ### User (protected)
 - `GET /user/dashboard/summary`
@@ -98,6 +137,7 @@ npm run dev
 - `GET /user/loans`
 - `POST /user/loans`
 - `GET /user/loans/:loanId/repayments`
+- `POST /user/loans/:loanId/repayments`
 - `GET /user/expenses`
 - `POST /user/expenses`
 - `GET /user/comments/threads`
@@ -110,6 +150,9 @@ npm run dev
 - `PATCH /user/profile`
 - `GET /user/notifications`
 - `PATCH /user/notifications/:notificationId/read`
+- `POST /user/pusher/auth`
+- `GET /user/quran/progress`
+- `POST /user/quran/progress`
 
 ## Authentication Flow
 
@@ -157,6 +200,10 @@ Routes/controllers/services stay unchanged when switching providers.
 - `notifications`
 - `audit_logs`
 - `auth_refresh_tokens`
+- `password_reset_otps`
+- `quran_progress`
+- `quran_penalty_runs`
+- `quran_penalties`
 
 View:
 - `v_member_financial_summary`

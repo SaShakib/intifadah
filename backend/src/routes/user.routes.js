@@ -1,9 +1,16 @@
 const express = require('express');
-const { requireAuth, requirePermission } = require('../middleware/auth');
+const { requireAuth, requireCompletedProfile, requirePermission } = require('../middleware/auth');
 const userController = require('../controllers/user.controller');
+const quranController = require('../controllers/quran.controller');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use((req, res, next) => {
+  if (req.path === '/profile' || req.path === '/profile/complete') {
+    return next();
+  }
+  return requireCompletedProfile(req, res, next);
+});
 
 router.get('/dashboard/summary', requirePermission('dashboard', 'read'), userController.dashboard);
 
@@ -15,6 +22,7 @@ router.post('/transactions', requirePermission('collections', 'write'), userCont
 router.get('/loans', requirePermission('loans', 'read'), userController.loans);
 router.post('/loans', requirePermission('loans', 'write'), userController.createUserLoanRequest);
 router.get('/loans/:loanId/repayments', requirePermission('repayments', 'read'), userController.loanRepayments);
+router.post('/loans/:loanId/repayments', requirePermission('repayments', 'write'), userController.createUserLoanRepayment);
 
 router.get('/expenses', requirePermission('expenses', 'read'), userController.expenses);
 router.post('/expenses', requirePermission('expenses', 'write'), userController.createUserExpense);
@@ -29,8 +37,16 @@ router.get('/reports/loans', requirePermission('loans', 'read'), userController.
 
 router.get('/profile', userController.profile);
 router.patch('/profile', userController.updateUserProfile);
+router.post('/profile/complete', userController.completeUserProfile);
 router.get('/notifications', userController.notifications);
 router.patch('/notifications/:notificationId/read', userController.markNotificationRead);
+router.post('/pusher/auth', userController.pusherAuth);
+router.post('/push-subscriptions', userController.savePushSubscription);
+router.delete('/push-subscriptions', userController.removePushSubscription);
+
+router.get('/quran/progress', requirePermission('quran', 'read'), quranController.myProgress);
+router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);
+router.patch('/quran/progress/:progressId', requirePermission('quran', 'write'), quranController.updateProgress);
 
 module.exports = {
   userRouter: router,

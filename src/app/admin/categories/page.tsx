@@ -10,9 +10,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getAdminCategories, getAdminCollections, mapCategoryRow, mapTransactionRow } from '@/lib/api';
 
 const initialData = {
-  metrics: CATEGORY_METRICS,
-  categories: CATEGORY_ROWS,
-  summary: CATEGORY_TYPE_SUMMARY,
+  metrics: [] as typeof CATEGORY_METRICS,
+  categories: [] as typeof CATEGORY_ROWS,
+  summary: [] as typeof CATEGORY_TYPE_SUMMARY,
 };
 
 export default function CategoriesPage() {
@@ -51,13 +51,16 @@ export default function CategoriesPage() {
     staleTimeMs: 120_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <CategoriesTopSection metrics={data.metrics} />
-      <CategoriesMiddleSection categories={data.categories} />
+      <CategoriesMiddleSection categories={data.categories} onMutationSuccess={() => void refetch()} />
       <CategoriesBottomSection summary={data.summary} />
     </PageStack>
   );

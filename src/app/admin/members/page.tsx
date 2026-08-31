@@ -9,9 +9,9 @@ import { queryKeys, useApiQuery } from '@/lib/api';
 import { getAdminMembers, toBanglaDate, toInitials, toMinorNumber, toUserRole } from '@/lib/api';
 
 const initialData = {
-  metrics: MEMBER_METRICS,
-  members: MEMBER_TABLE_ROWS,
-  recentMembers: RECENT_MEMBER_ROWS,
+  metrics: [] as typeof MEMBER_METRICS,
+  members: [] as typeof MEMBER_TABLE_ROWS,
+  recentMembers: [] as typeof RECENT_MEMBER_ROWS,
 };
 
 export default function MembersPage() {
@@ -57,13 +57,16 @@ export default function MembersPage() {
     staleTimeMs: 120_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <MembersTopSection metrics={data.metrics} />
-      <MembersMiddleSection members={data.members} />
+      <MembersMiddleSection members={data.members} onMutationSuccess={() => void refetch()} />
       <MembersBottomSection recentMembers={data.recentMembers} />
     </PageStack>
   );

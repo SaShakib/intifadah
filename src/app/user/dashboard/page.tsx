@@ -17,31 +17,36 @@ import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
 import {
   getUserDashboardSummary,
+  getUserCategories,
   getUserLoans,
   getUserTransactions,
+  mapCategoryRow,
   mapLoanRow,
   mapTransactionRow,
   toBanglaDate,
 } from '@/lib/api';
 
 const initialData = {
-  metrics: USER_DASHBOARD_METRICS,
-  alerts: USER_DASHBOARD_ALERTS,
-  transactions: USER_DASHBOARD_TRANSACTIONS,
+  metrics: [] as typeof USER_DASHBOARD_METRICS,
+  alerts: [] as typeof USER_DASHBOARD_ALERTS,
+  transactions: [] as typeof USER_DASHBOARD_TRANSACTIONS,
+  categories: [],
 };
 
 const MONTHLY_TARGET = 2000;
 
 export default function UserDashboardPage() {
   const loadDashboard = useCallback(async () => {
-    const [summary, transactionsRows, loanRows] = await Promise.all([
+    const [summary, transactionsRows, loanRows, categoryRows] = await Promise.all([
       getUserDashboardSummary(),
       getUserTransactions({ limit: 8 }),
       getUserLoans(),
+      getUserCategories({ active: true }),
     ]);
 
     const transactions = transactionsRows.map(mapTransactionRow);
     const loans = loanRows.map(mapLoanRow);
+    const categories = categoryRows.map(mapCategoryRow);
 
     const totalSavings = transactions
       .filter((item) => item.type === 'savings')
@@ -80,6 +85,7 @@ export default function UserDashboardPage() {
       ],
       alerts,
       transactions: transactions.slice(0, 6).map((tx) => ({ ...tx, date: tx.date || toBanglaDate(null) })),
+      categories,
     };
   }, []);
 
@@ -88,13 +94,16 @@ export default function UserDashboardPage() {
     staleTimeMs: 45_000,
   });
 
+  if (loading) {
+    return <PageStack><ApiLoadingNotice /></PageStack>;
+  }
+
   return (
     <PageStack>
-      {loading && <ApiLoadingNotice />}
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <UserDashboardTopSection metrics={data.metrics} />
-      <UserDashboardMiddleSection alerts={data.alerts} />
+      <UserDashboardMiddleSection alerts={data.alerts} categories={data.categories} onMutationSuccess={() => void refetch()} />
       <UserDashboardBottomSection transactions={data.transactions} />
     </PageStack>
   );
