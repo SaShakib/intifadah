@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/base/Button';
 
@@ -127,7 +128,14 @@ export function PWAInstallPrompt() {
         </button>
 
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-2xl font-bold text-white">ই</div>
+          <Image
+            src="/icons/intifadah.jpeg"
+            alt="ইনতিফাদাহ"
+            width={96}
+            height={96}
+            className="h-12 w-12 rounded-xl border border-white/15 object-cover"
+            priority
+          />
           <div>
             <p className="text-base font-bold">ইনতিফাদাহ</p>
             <p className="text-xs text-white/60">কর্যে হাসানাঃ</p>
