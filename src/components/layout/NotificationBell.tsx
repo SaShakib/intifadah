@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { getErrorMessage, getUserNotifications, markNotificationRead, toBanglaDate } from '@/lib/api';
 import { cn } from '@/lib/utils/cn';
@@ -31,7 +32,18 @@ function notificationMessage(row: ApiNotificationRow) {
   return row.created_at ? toBanglaDate(row.created_at) : '';
 }
 
+function notificationUrl(row: ApiNotificationRow) {
+  const payload = row.payload_json ?? {};
+  if (typeof payload.url === 'string' && payload.url.startsWith('/')) return payload.url;
+  if (payload.event === 'quran_daily_reminder' || payload.event === 'quran_weekly_penalty_assigned') return '/user/quran';
+  if (payload.event === 'quran_weekly_penalty_run') return '/admin/quran';
+  if (payload.event === 'loan_request_created') return '/admin/loans';
+  if (payload.event === 'user_transaction_created') return '/admin/fund-collection';
+  return null;
+}
+
 export function NotificationBell({ defaultCount = 0 }: { defaultCount?: number }) {
+  const router = useRouter();
   const liveCount = useNotificationCount(defaultCount);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ApiNotificationRow[]>([]);
@@ -70,6 +82,20 @@ export function NotificationBell({ defaultCount = 0 }: { defaultCount?: number }
     setRows((current) => current.map((item) => item.id === row.id ? { ...item, is_read: true } : item));
   };
 
+  const openNotification = async (row: ApiNotificationRow) => {
+    try {
+      await markRead(row);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      const url = notificationUrl(row);
+      if (url) {
+        setOpen(false);
+        router.push(url);
+      }
+    }
+  };
+
   return (
     <div className="relative">
       <button
@@ -97,7 +123,7 @@ export function NotificationBell({ defaultCount = 0 }: { defaultCount?: number }
               <button
                 key={row.id}
                 type="button"
-                onClick={() => void markRead(row)}
+                onClick={() => void openNotification(row)}
                 className={cn(
                   'block w-full border-b border-border px-4 py-3 text-left last:border-b-0 hover:bg-surface-2',
                   !row.is_read && 'bg-brand-light/40',

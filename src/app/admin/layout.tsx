@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminTopBar } from '@/components/layout/AdminTopBar';
+import { BackgroundNotificationsPrompt } from '@/components/layout/BackgroundNotificationsPrompt';
 import { ADMIN_PAGE_TITLES } from '@/components/layout/config/pageTitles';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -45,6 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AdminTopBar title={title} onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
         <main className="p-3 pb-6 md:p-6">{children}</main>
       </div>
+      <BackgroundNotificationsPrompt />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UserSidebar } from '@/components/layout/UserSidebar';
 import { UserTopBar } from '@/components/layout/UserTopBar';
 import { UserBottomNav } from '@/components/layout/UserBottomNav';
+import { BackgroundNotificationsPrompt } from '@/components/layout/BackgroundNotificationsPrompt';
 import { USER_PAGE_TITLES } from '@/components/layout/config/pageTitles';
 import { useAuth } from '@/contexts/AuthContext';
 import { getOrFetchCached, getUserQuranProgress, queryKeys } from '@/lib/api';
@@ -60,6 +61,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         <main className="p-3 md:p-6">{children}</main>
       </div>
       <UserBottomNav />
+      <BackgroundNotificationsPrompt />
     </div>
   );
 }

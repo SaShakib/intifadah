@@ -56,13 +56,18 @@ export function useBackgroundNotifications() {
     if (!browserSupported() || !vapidPublicKey || Notification.permission !== 'granted') return;
 
     const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-    if (subscription) {
-      await apiRequest('/user/push-subscriptions', {
-        method: 'POST',
-        body: JSON.stringify(toPayload(subscription)),
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
     }
+
+    await apiRequest('/user/push-subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(toPayload(subscription)),
+    });
   }, [vapidPublicKey]);
 
   useEffect(() => {
@@ -71,14 +76,14 @@ export function useBackgroundNotifications() {
     });
   }, [syncExistingSubscription]);
 
-  const enable = useCallback(async () => {
+  const enable = useCallback(async (): Promise<boolean> => {
     if (!browserSupported()) {
       setStatus('unsupported');
-      return;
+      return false;
     }
     if (!vapidPublicKey) {
       setStatus('unconfigured');
-      return;
+      return false;
     }
 
     setBusy(true);
@@ -87,7 +92,7 @@ export function useBackgroundNotifications() {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         setStatus(permission === 'denied' ? 'blocked' : 'default');
-        return;
+        return false;
       }
 
       const registration = await navigator.serviceWorker.ready;
@@ -104,9 +109,11 @@ export function useBackgroundNotifications() {
         body: JSON.stringify(toPayload(subscription)),
       });
       setStatus('enabled');
+      return true;
     } catch {
       setStatus('error');
       setError('ব্যাকগ্রাউন্ড বিজ্ঞপ্তি চালু করা যায়নি।');
+      return false;
     } finally {
       setBusy(false);
     }
