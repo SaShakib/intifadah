@@ -2,7 +2,9 @@ const { env } = require('../config/env');
 
 async function sendEmail({ to, subject, html, text }) {
   if (!env.resendApiKey) {
-    return { skipped: true, reason: 'RESEND_API_KEY is not configured' };
+    const error = new Error('Email delivery is not configured');
+    error.statusCode = 503;
+    throw error;
   }
 
   const response = await fetch('https://api.resend.com/emails', {

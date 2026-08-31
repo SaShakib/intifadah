@@ -152,6 +152,10 @@ async function createUser(payload) {
   return res.rows[0];
 }
 
+async function deleteUserById(userId) {
+  await query('DELETE FROM app_users WHERE id = $1', [userId]);
+}
+
 async function updateUserRole(userId, roleId) {
   await query('UPDATE app_users SET role_id = $2, updated_at = NOW() WHERE id = $1', [userId, roleId]);
 }
@@ -354,6 +358,7 @@ module.exports = {
   getUserByGoogleSub,
   getUserById,
   createUser,
+  deleteUserById,
   updateUserRole,
   updateUserLastLogin,
   updateUserPassword,

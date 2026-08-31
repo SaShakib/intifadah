@@ -210,6 +210,12 @@ async function registerUser(input, req) {
       }
     } catch (error) {
       console.error(`Could not send account email to ${email}:`, error.message);
+      if (!providedPassword) {
+        await authRepository.deleteUserById(inserted.id);
+        const deliveryError = new Error('Could not send your temporary password email. Please try again.');
+        deliveryError.statusCode = 503;
+        throw deliveryError;
+      }
     }
   }
   const tokens = await issueTokenPair(createdUser, getContextFromRequest(req));
