@@ -19,8 +19,8 @@ interface UserSidebarProps {
 export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, roleKey, userKind, logout } = useAuth();
-  const navItems = USER_NAV_ITEMS.filter((item) => item.href !== '/user/quran' || userKind === 1);
+  const { user, roleKey, logout } = useAuth();
+  const navItems = USER_NAV_ITEMS;
   const sections = [...new Set(navItems.map((item) => item.section))];
 
   const handleLogout = async () => {

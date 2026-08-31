@@ -44,9 +44,9 @@ router.post('/pusher/auth', userController.pusherAuth);
 router.post('/push-subscriptions', userController.savePushSubscription);
 router.delete('/push-subscriptions', userController.removePushSubscription);
 
-router.get('/quran/progress', requireUserKind(1), requirePermission('quran', 'read'), quranController.myProgress);
-router.post('/quran/progress', requireUserKind(1), requirePermission('quran', 'write'), quranController.createProgress);
-router.patch('/quran/progress/:progressId', requireUserKind(1), requirePermission('quran', 'write'), quranController.updateProgress);
+router.get('/quran/progress', requirePermission('quran', 'read'), quranController.myProgress);
+router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);
+router.patch('/quran/progress/:progressId', requirePermission('quran', 'write'), quranController.updateProgress);
 router.get('/quran/weekly-completion', requireUserKind(1), requirePermission('quran', 'read'), quranController.internalWeeklyCompletion);
 
 module.exports = {

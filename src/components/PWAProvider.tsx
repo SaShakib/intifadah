@@ -156,10 +156,9 @@ export function PWAInstallPrompt() {
           </>
         ) : (
           <>
-            <p className="mb-3 text-sm text-white/80">ইনতিফাদাহ ইনস্টল করলে দ্রুত লোড, অফলাইন সাপোর্ট এবং নেটিভ অভিজ্ঞতা পাবেন।</p>
+            <p className="mb-3 text-sm text-white/80">ইনতিফাদাহ ইনস্টল করলে দ্রুত লোড এবং নেটিভ অভিজ্ঞতা পাবেন।</p>
             <div className="mb-4 flex flex-wrap gap-2 text-[11px]">
               <span className="rounded-full border border-white/15 bg-white/10 px-2 py-1">⚡ দ্রুত</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2 py-1">📴 অফলাইন</span>
               <span className="rounded-full border border-white/15 bg-white/10 px-2 py-1">🔔 নোটিফিকেশন</span>
             </div>
             <div className="flex gap-2">

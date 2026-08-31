@@ -14,7 +14,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { isReady, isAuthenticated, needsProfileCompletion, userKind } = useAuth();
+  const { isReady, isAuthenticated, needsProfileCompletion } = useAuth();
   const pageInfo = USER_PAGE_TITLES[pathname] ?? { title: 'ইনতিফাদাহ' };
 
   useEffect(() => {
@@ -26,13 +26,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       router.replace('/login');
     } else if (needsProfileCompletion) {
       router.replace('/onboarding');
-    } else if (pathname === '/user/quran' && userKind !== 1) {
-      router.replace('/user/dashboard');
     }
-  }, [isReady, isAuthenticated, needsProfileCompletion, pathname, router, userKind]);
+  }, [isReady, isAuthenticated, needsProfileCompletion, router]);
 
   useEffect(() => {
-    if (!isReady || !isAuthenticated || needsProfileCompletion || userKind !== 1) {
+    if (!isReady || !isAuthenticated || needsProfileCompletion) {
       return;
     }
 
@@ -45,9 +43,9 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     ).catch(() => {
       // Quran data can load normally if the warm-up request is unavailable.
     });
-  }, [isReady, isAuthenticated, needsProfileCompletion, router, userKind]);
+  }, [isReady, isAuthenticated, needsProfileCompletion, router]);
 
-  if (!isReady || !isAuthenticated || needsProfileCompletion || (pathname === '/user/quran' && userKind !== 1)) {
+  if (!isReady || !isAuthenticated || needsProfileCompletion) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-muted">লোড হচ্ছে...</div>;
   }
 

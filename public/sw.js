@@ -1,76 +1,26 @@
 /**
  * Intifadah Service Worker
  * Implements:
- *  - Precaching of app shell routes on install
- *  - Cache-first for static assets (JS, CSS, fonts, images)
- *  - Network-first with offline fallback for HTML pages
- *  - Network-only for application routes and data
+ *  - Leaves all application fetches to the browser and Next.js
+ *  - Receives push notifications while the app is closed
  */
 
-const CACHE_VERSION = 'v5';
-const SHELL_CACHE  = `intifadah-shell-${CACHE_VERSION}`;
-const ASSET_CACHE  = `intifadah-assets-${CACHE_VERSION}`;
-
-/* Routes to precache on install */
-const SHELL_URLS = [
-  '/offline.html',
-];
+const CACHE_VERSION = 'v6';
 
 /* ── Install ──────────────────────────────────────────────── */
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(SHELL_CACHE)
-      .then(cache => cache.addAll(SHELL_URLS).catch(() => {}))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
-/* ── Activate — clear stale caches ───────────────────────── */
+/* ── Activate — clear legacy caches before claiming clients ─ */
 self.addEventListener('activate', event => {
-  const validCaches = [SHELL_CACHE, ASSET_CACHE];
   event.waitUntil(
     caches.keys()
       .then(names => Promise.all(
-        names.filter(n => !validCaches.includes(n)).map(n => caches.delete(n))
+        names.filter(name => name.startsWith('intifadah-') && !name.endsWith(CACHE_VERSION)).map(name => caches.delete(name))
       ))
       .then(() => self.clients.claim())
   );
-});
-
-/* ── Fetch strategy ───────────────────────────────────────── */
-self.addEventListener('fetch', event => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  /* Skip non-GET, cross-origin, and Next.js internals */
-  if (request.method !== 'GET') return;
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/_next/webpack-hmr')) return;
-
-  /* React Server Component payloads must never be cached across deployments. */
-  if (
-    request.headers.has('RSC') ||
-    request.headers.has('Next-Router-State-Tree') ||
-    url.searchParams.has('_rsc')
-  ) return;
-
-  /* Only immutable Next static assets are cacheable. */
-  if (url.pathname.startsWith('/_next/') && !url.pathname.startsWith('/_next/static/')) return;
-
-  /* Static assets: JS, CSS, fonts, images → cache-first */
-  if (
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.startsWith('/icons/') ||
-    /\.(woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/.test(url.pathname)
-  ) {
-    event.respondWith(cacheFirst(request, ASSET_CACHE));
-    return;
-  }
-
-  /* App navigations are always network-first to keep route payloads in sync. */
-  if (request.mode === 'navigate' || request.destination === 'document' || request.headers.get('Accept')?.includes('text/html')) {
-    event.respondWith(networkFirstWithFallback(request));
-  }
 });
 
 /* ── Web Push: works while the installed app is closed ───── */
@@ -105,31 +55,3 @@ self.addEventListener('notificationclick', event => {
     return self.clients.openWindow(targetUrl);
   })());
 });
-
-/* ── Strategies ───────────────────────────────────────────── */
-async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return new Response('Offline', { status: 503 });
-  }
-}
-
-async function networkFirstWithFallback(request) {
-  try {
-    return await fetch(request);
-  } catch {
-    const offlinePage = await caches.match('/offline.html');
-    return offlinePage || new Response(
-      '<h1>অফলাইন</h1><p>ইন্টারনেট সংযোগ নেই</p>',
-      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-    );
-  }
-}

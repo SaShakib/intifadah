@@ -22,8 +22,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const { user, roleKey, canManagePermissions, logout } = useAuth();
   const navItems = ADMIN_NAV_ITEMS.filter((item) => {
     if (item.permissionOnly && !canManagePermissions) return false;
-    return item.href !== '/admin/quran' || canManagePermissions;
-  });
+    return true;
+  }).map((item) => (
+    item.href === '/admin/quran' && !canManagePermissions
+      ? { ...item, href: '/user/quran', label: 'আমার Quran' }
+      : item
+  ));
   const sections = [...new Set(navItems.map((item) => item.section))];
 
   const handleLogout = async () => {
