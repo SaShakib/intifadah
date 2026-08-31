@@ -145,13 +145,6 @@ export default function UserQuranPage() {
     <PageStack>
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
-      <section>
-        <SectionHeader title="Quran অগ্রগতি" subtitle="প্রতিদিনের পড়া একবারে রেকর্ড করুন" />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
-        </div>
-      </section>
-
       <Card className="border-brand/20 bg-brand-light/25">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -177,6 +170,13 @@ export default function UserQuranPage() {
           </div>
         </div>
       </Card>
+
+      <section>
+        <SectionHeader title="Quran অগ্রগতি" subtitle="প্রতিদিনের পড়া একবারে রেকর্ড করুন" />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+        </div>
+      </section>
 
       <section>
         <Card>

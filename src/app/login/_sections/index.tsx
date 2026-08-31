@@ -26,7 +26,7 @@ interface LoginMiddleSectionProps {
 
 export function LoginTopSection({ loading }: LoginTopSectionProps) {
   return (
-    <section className="relative flex min-h-[180px] flex-col justify-center overflow-hidden bg-[linear-gradient(160deg,oklch(10%_0.01_55)_0%,oklch(16%_0.04_354)_55%,oklch(28%_0.14_354)_100%)] p-7 text-white md:min-h-screen md:p-12">
+    <section className="order-2 relative flex min-h-[180px] flex-col justify-center overflow-hidden bg-[linear-gradient(160deg,oklch(10%_0.01_55)_0%,oklch(16%_0.04_354)_55%,oklch(28%_0.14_354)_100%)] p-7 text-white md:order-1 md:min-h-screen md:p-12">
       <div className="relative z-10">
         <Image src="/icons/intifadah.jpeg" alt="ইনতিফাদাহ" width={52} height={52} className="mb-5 h-[52px] w-[52px] rounded-[14px] border border-accent/50 object-cover" priority />
         <div>

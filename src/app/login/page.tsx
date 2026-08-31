@@ -215,7 +215,7 @@ export default function LoginPage() {
       {googleClientId && <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onLoad={initializeGoogle} />}
       <LoginTopSection loading={loading} />
 
-      <div className="flex flex-col justify-center gap-6 p-4 md:p-8">
+      <div className="order-1 flex flex-col justify-center gap-6 p-4 md:order-2 md:p-8">
         <LoginMiddleSection
           showPassword={showPassword}
           identifier={identifier}
