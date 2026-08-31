@@ -11,9 +11,11 @@ import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { ApiErrorNotice, ApiLoadingNotice } from '@/components/custom/ApiNotice';
 import { PageStack } from '@/components/custom/PageStack';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   createUserQuranProgress,
   getErrorMessage,
+  getInternalQuranWeeklyCompletion,
   getUserQuranProgress,
   queryKeys,
   toBanglaDate,
@@ -25,6 +27,12 @@ import type { QuranProgressInput } from '@/lib/api';
 const today = () => new Date().toISOString().slice(0, 10);
 const thirtyDaysAgo = () => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
+function addDays(dateText: string, days: number) {
+  const date = new Date(`${dateText}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 const DEFAULT_FORM: QuranProgressInput = {
   progressDate: today(),
   pagesRead: null,
@@ -34,6 +42,8 @@ const DEFAULT_FORM: QuranProgressInput = {
 };
 
 export default function UserQuranPage() {
+  const { userKind } = useAuth();
+  const isIntifadahMember = userKind === 1;
   const [form, setForm] = useState<QuranProgressInput>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -46,6 +56,18 @@ export default function UserQuranPage() {
   const { data, loading, error, refetch } = useApiQuery(loadProgress, { rows: [] }, [], {
     cacheKey: queryKeys.user.quranProgress({ scope: '30d' }),
     staleTimeMs: 5 * 60_000,
+  });
+
+  const loadWeeklyCompletion = useCallback(() => getInternalQuranWeeklyCompletion(), []);
+  const {
+    data: weeklyCompletion,
+    loading: weeklyLoading,
+    error: weeklyError,
+    refetch: refetchWeeklyCompletion,
+  } = useApiQuery(loadWeeklyCompletion, { fromDate: '', toDate: '', rows: [] }, [], {
+    cacheKey: queryKeys.user.quranWeeklyCompletion(),
+    staleTimeMs: 60_000,
+    enabled: isIntifadahMember,
   });
 
   const selectedDate = form.progressDate || today();
@@ -110,6 +132,9 @@ export default function UserQuranPage() {
         showToast(selectedDate === today() ? 'আজকের Quran পড়া রেকর্ড করা হয়েছে।' : 'Quran পড়ার রেকর্ড সংরক্ষণ হয়েছে।');
       }
       await refetch();
+      if (isIntifadahMember) {
+        await refetchWeeklyCompletion();
+      }
     } catch (err) {
       showToast(getErrorMessage(err));
     } finally {
@@ -140,6 +165,26 @@ export default function UserQuranPage() {
       { label: 'মোট সময়', value: `${minutes} মিনিট`, hint: 'দেওয়া তথ্য থেকে' },
     ];
   }, [data.rows, todayDone]);
+
+  const weeklyDays = useMemo(
+    () => weeklyCompletion.fromDate ? Array.from({ length: 7 }, (_, index) => addDays(weeklyCompletion.fromDate, index)) : [],
+    [weeklyCompletion.fromDate],
+  );
+
+  const weeklyRows = weeklyCompletion.rows.map((row) => ({
+    id: String(row.user_id),
+    searchText: row.full_name,
+    sortValues: [row.full_name, ...weeklyDays.map((date) => row.days?.[date]?.done ? 1 : 0)],
+    cells: [
+      <p key={`${row.user_id}-name`} className="font-bold text-fg">{row.full_name}</p>,
+      ...weeklyDays.map((date) => (
+        <span key={`${row.user_id}-${date}`} className={row.days?.[date]?.done ? 'font-bold text-success' : 'text-muted'}>
+          {row.days?.[date]?.done ? 'Done' : '-'}
+        </span>
+      )),
+      `${weeklyDays.filter((date) => row.days?.[date]?.done).length}/7`,
+    ],
+  }));
 
   return (
     <PageStack>
@@ -177,6 +222,26 @@ export default function UserQuranPage() {
           {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
         </div>
       </section>
+
+      {isIntifadahMember && (
+        <section>
+          {weeklyError && <ApiErrorNotice message={weeklyError} onRetry={() => void refetchWeeklyCompletion()} />}
+          <Card>
+            <SectionHeader
+              title="ইনতিফাদাহ সদস্যদের সাপ্তাহিক Done"
+              subtitle={weeklyCompletion.fromDate ? `${toBanglaDate(weeklyCompletion.fromDate)} - ${toBanglaDate(weeklyCompletion.toDate)}` : 'শুক্রবার থেকে বৃহস্পতিবার'}
+            />
+            {weeklyLoading ? <ApiLoadingNotice label="সাপ্তাহিক Done অবস্থা লোড হচ্ছে..." /> : (
+              <DataTable
+                headers={['সদস্য', ...weeklyDays.map((date) => toBanglaDate(date)), 'মোট']}
+                rows={weeklyRows}
+                searchPlaceholder="সদস্যের নাম..."
+                emptyMessage="এই সপ্তাহে কোনো ইনতিফাদাহ সদস্য পাওয়া যায়নি"
+              />
+            )}
+          </Card>
+        </section>
+      )}
 
       <section>
         <Card>

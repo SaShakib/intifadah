@@ -19,8 +19,9 @@ interface UserSidebarProps {
 export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, roleKey, logout } = useAuth();
-  const sections = [...new Set(USER_NAV_ITEMS.map((item) => item.section))];
+  const { user, roleKey, userKind, logout } = useAuth();
+  const navItems = USER_NAV_ITEMS.filter((item) => item.href !== '/user/quran' || userKind === 1);
+  const sections = [...new Set(navItems.map((item) => item.section))];
 
   const handleLogout = async () => {
     onClose();
@@ -71,7 +72,7 @@ export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
             <div key={section} className="mb-4">
               <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">{section}</p>
               <div className="space-y-1">
-                {USER_NAV_ITEMS.filter((item) => item.section === section).map((item) => {
+                {navItems.filter((item) => item.section === section).map((item) => {
                   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                   return (
                     <Link

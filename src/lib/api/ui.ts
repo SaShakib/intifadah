@@ -52,7 +52,7 @@ export function toUserRole(roleKey: BackendRoleKey): UserRole {
 }
 
 export function isAdminRoleKey(roleKey: BackendRoleKey) {
-  return roleKey === 'super_admin' || roleKey === 'admin' || roleKey === 'manager' || roleKey === 'member_internal';
+  return roleKey === 'super_admin' || roleKey === 'admin' || roleKey === 'manager';
 }
 
 export function canManagePermissions(roleKey: BackendRoleKey | null | undefined) {

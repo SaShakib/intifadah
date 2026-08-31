@@ -45,9 +45,9 @@ router.post('/comments/threads/:threadId/messages', requirePermission('comments'
 router.get('/reports/period-collections', requirePermission('reports', 'read'), adminController.reportPeriodCollections);
 router.get('/reports/members/financial-summary', requirePermission('reports', 'read'), adminController.memberFinancialSummary);
 router.get('/reports/categories/due-summary', requirePermission('reports', 'read'), adminController.reportCategoryDueSummary);
-router.get('/quran/weekly-report', requirePermission('quran', 'read'), quranController.weeklyReport);
-router.get('/quran/penalties', requirePermission('quran', 'read'), quranController.penalties);
-router.post('/quran/run-penalties', requirePermission('quran', 'update'), quranController.runPenalties);
+router.get('/quran/weekly-report', requireRoles('super_admin', 'admin'), requirePermission('quran', 'read'), quranController.weeklyReport);
+router.get('/quran/penalties', requireRoles('super_admin', 'admin'), requirePermission('quran', 'read'), quranController.penalties);
+router.post('/quran/run-penalties', requireRoles('super_admin', 'admin'), requirePermission('quran', 'update'), quranController.runPenalties);
 
 router.get('/roles-permissions', requireRoles('super_admin', 'admin'), adminController.rolesPermissions);
 

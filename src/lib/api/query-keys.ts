@@ -18,6 +18,7 @@ export const queryKeys = {
     categories: (params: Record<string, unknown> = {}) => `user:categories${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     loans: (params: Record<string, unknown> = {}) => `user:loans${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     quranProgress: (params: Record<string, unknown> = {}) => `user:quran:progress${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
+    quranWeeklyCompletion: () => 'user:quran:weekly-completion',
     expenses: (params: Record<string, unknown> = {}) => `user:expenses${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     commentsThreads: () => 'user:comments:threads',
     commentsMessages: (threadId: string | number) => `user:comments:threads:${threadId}:messages`,

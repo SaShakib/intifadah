@@ -3,6 +3,7 @@ const {
   updateMyProgress,
   listMyProgress,
   getAdminWeeklyReport,
+  getInternalWeeklyCompletion,
   getAdminPenaltyReport,
   runWeeklyPenaltyJob,
 } = require('../services/api/quran-api.service');
@@ -55,6 +56,15 @@ async function weeklyReport(req, res, next) {
   }
 }
 
+async function internalWeeklyCompletion(_req, res, next) {
+  try {
+    const data = await getInternalWeeklyCompletion();
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function penalties(req, res, next) {
   try {
     const data = await getAdminPenaltyReport({
@@ -84,6 +94,7 @@ module.exports = {
   createProgress,
   updateProgress,
   weeklyReport,
+  internalWeeklyCompletion,
   penalties,
   runPenalties,
 };

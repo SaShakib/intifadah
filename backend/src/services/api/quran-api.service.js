@@ -2,7 +2,7 @@ const { repositories } = require('../../repositories');
 const { env } = require('../../config/env');
 
 const { notificationsRepository, quranRepository } = repositories;
-const MANAGER_ROLE_KEYS = ['super_admin', 'admin', 'manager'];
+const QURAN_ADMIN_ROLE_KEYS = ['super_admin', 'admin'];
 
 function parseOptionalPositiveInt(value, fieldName) {
   if (value === undefined || value === null || value === '') {
@@ -19,43 +19,43 @@ function parseOptionalPositiveInt(value, fieldName) {
   return parsed;
 }
 
+function dateTextInTimezone(value = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: env.quranCronTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addCalendarDays(dateText, days) {
+  const date = new Date(`${dateText}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function fridayToThursdayRange(baseDate = new Date()) {
+  const dateText = typeof baseDate === 'string' ? baseDate : dateTextInTimezone(baseDate);
+  const dayOfWeek = new Date(`${dateText}T00:00:00.000Z`).getUTCDay();
+  const daysSinceFriday = (dayOfWeek + 2) % 7;
+  const fromDate = addCalendarDays(dateText, -daysSinceFriday);
+  return { fromDate, toDate: addCalendarDays(fromDate, 6) };
+}
+
 function defaultWeekRange(input = {}) {
   if (input.fromDate && input.toDate) {
     return { fromDate: input.fromDate, toDate: input.toDate };
   }
 
-  const today = new Date();
-  const day = today.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + mondayOffset);
-
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  return {
-    fromDate: monday.toISOString().slice(0, 10),
-    toDate: sunday.toISOString().slice(0, 10),
-  };
+  return fridayToThursdayRange();
 }
 
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function toDateText(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function previousSevenDayRange(baseDate = new Date()) {
-  const end = addDays(baseDate, -1);
-  const start = addDays(end, -6);
-  return {
-    fromDate: toDateText(start),
-    toDate: toDateText(end),
-  };
+function lastCompletedWeekRange(baseDate = new Date()) {
+  const currentWeek = fridayToThursdayRange(baseDate);
+  const fromDate = addCalendarDays(currentWeek.fromDate, -7);
+  return { fromDate, toDate: addCalendarDays(fromDate, 6) };
 }
 
 async function createMyProgress(userId, input = {}) {
@@ -113,6 +113,21 @@ async function getAdminWeeklyReport(filters = {}) {
   };
 }
 
+async function getInternalWeeklyCompletion() {
+  const range = defaultWeekRange();
+  const rows = await quranRepository.getWeeklyReport(range);
+  return {
+    ...range,
+    rows: rows.map((row) => ({
+      user_id: row.user_id,
+      full_name: row.full_name,
+      days: Object.fromEntries(
+        Object.entries(row.days || {}).map(([date, value]) => [date, { done: Boolean(value?.done) }]),
+      ),
+    })),
+  };
+}
+
 async function sendQuranReminderNotifications() {
   const users = await quranRepository.listInternalActiveUsers();
   const rows = await notificationsRepository.createForUsers({
@@ -133,7 +148,7 @@ async function sendQuranReminderNotifications() {
 async function runWeeklyPenaltyJob(input = {}) {
   const range = input.fromDate && input.toDate
     ? { fromDate: input.fromDate, toDate: input.toDate }
-    : previousSevenDayRange(input.baseDate ? new Date(input.baseDate) : new Date());
+    : lastCompletedWeekRange(input.baseDate || new Date());
 
   const result = await quranRepository.createWeeklyPenaltyRun({
     ...range,
@@ -142,7 +157,7 @@ async function runWeeklyPenaltyJob(input = {}) {
 
   if (!result.skipped) {
     await notificationsRepository.createForRoleKeys({
-      roleKeys: MANAGER_ROLE_KEYS,
+      roleKeys: QURAN_ADMIN_ROLE_KEYS,
       notifType: 21,
       payloadJson: {
         event: 'quran_weekly_penalty_run',
@@ -172,8 +187,12 @@ async function runWeeklyPenaltyJob(input = {}) {
 }
 
 async function getAdminPenaltyReport(filters = {}) {
-  const rows = await quranRepository.listPenalties(filters);
+  const range = filters.fromDate && filters.toDate
+    ? { fromDate: filters.fromDate, toDate: filters.toDate }
+    : lastCompletedWeekRange();
+  const rows = await quranRepository.listPenalties({ ...filters, ...range });
   return {
+    ...range,
     rows,
     totalPenaltyMinor: rows.reduce((sum, row) => sum + Number(row.penalty_minor || 0), 0),
     totalMissedDays: rows.reduce((sum, row) => sum + Number(row.missed_days || 0), 0),
@@ -181,10 +200,13 @@ async function getAdminPenaltyReport(filters = {}) {
 }
 
 module.exports = {
+  fridayToThursdayRange,
+  lastCompletedWeekRange,
   createMyProgress,
   updateMyProgress,
   listMyProgress,
   getAdminWeeklyReport,
+  getInternalWeeklyCompletion,
   sendQuranReminderNotifications,
   runWeeklyPenaltyJob,
   getAdminPenaltyReport,

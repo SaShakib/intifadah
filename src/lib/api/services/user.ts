@@ -7,6 +7,7 @@ import type {
   ApiLoanRow,
   ApiNotificationRow,
   ApiQuranProgressRow,
+  ApiQuranWeeklyCompletionResponse,
   ApiRowsResponse,
   ApiSummaryResponse,
   ApiTransactionRow,
@@ -183,6 +184,10 @@ export async function getUserQuranProgress(params: { fromDate?: string; toDate?:
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiQuranProgressRow>>(`/user/quran/progress${query}`);
   return data.rows;
+}
+
+export function getInternalQuranWeeklyCompletion() {
+  return apiRequest<ApiQuranWeeklyCompletionResponse>('/user/quran/weekly-completion');
 }
 
 export async function createUserQuranProgress(input: QuranProgressInput = {}) {

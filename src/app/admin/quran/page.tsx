@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Play, Search } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Button } from '@/components/base/Button';
-import { Input } from '@/components/base/Input';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
 import { MetricCard } from '@/components/semibase/MetricCard';
@@ -21,14 +20,6 @@ import {
 } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 
-function getWeekStart(date = new Date()) {
-  const day = date.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(date);
-  monday.setDate(date.getDate() + mondayOffset);
-  return monday.toISOString().slice(0, 10);
-}
-
 function addDays(dateText: string, days: number) {
   const date = new Date(dateText);
   date.setDate(date.getDate() + days);
@@ -36,31 +27,25 @@ function addDays(dateText: string, days: number) {
 }
 
 export default function AdminQuranPage() {
-  const [fromDate, setFromDate] = useState(getWeekStart());
   const [running, setRunning] = useState(false);
-
-  const params = useMemo(() => ({
-    fromDate,
-    toDate: addDays(fromDate, 6),
-  }), [fromDate]);
 
   const loadReport = useCallback(async () => {
     const [weekly, penalties] = await Promise.all([
-      getAdminQuranWeeklyReport(params),
-      getAdminQuranPenalties(params),
+      getAdminQuranWeeklyReport(),
+      getAdminQuranPenalties(),
     ]);
     return { weekly, penalties };
-  }, [params]);
+  }, []);
 
-  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { ...params, rows: [] }, penalties: { rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 } }, [params.fromDate, params.toDate], {
-    cacheKey: `${queryKeys.admin.quranWeekly(params)}:${queryKeys.admin.quranPenalties(params)}`,
+  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { fromDate: '', toDate: '', rows: [] }, penalties: { fromDate: '', toDate: '', rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 } }, [], {
+    cacheKey: `${queryKeys.admin.quranWeekly()}:${queryKeys.admin.quranPenalties()}`,
     staleTimeMs: 30_000,
   });
 
   const runPenalties = async () => {
     setRunning(true);
     try {
-      await runAdminQuranPenalties(params);
+      await runAdminQuranPenalties();
       await refetch();
     } finally {
       setRunning(false);
@@ -133,7 +118,7 @@ export default function AdminQuranPage() {
           <MetricCard label="সদস্য" value={String(data.weekly.rows.length)} hint="সক্রিয় ইনতিফাদাহ ব্যবহারকারী" />
           <MetricCard label="অংশগ্রহণ" value={String(completedUsers)} hint="এই সপ্তাহে অন্তত ১ দিন" />
           <MetricCard label="মোট Done" value={String(totalMarks)} hint={`${totalPages} পৃষ্ঠা / ${totalMinutes} মিনিট`} />
-          <MetricCard label="Penalty" value={formatCurrencyBn(data.penalties.totalPenaltyMinor)} hint={`${data.penalties.totalMissedDays} missed days`} />
+          <MetricCard label="Penalty" value={formatCurrencyBn(data.penalties.totalPenaltyMinor)} hint={`${data.penalties.totalMissedDays} missed days (গত পূর্ণ সপ্তাহ)`} />
         </div>
       </section>
 
@@ -141,13 +126,9 @@ export default function AdminQuranPage() {
         <Card>
           <SectionHeader
             title="সদস্যভিত্তিক ৭ দিনের ট্র্যাক"
-            subtitle="প্রতিটি সারিতে সপ্তাহের Done অবস্থা"
+            subtitle="শুক্রবার থেকে বৃহস্পতিবারের Done অবস্থা"
             action={(
-              <div className="flex items-center gap-2">
-                <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-                <Button variant="secondary" onClick={() => void refetch()}><Search className="h-4 w-4" />দেখুন</Button>
-                <Button onClick={() => void runPenalties()} disabled={running}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
-              </div>
+              <Button onClick={() => void runPenalties()} disabled={running}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
             )}
           />
           <DataTable
@@ -165,7 +146,7 @@ export default function AdminQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="Quran penalty" subtitle="মিসড দিনের হিসাব ও সংরক্ষিত penalty transaction" />
+          <SectionHeader title="Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
           <DataTable
             headers={['সদস্য', 'ইন্টারভাল', 'Missed', 'Penalty', 'Transaction']}
             rows={penaltyRows}

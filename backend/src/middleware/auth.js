@@ -68,6 +68,20 @@ function requireRoles(...allowedRoles) {
   };
 }
 
+function requireUserKind(...allowedKinds) {
+  return (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!allowedKinds.includes(Number(req.auth.userKind))) {
+      return res.status(403).json({ message: 'Forbidden: Intifadah membership required' });
+    }
+
+    return next();
+  };
+}
+
 function requireSuperAdmin(req, res, next) {
   if (!req.auth) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -156,6 +170,7 @@ module.exports = {
   requireAuth,
   requireCompletedProfile,
   requireRoles,
+  requireUserKind,
   requireAnyRoles,
   requireSuperAdmin,
   requirePermission,

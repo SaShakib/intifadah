@@ -20,7 +20,10 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, roleKey, canManagePermissions, logout } = useAuth();
-  const navItems = ADMIN_NAV_ITEMS.filter((item) => !item.permissionOnly || canManagePermissions);
+  const navItems = ADMIN_NAV_ITEMS.filter((item) => {
+    if (item.permissionOnly && !canManagePermissions) return false;
+    return item.href !== '/admin/quran' || canManagePermissions;
+  });
   const sections = [...new Set(navItems.map((item) => item.section))];
 
   const handleLogout = async () => {

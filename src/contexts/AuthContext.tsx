@@ -26,6 +26,7 @@ interface AuthContextValue {
   user: Member | null;
   role: UserRole | null;
   roleKey: BackendRoleKey | null;
+  userKind: number | null;
   isAdmin: boolean;
   canManagePermissions: boolean;
   needsProfileCompletion: boolean;
@@ -45,6 +46,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   role: null,
   roleKey: null,
+  userKind: null,
   isAdmin: false,
   canManagePermissions: false,
   needsProfileCompletion: false,
@@ -178,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: memberUser,
       role,
       roleKey,
+      userKind: sessionUser?.userKind ?? null,
       isAdmin: roleKey ? isAdminRoleKey(roleKey) : false,
       canManagePermissions: canManagePermissions(roleKey),
       needsProfileCompletion: Boolean(sessionUser?.needsProfileCompletion),

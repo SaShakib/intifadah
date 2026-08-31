@@ -267,6 +267,18 @@ export interface ApiQuranWeeklyReportResponse {
   rows: ApiQuranWeeklyReportRow[];
 }
 
+export interface ApiQuranWeeklyCompletionRow {
+  user_id: number;
+  full_name: string;
+  days: Record<string, { done: boolean }> | null;
+}
+
+export interface ApiQuranWeeklyCompletionResponse {
+  fromDate: string;
+  toDate: string;
+  rows: ApiQuranWeeklyCompletionRow[];
+}
+
 export interface ApiQuranPenaltyRow {
   id: string | number;
   run_id: string | number;
@@ -282,6 +294,8 @@ export interface ApiQuranPenaltyRow {
 }
 
 export interface ApiQuranPenaltyReportResponse {
+  fromDate: string;
+  toDate: string;
   rows: ApiQuranPenaltyRow[];
   totalPenaltyMinor: number;
   totalMissedDays: number;
