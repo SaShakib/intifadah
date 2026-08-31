@@ -10,27 +10,26 @@ import { DataTable } from '@/components/semibase/DataTable';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
-import { USER_DASHBOARD_ALERTS, USER_DASHBOARD_METRICS, USER_DASHBOARD_TRANSACTIONS } from './constants';
 import { createUserLoan, createUserLoanRepayment, createUserTransaction, getErrorMessage } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { UserDashboardMetric } from './types';
-import type { Category } from '@/types';
+import type { Category, Transaction } from '@/types';
 
 interface UserDashboardTopSectionProps {
-  metrics?: UserDashboardMetric[];
+  metrics: UserDashboardMetric[];
 }
 
 interface UserDashboardMiddleSectionProps {
-  alerts?: string[];
-  categories?: Category[];
+  alerts: string[];
+  categories: Category[];
   onMutationSuccess?: () => void | Promise<void>;
 }
 
 interface UserDashboardBottomSectionProps {
-  transactions?: typeof USER_DASHBOARD_TRANSACTIONS;
+  transactions: Transaction[];
 }
 
-export function UserDashboardTopSection({ metrics = USER_DASHBOARD_METRICS }: UserDashboardTopSectionProps) {
+export function UserDashboardTopSection({ metrics }: UserDashboardTopSectionProps) {
   return (
     <section>
       <SectionHeader title="আর্থিক সারাংশ" subtitle="আপনার অ্যাকাউন্টের দ্রুত অবস্থা" />
@@ -53,7 +52,7 @@ const DEFAULT_ACTION_FORM = {
   note: '',
 };
 
-export function UserDashboardMiddleSection({ alerts = USER_DASHBOARD_ALERTS, categories = [], onMutationSuccess }: UserDashboardMiddleSectionProps) {
+export function UserDashboardMiddleSection({ alerts, categories, onMutationSuccess }: UserDashboardMiddleSectionProps) {
   const [modal, setModal] = useState<'donate' | 'savings' | 'loan' | 'pay' | null>(null);
   const [form, setForm] = useState(DEFAULT_ACTION_FORM);
   const [saving, setSaving] = useState(false);
@@ -169,7 +168,7 @@ export function UserDashboardMiddleSection({ alerts = USER_DASHBOARD_ALERTS, cat
   );
 }
 
-export function UserDashboardBottomSection({ transactions = USER_DASHBOARD_TRANSACTIONS }: UserDashboardBottomSectionProps) {
+export function UserDashboardBottomSection({ transactions }: UserDashboardBottomSectionProps) {
   const rows = transactions.map((transaction) => ({
     id: transaction.id,
     tabValue: transaction.status,

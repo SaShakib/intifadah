@@ -9,26 +9,25 @@ import { DataTable } from '@/components/semibase/DataTable';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
-import { SAVINGS_HISTORY_ROWS, SAVINGS_METRICS, SAVINGS_PLAN_ROWS } from './constants';
 import { createUserTransaction, getErrorMessage } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { SavingsMetric } from './types';
-import type { Category } from '@/types';
+import type { Category, Transaction } from '@/types';
 
 interface SavingsTopSectionProps {
-  metrics?: SavingsMetric[];
+  metrics: SavingsMetric[];
 }
 
 interface SavingsBottomSectionProps {
-  history?: typeof SAVINGS_HISTORY_ROWS;
+  history: Transaction[];
 }
 
 interface SavingsMiddleSectionProps {
-  categories?: Category[];
+  categories: Category[];
   onMutationSuccess?: () => void | Promise<void>;
 }
 
-export function SavingsTopSection({ metrics = SAVINGS_METRICS }: SavingsTopSectionProps) {
+export function SavingsTopSection({ metrics }: SavingsTopSectionProps) {
   return (
     <section>
       <SectionHeader title="সঞ্চয় সারাংশ" subtitle="আপনার সঞ্চয়ের বর্তমান অবস্থা" />
@@ -48,13 +47,12 @@ const DEFAULT_SAVINGS_FORM = {
   note: '',
 };
 
-export function SavingsMiddleSection({ categories = [], onMutationSuccess }: SavingsMiddleSectionProps) {
+export function SavingsMiddleSection({ categories, onMutationSuccess }: SavingsMiddleSectionProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(DEFAULT_SAVINGS_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const planRows = categories.length
-    ? categories.map((category) => ({
+  const planRows = categories.map((category) => ({
       id: category.id,
       searchText: `${category.name} ${category.description ?? ''}`,
       sortValues: [category.name, category.amount ?? 0, category.recurrence],
@@ -69,10 +67,6 @@ export function SavingsMiddleSection({ categories = [], onMutationSuccess }: Sav
           }}><WalletCards className="h-3.5 w-3.5" />জমা</Button>
         </div>,
       ],
-    }))
-    : SAVINGS_PLAN_ROWS.map((row, index) => ({
-      id: `plan-${index}`,
-      cells: [...row, ''],
     }));
   const showToast = (message: string) => {
     setToast(message);
@@ -104,8 +98,8 @@ export function SavingsMiddleSection({ categories = [], onMutationSuccess }: Sav
         <SectionHeader title="সঞ্চয় পরিকল্পনা" subtitle="নির্ধারিত খাতসমূহ" action={<Button onClick={() => {
           setForm(DEFAULT_SAVINGS_FORM);
           setModalOpen(true);
-        }}><WalletCards className="h-4 w-4" />সঞ্চয় করুন</Button>} />
-        <DataTable headers={['খাত', 'প্রস্তাবিত পরিমাণ', 'সময়সূচি', { header: 'কার্যক্রম', align: 'right', sortable: false }]} rows={planRows} />
+        }} disabled={!categories.length}><WalletCards className="h-4 w-4" />সঞ্চয় করুন</Button>} />
+        <DataTable headers={['খাত', 'প্রস্তাবিত পরিমাণ', 'সময়সূচি', { header: 'কার্যক্রম', align: 'right', sortable: false }]} rows={planRows} emptyMessage="সঞ্চয়ের কোনো খাত এখনো তৈরি করা হয়নি" />
       </Card>
       <AppModal
         open={modalOpen}
@@ -114,7 +108,7 @@ export function SavingsMiddleSection({ categories = [], onMutationSuccess }: Sav
         footer={(
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>বাতিল</Button>
-            <Button onClick={() => void saveSavings()} disabled={saving || !form.amountMinor}><Save className="h-4 w-4" />{saving ? 'জমা হচ্ছে...' : 'জমা দিন'}</Button>
+            <Button onClick={() => void saveSavings()} disabled={saving || !form.categoryId || !form.amountMinor}><Save className="h-4 w-4" />{saving ? 'জমা হচ্ছে...' : 'জমা দিন'}</Button>
           </>
         )}
       >
@@ -130,7 +124,7 @@ export function SavingsMiddleSection({ categories = [], onMutationSuccess }: Sav
   );
 }
 
-export function SavingsBottomSection({ history = SAVINGS_HISTORY_ROWS }: SavingsBottomSectionProps) {
+export function SavingsBottomSection({ history }: SavingsBottomSectionProps) {
   const rows = history.map((transaction) => ({
     id: transaction.id,
     searchText: `${transaction.date} ${transaction.categoryName ?? ''}`,

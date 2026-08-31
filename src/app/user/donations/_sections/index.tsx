@@ -9,26 +9,25 @@ import { DataTable } from '@/components/semibase/DataTable';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
-import { DONATION_CATEGORY_ROWS, DONATION_HISTORY_ROWS, DONATION_METRICS } from './constants';
 import { createUserTransaction, getErrorMessage } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { DonationMetric } from './types';
-import type { Category } from '@/types';
+import type { Category, Transaction } from '@/types';
 
 interface DonationsTopSectionProps {
-  metrics?: DonationMetric[];
+  metrics: DonationMetric[];
 }
 
 interface DonationsMiddleSectionProps {
-  categories?: Category[];
+  categories: Category[];
   onMutationSuccess?: () => void | Promise<void>;
 }
 
 interface DonationsBottomSectionProps {
-  history?: typeof DONATION_HISTORY_ROWS;
+  history: Transaction[];
 }
 
-export function DonationsTopSection({ metrics = DONATION_METRICS }: DonationsTopSectionProps) {
+export function DonationsTopSection({ metrics }: DonationsTopSectionProps) {
   return (
     <section>
       <SectionHeader title="দান সারাংশ" subtitle="আপনার দানের অগ্রগতি" />
@@ -48,7 +47,7 @@ const DEFAULT_DONATION_FORM = {
   note: '',
 };
 
-export function DonationsMiddleSection({ categories = DONATION_CATEGORY_ROWS, onMutationSuccess }: DonationsMiddleSectionProps) {
+export function DonationsMiddleSection({ categories, onMutationSuccess }: DonationsMiddleSectionProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(DEFAULT_DONATION_FORM);
   const [saving, setSaving] = useState(false);
@@ -97,8 +96,8 @@ export function DonationsMiddleSection({ categories = DONATION_CATEGORY_ROWS, on
   return (
     <section>
       <Card>
-        <SectionHeader title="দান খাতসমূহ" subtitle="যেসব খাতে আপনি দান করতে পারবেন" action={<Button onClick={() => openDonation()}><HeartHandshake className="h-4 w-4" />দান করুন</Button>} />
-        <DataTable headers={['খাত', 'বিবরণ', 'প্রস্তাবিত পরিমাণ', { header: 'কার্যক্রম', align: 'right', sortable: false }]} rows={rows} searchPlaceholder="খাত বা বিবরণ..." />
+        <SectionHeader title="দান খাতসমূহ" subtitle="যেসব খাতে আপনি দান করতে পারবেন" action={<Button onClick={() => openDonation()} disabled={!categories.length}><HeartHandshake className="h-4 w-4" />দান করুন</Button>} />
+        <DataTable headers={['খাত', 'বিবরণ', 'প্রস্তাবিত পরিমাণ', { header: 'কার্যক্রম', align: 'right', sortable: false }]} rows={rows} searchPlaceholder="খাত বা বিবরণ..." emptyMessage="দানের কোনো খাত এখনো তৈরি করা হয়নি" />
       </Card>
       <AppModal
         open={modalOpen}
@@ -107,7 +106,7 @@ export function DonationsMiddleSection({ categories = DONATION_CATEGORY_ROWS, on
         footer={(
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>বাতিল</Button>
-            <Button onClick={() => void saveDonation()} disabled={saving || !form.amountMinor}><Save className="h-4 w-4" />{saving ? 'জমা হচ্ছে...' : 'জমা দিন'}</Button>
+            <Button onClick={() => void saveDonation()} disabled={saving || !form.categoryId || !form.amountMinor}><Save className="h-4 w-4" />{saving ? 'জমা হচ্ছে...' : 'জমা দিন'}</Button>
           </>
         )}
       >
@@ -123,7 +122,7 @@ export function DonationsMiddleSection({ categories = DONATION_CATEGORY_ROWS, on
   );
 }
 
-export function DonationsBottomSection({ history = DONATION_HISTORY_ROWS }: DonationsBottomSectionProps) {
+export function DonationsBottomSection({ history }: DonationsBottomSectionProps) {
   const rows = history.map((item) => ({
     id: item.id,
     searchText: `${item.date} ${item.categoryName ?? ''}`,

@@ -8,11 +8,7 @@ import {
   UserDashboardMiddleSection,
   UserDashboardTopSection,
 } from './_sections';
-import {
-  USER_DASHBOARD_ALERTS,
-  USER_DASHBOARD_METRICS,
-  USER_DASHBOARD_TRANSACTIONS,
-} from './_sections/constants';
+import type { UserDashboardMetric } from './_sections/types';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
 import {
@@ -25,15 +21,14 @@ import {
   mapTransactionRow,
   toBanglaDate,
 } from '@/lib/api';
+import type { Category, Transaction } from '@/types';
 
 const initialData = {
-  metrics: [] as typeof USER_DASHBOARD_METRICS,
-  alerts: [] as typeof USER_DASHBOARD_ALERTS,
-  transactions: [] as typeof USER_DASHBOARD_TRANSACTIONS,
-  categories: [],
+  metrics: [] as UserDashboardMetric[],
+  alerts: [] as string[],
+  transactions: [] as Transaction[],
+  categories: [] as Category[],
 };
-
-const MONTHLY_TARGET = 2000;
 
 export default function UserDashboardPage() {
   const loadDashboard = useCallback(async () => {
@@ -57,10 +52,16 @@ export default function UserDashboardPage() {
       .reduce((sum, item) => sum + item.amount, 0);
 
     const totalContributions = Number(summary.totalCollectionMinor ?? 0);
+    const monthlyTarget = categories
+      .filter((category) => category.type === 'savings' && category.recurrence === 'monthly' && !category.isVariable)
+      .reduce((sum, category) => sum + Number(category.amount ?? 0), 0);
 
     const now = new Date();
     const monthlyPaid = transactionsRows
       .filter((row) => {
+        if (Number(row.tx_type) !== 3) {
+          return false;
+        }
         const d = new Date(row.occurred_on);
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       })
@@ -71,7 +72,7 @@ export default function UserDashboardPage() {
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
 
     const alerts = [
-      `এই মাসের বাকি লক্ষ্য: ${formatCurrencyBn(Math.max(0, MONTHLY_TARGET - monthlyPaid))}`,
+      ...(monthlyTarget ? [`এই মাসের বাকি সঞ্চয় পরিকল্পনা: ${formatCurrencyBn(Math.max(0, monthlyTarget - monthlyPaid))}`] : []),
       nextLoanDue ? `পরবর্তী ঋণ কিস্তি: ${nextLoanDue.dueDate}` : 'বর্তমানে কোনো বকেয়া ঋণ কিস্তি নেই',
       `মোট সক্রিয় ঋণ: ${loans.filter((loan) => loan.status === 'active').length}টি`,
     ];
@@ -81,7 +82,7 @@ export default function UserDashboardPage() {
         { label: 'মোট সঞ্চয়', value: formatCurrencyBn(totalSavings), hint: 'আপনার ব্যক্তিগত সঞ্চয়' },
         { label: 'মোট দান', value: formatCurrencyBn(totalDonations), hint: 'অবদান' },
         { label: 'মোট অবদান', value: formatCurrencyBn(totalContributions), hint: 'সঞ্চয় + দান' },
-        { label: 'মাসিক লক্ষ্য', value: formatCurrencyBn(MONTHLY_TARGET), hint: `পরিশোধিত: ${formatCurrencyBn(monthlyPaid)}` },
+        { label: 'মাসিক সঞ্চয় পরিকল্পনা', value: monthlyTarget ? formatCurrencyBn(monthlyTarget) : 'সেট করা নেই', hint: `জমা: ${formatCurrencyBn(monthlyPaid)}` },
       ],
       alerts,
       transactions: transactions.slice(0, 6).map((tx) => ({ ...tx, date: tx.date || toBanglaDate(null) })),

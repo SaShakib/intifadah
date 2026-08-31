@@ -7,17 +7,14 @@
  *  - Stale-while-revalidate for everything else
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE  = `intifadah-shell-${CACHE_VERSION}`;
 const ASSET_CACHE  = `intifadah-assets-${CACHE_VERSION}`;
 const DATA_CACHE   = `intifadah-data-${CACHE_VERSION}`;
 
 /* Routes to precache on install */
 const SHELL_URLS = [
-  '/login',
-  '/admin/dashboard',
-  '/user/dashboard',
-  '/offline',
+  '/offline.html',
 ];
 
 /* ── Install ──────────────────────────────────────────────── */
@@ -71,7 +68,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* HTML pages → network-first with offline fallback */
+  /* HTML pages are always network-only to keep Next.js page data and JS in sync. */
   if (request.headers.get('Accept')?.includes('text/html')) {
     event.respondWith(networkFirstWithFallback(request));
     return;
@@ -132,16 +129,9 @@ async function cacheFirst(request, cacheName) {
 
 async function networkFirstWithFallback(request) {
   try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(SHELL_CACHE);
-      cache.put(request, response.clone());
-    }
-    return response;
+    return await fetch(request);
   } catch {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    const offlinePage = await caches.match('/offline');
+    const offlinePage = await caches.match('/offline.html');
     return offlinePage || new Response(
       '<h1>অফলাইন</h1><p>ইন্টারনেট সংযোগ নেই</p>',
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
