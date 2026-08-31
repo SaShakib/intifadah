@@ -156,6 +156,12 @@ async function registerUser(input, req) {
     throw error;
   }
 
+  if (!providedPassword && !email) {
+    const error = new Error('Email or password is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (providedPassword && password.length < 8) {
     const error = new Error('Password must be at least 8 characters');
     error.statusCode = 400;

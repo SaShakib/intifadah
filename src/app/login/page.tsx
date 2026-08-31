@@ -45,6 +45,7 @@ export default function LoginPage() {
     fullName: '',
     mobile: '',
     email: '',
+    password: '',
     addressLine: '',
   });
   const [googleReady, setGoogleReady] = useState(false);
@@ -121,6 +122,14 @@ export default function LoginPage() {
       setRegisterMessage('নাম, মোবাইল ও ঠিকানা দিন।');
       return;
     }
+    if (!registerForm.email.trim() && !registerForm.password.trim()) {
+      setRegisterMessage('ইমেইল অথবা পাসওয়ার্ড দিন।');
+      return;
+    }
+    if (registerForm.password.trim() && registerForm.password.length < 8) {
+      setRegisterMessage('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।');
+      return;
+    }
 
     setRegisterLoading(true);
     setRegisterMessage(null);
@@ -129,6 +138,7 @@ export default function LoginPage() {
         fullName: registerForm.fullName.trim(),
         mobile: registerForm.mobile.trim(),
         email: registerForm.email.trim() || undefined,
+        password: registerForm.password || undefined,
         addressLine: registerForm.addressLine.trim(),
       });
       setRegisterOpen(false);
@@ -283,10 +293,15 @@ export default function LoginPage() {
             <span className="text-xs font-semibold text-fg-2">ইমেইল</span>
             <Input type="email" value={registerForm.email} onChange={(event) => setRegisterForm((current) => ({ ...current, email: event.target.value }))} placeholder="ঐচ্ছিক" />
           </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-fg-2">পাসওয়ার্ড</span>
+            <Input type="password" minLength={8} value={registerForm.password} onChange={(event) => setRegisterForm((current) => ({ ...current, password: event.target.value }))} placeholder="ইমেইল না দিলে প্রয়োজন" />
+          </label>
           <label className="block space-y-1 sm:col-span-2">
             <span className="text-xs font-semibold text-fg-2">ঠিকানা</span>
             <Input value={registerForm.addressLine} onChange={(event) => setRegisterForm((current) => ({ ...current, addressLine: event.target.value }))} placeholder="আপনার ঠিকানা" />
           </label>
+          <p className="text-xs leading-5 text-muted sm:col-span-2">ইমেইল দিলে পাসওয়ার্ড ফাঁকা রাখা যায়; নিরাপদ অস্থায়ী পাসওয়ার্ড ইমেইলে পাঠানো হবে। ইমেইল না দিলে আপনার নিজের পাসওয়ার্ড দিন।</p>
           {registerMessage && <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg-2 sm:col-span-2">{registerMessage}</p>}
         </div>
       </AppModal>
