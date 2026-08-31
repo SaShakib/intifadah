@@ -126,6 +126,10 @@ export default function LoginPage() {
       setRegisterMessage('ইমেইল অথবা পাসওয়ার্ড দিন।');
       return;
     }
+    if (registerForm.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email.trim())) {
+      setRegisterMessage('সঠিক ইমেইল ঠিকানা দিন।');
+      return;
+    }
     if (registerForm.password.trim() && registerForm.password.length < 8) {
       setRegisterMessage('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।');
       return;

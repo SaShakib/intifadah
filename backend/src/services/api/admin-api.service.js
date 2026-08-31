@@ -68,6 +68,14 @@ function normalizeEmail(email) {
   return email ? String(email).trim().toLowerCase() : null;
 }
 
+function assertValidEmail(email) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const error = new Error('A valid email address is required');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
 function generateTemporaryPassword() {
   return `Int-${randomToken(9)}1a`;
 }
@@ -90,6 +98,8 @@ async function createMember(input) {
   const password = providedPassword || generateTemporaryPassword();
   const userKind = Number(input.userKind || 2);
   const email = normalizeEmail(input.email);
+
+  assertValidEmail(email);
 
   if (!fullName || !mobile) {
     const error = new Error('fullName and mobile are required');

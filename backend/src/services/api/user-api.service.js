@@ -339,6 +339,12 @@ async function updateProfile(userId, input) {
     ? String(input.email || '').trim().toLowerCase() || null
     : undefined;
 
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const error = new Error('A valid email address is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
   await authRepository.updateUserProfile(userId, {
     fullName: input.fullName,
     mobile: input.mobile !== undefined ? String(input.mobile || '').trim() || undefined : undefined,
