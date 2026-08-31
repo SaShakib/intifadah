@@ -63,3 +63,13 @@ export function resetPasswordApi(input: { identifier: string; otp: string; passw
     body: JSON.stringify(input),
   }, { withAuth: false });
 }
+
+export async function changePasswordApi(input: { currentPassword: string; newPassword: string }) {
+  const data = await apiRequest<ApiAuthResponse>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  setAuthSession({ user: data.user, tokens: data.tokens });
+  return data;
+}

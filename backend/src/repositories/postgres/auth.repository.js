@@ -286,6 +286,16 @@ async function revokeRefreshTokenById(tokenId) {
   );
 }
 
+async function revokeRefreshTokensForUser(userId) {
+  await query(
+    `UPDATE auth_refresh_tokens
+     SET revoked_at = NOW()
+     WHERE user_id = $1
+       AND revoked_at IS NULL`,
+    [userId],
+  );
+}
+
 async function createPasswordResetOtp({ userId, code, expiresAt, ipAddress, userAgent }) {
   const codeHash = sha256(code);
   const res = await query(
@@ -368,6 +378,7 @@ module.exports = {
   getValidRefreshToken,
   revokeRefreshToken,
   revokeRefreshTokenById,
+  revokeRefreshTokensForUser,
   createPasswordResetOtp,
   getLatestValidPasswordResetOtp,
   incrementPasswordResetOtpAttempts,

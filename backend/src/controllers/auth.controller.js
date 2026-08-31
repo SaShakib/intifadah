@@ -6,6 +6,7 @@ const {
   logoutSession,
   requestPasswordReset,
   resetPasswordWithOtp,
+  changePassword,
   sanitizeUser,
 } = require('../services/auth.service');
 
@@ -72,6 +73,15 @@ async function resetPassword(req, res, next) {
   }
 }
 
+async function changePasswordForCurrentUser(req, res, next) {
+  try {
+    const result = await changePassword(req.body || {}, req.auth.user, req);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 function me(req, res) {
   res.json({ user: sanitizeUser(req.auth.user) });
 }
@@ -84,5 +94,6 @@ module.exports = {
   logout,
   forgotPassword,
   resetPassword,
+  changePasswordForCurrentUser,
   me,
 };

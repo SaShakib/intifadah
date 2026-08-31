@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { THEMES } from '@/lib/themes';
-import { queryKeys, updateUserProfile as updateUserProfileApi, useApiMutation } from '@/lib/api';
+import { changePasswordApi, getErrorMessage, queryKeys, updateUserProfile as updateUserProfileApi, useApiMutation } from '@/lib/api';
 import { Avatar } from '@/components/base/Avatar';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
@@ -145,9 +145,45 @@ export function ProfileMiddleSection() {
 }
 
 export function ProfileBottomSection() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+
+  const changePassword = async () => {
+    setPasswordMessage(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage('বর্তমান ও নতুন পাসওয়ার্ড দিন।');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage('নতুন পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('নতুন পাসওয়ার্ড দুটি এক নয়।');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await changePasswordApi({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordMessage('পাসওয়ার্ড পরিবর্তন হয়েছে। অন্য ডিভাইসের সেশন বন্ধ করা হয়েছে।');
+    } catch (error) {
+      setPasswordMessage(getErrorMessage(error));
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
-    <section>
-      <Card>
+    <section className="grid gap-4 xl:grid-cols-5">
+      <Card className="xl:col-span-3">
         <SectionHeader title="নোটিফিকেশন পছন্দ" subtitle="আপনি কোন ধরনের আপডেট পেতে চান" />
         <div className="space-y-3">
           {PROFILE_PREFERENCES.map((preference) => (
@@ -159,6 +195,29 @@ export function ProfileBottomSection() {
               </span>
             </label>
           ))}
+        </div>
+      </Card>
+      <Card className="xl:col-span-2">
+        <SectionHeader title="পাসওয়ার্ড পরিবর্তন" subtitle="পুরোনো পাসওয়ার্ড যাচাই করে নতুনটি দিন" />
+        <div className="space-y-3">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-fg-2">বর্তমান পাসওয়ার্ড</span>
+            <Input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-fg-2">নতুন পাসওয়ার্ড</span>
+            <Input type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-fg-2">নতুন পাসওয়ার্ড আবার দিন</span>
+            <Input type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+          </label>
+          <div className="flex justify-end pt-1">
+            <Button onClick={() => void changePassword()} disabled={changingPassword}>
+              {changingPassword ? 'পরিবর্তন হচ্ছে...' : 'পাসওয়ার্ড পরিবর্তন'}
+            </Button>
+          </div>
+          {passwordMessage && <p className={`text-sm ${passwordMessage.startsWith('পাসওয়ার্ড পরিবর্তন হয়েছে') ? 'text-success' : 'text-danger'}`}>{passwordMessage}</p>}
         </div>
       </Card>
     </section>

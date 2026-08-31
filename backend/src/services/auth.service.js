@@ -502,8 +502,50 @@ async function resetPasswordWithOtp(input) {
 
   await authRepository.updateUserPassword(user.id, hashPassword(password));
   await authRepository.consumePasswordResetOtpsForUser(user.id);
+  await authRepository.revokeRefreshTokensForUser(user.id);
 
   return { message: 'Password reset successful' };
+}
+
+async function changePassword(input, user, req) {
+  const currentPassword = String(input.currentPassword || '');
+  const newPassword = String(input.newPassword || '');
+
+  if (!currentPassword || !newPassword) {
+    const error = new Error('Current password and new password are required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (newPassword.length < 8) {
+    const error = new Error('Password must be at least 8 characters');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (currentPassword === newPassword) {
+    const error = new Error('New password must be different from your current password');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!verifyPassword(currentPassword, user.password_hash)) {
+    const error = new Error('Current password is incorrect');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  await authRepository.updateUserPassword(user.id, hashPassword(newPassword));
+  await authRepository.consumePasswordResetOtpsForUser(user.id);
+  await authRepository.revokeRefreshTokensForUser(user.id);
+
+  const freshUser = await authRepository.getUserById(user.id);
+  const tokens = await issueTokenPair(freshUser, getContextFromRequest(req));
+
+  return {
+    user: sanitizeUser(freshUser),
+    tokens,
+  };
 }
 
 async function logoutSession(input) {
@@ -524,6 +566,7 @@ module.exports = {
   logoutSession,
   requestPasswordReset,
   resetPasswordWithOtp,
+  changePassword,
   sanitizeUser,
   needsProfileCompletion,
 };
