@@ -1,6 +1,17 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/internal/cron/quran-daily-reminder",
+      "schedule": "30 13 * * *"
+    },
+    {
+      "path": "/internal/cron/quran-weekly-penalty",
+      "schedule": "10 18 * * 4"
+    }
+  ],
   "builds": [
     {
       "src": "api/index.js",

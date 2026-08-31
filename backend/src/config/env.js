@@ -63,6 +63,7 @@ const env = {
   vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@mail.intifadah.org',
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+  cronSecret: process.env.CRON_SECRET,
   schedulerEnabled: process.env.SCHEDULER_ENABLED !== 'false',
   quranCronTimezone: process.env.QURAN_CRON_TIMEZONE || 'Asia/Dhaka',
   quranPenaltyPerMissedDayMinor: parseNumber(process.env.QURAN_PENALTY_PER_MISSED_DAY_MINOR, 5),

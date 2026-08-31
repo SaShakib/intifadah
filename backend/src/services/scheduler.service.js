@@ -22,7 +22,7 @@ function startSchedulers() {
     return jobs;
   }
 
-  scheduleJob('0 21 * * *', async () => {
+  scheduleJob('30 19 * * *', async () => {
     try {
       const result = await sendQuranReminderNotifications();
       console.log(`Quran reminder notifications sent: ${result.notifiedUsers}`);
