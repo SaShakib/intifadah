@@ -4,13 +4,12 @@
  *  - Precaching of app shell routes on install
  *  - Cache-first for static assets (JS, CSS, fonts, images)
  *  - Network-first with offline fallback for HTML pages
- *  - Stale-while-revalidate for everything else
+ *  - Network-only for application routes and data
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const SHELL_CACHE  = `intifadah-shell-${CACHE_VERSION}`;
 const ASSET_CACHE  = `intifadah-assets-${CACHE_VERSION}`;
-const DATA_CACHE   = `intifadah-data-${CACHE_VERSION}`;
 
 /* Routes to precache on install */
 const SHELL_URLS = [
@@ -28,7 +27,7 @@ self.addEventListener('install', event => {
 
 /* ── Activate — clear stale caches ───────────────────────── */
 self.addEventListener('activate', event => {
-  const validCaches = [SHELL_CACHE, ASSET_CACHE, DATA_CACHE];
+  const validCaches = [SHELL_CACHE, ASSET_CACHE];
   event.waitUntil(
     caches.keys()
       .then(names => Promise.all(
@@ -68,14 +67,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* HTML pages are always network-only to keep Next.js page data and JS in sync. */
-  if (request.headers.get('Accept')?.includes('text/html')) {
+  /* App navigations are always network-first to keep route payloads in sync. */
+  if (request.mode === 'navigate' || request.destination === 'document' || request.headers.get('Accept')?.includes('text/html')) {
     event.respondWith(networkFirstWithFallback(request));
-    return;
   }
-
-  /* Everything else → stale-while-revalidate */
-  event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
 });
 
 /* ── Web Push: works while the installed app is closed ───── */
@@ -137,14 +132,4 @@ async function networkFirstWithFallback(request) {
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
   }
-}
-
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  const networkPromise = fetch(request).then(response => {
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  }).catch(() => null);
-  return cached || await networkPromise || new Response('', { status: 503 });
 }
