@@ -4,7 +4,7 @@ const { env } = require('../config/env');
 const { hashPassword, randomToken, sha256, verifyPassword } = require('../lib/hash');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../lib/jwt');
 const { repositories } = require('../repositories');
-const { sendPasswordResetOtpEmail, sendTemporaryPasswordEmail } = require('./mail.service');
+const { sendPasswordResetOtpEmail, sendTemporaryPasswordEmail, sendWelcomeEmail } = require('./mail.service');
 
 const { authRepository } = repositories;
 
@@ -201,11 +201,15 @@ async function registerUser(input, req) {
   });
 
   const createdUser = await authRepository.getUserById(inserted.id);
-  if (!providedPassword && email) {
+  if (email) {
     try {
-      await sendTemporaryPasswordEmail({ to: email, fullName, password });
+      if (providedPassword) {
+        await sendWelcomeEmail({ to: email, fullName });
+      } else {
+        await sendTemporaryPasswordEmail({ to: email, fullName, password });
+      }
     } catch (error) {
-      console.error(`Could not send temporary password to ${email}:`, error.message);
+      console.error(`Could not send account email to ${email}:`, error.message);
     }
   }
   const tokens = await issueTokenPair(createdUser, getContextFromRequest(req));

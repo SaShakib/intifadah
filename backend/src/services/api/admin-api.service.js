@@ -1,7 +1,7 @@
 const { repositories } = require('../../repositories');
 const { TX_TYPE, TX_STATUS } = require('../../config/domain');
 const { hashPassword, randomToken } = require('../../lib/hash');
-const { sendTemporaryPasswordEmail } = require('../mail.service');
+const { sendTemporaryPasswordEmail, sendWelcomeEmail } = require('../mail.service');
 
 const {
   membersRepository,
@@ -136,11 +136,15 @@ async function createMember(input) {
   let emailSendError;
   if (email) {
     try {
-      await sendTemporaryPasswordEmail({
-        to: email,
-        fullName,
-        password,
-      });
+      if (providedPassword) {
+        await sendWelcomeEmail({ to: email, fullName });
+      } else {
+        await sendTemporaryPasswordEmail({
+          to: email,
+          fullName,
+          password,
+        });
+      }
     } catch (error) {
       emailSendError = error.message;
     }

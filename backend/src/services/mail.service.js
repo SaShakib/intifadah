@@ -48,6 +48,22 @@ async function sendTemporaryPasswordEmail({ to, fullName, password }) {
   });
 }
 
+async function sendWelcomeEmail({ to, fullName }) {
+  return sendEmail({
+    to,
+    subject: 'Your Intifadah account is ready',
+    text: `Assalamu alaikum ${fullName}, your Intifadah account is ready. Sign in with your email or mobile number and the password you chose.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;">
+        <h2>Intifadah account created</h2>
+        <p>Assalamu alaikum ${fullName},</p>
+        <p>Your account is ready. Sign in with your email or mobile number and the password you chose.</p>
+        <p>For your security, we never send a password by email when you set it yourself.</p>
+      </div>
+    `,
+  });
+}
+
 async function sendPasswordResetOtpEmail({ to, fullName, otp, ttlMinutes }) {
   return sendEmail({
     to,
@@ -68,5 +84,6 @@ async function sendPasswordResetOtpEmail({ to, fullName, otp, ttlMinutes }) {
 module.exports = {
   sendEmail,
   sendTemporaryPasswordEmail,
+  sendWelcomeEmail,
   sendPasswordResetOtpEmail,
 };
