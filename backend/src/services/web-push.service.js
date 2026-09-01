@@ -57,6 +57,7 @@ function notificationContent(notification) {
       ? 'intifadah-quran-reminder'
       : notification?.id ? `intifadah-notification-${notification.id}` : undefined,
     renotify: event === 'quran_daily_reminder',
+    urgency: event === 'quran_daily_reminder' || event === 'push_test' ? 'high' : 'normal',
   };
 }
 
@@ -126,13 +127,14 @@ async function sendUserNotification(notification) {
      WHERE user_id = $1`,
     [notification.recipient_user_id],
   );
-  const payload = JSON.stringify(notificationContent(notification));
+  const content = notificationContent(notification);
+  const payload = JSON.stringify(content);
   const results = await Promise.allSettled(subscriptions.rows.map(async (subscription) => {
     try {
       await webpush.sendNotification({
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.p256dh_key, auth: subscription.auth_key },
-      }, payload, { TTL: 86400, urgency: 'normal' });
+      }, payload, { TTL: 86400, urgency: content.urgency });
       return true;
     } catch (error) {
       if (error.statusCode === 404 || error.statusCode === 410) {
