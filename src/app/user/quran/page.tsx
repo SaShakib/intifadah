@@ -29,8 +29,20 @@ const thirtyDaysAgo = () => new Date(Date.now() - 30 * 86400000).toISOString().s
 
 function addDays(dateText: string, days: number) {
   const date = new Date(`${dateText}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 const DEFAULT_FORM: QuranProgressInput = {
@@ -166,10 +178,15 @@ export default function UserQuranPage() {
     ];
   }, [data.rows, todayDone]);
 
-  const weeklyDays = useMemo(
-    () => weeklyCompletion.fromDate ? Array.from({ length: 7 }, (_, index) => addDays(weeklyCompletion.fromDate, index)) : [],
-    [weeklyCompletion.fromDate],
-  );
+  const weeklyStartDate = isCalendarDate(weeklyCompletion.fromDate) ? weeklyCompletion.fromDate : null;
+  const weeklyEndDate = isCalendarDate(weeklyCompletion.toDate) ? weeklyCompletion.toDate : null;
+  const weeklyDays = useMemo(() => {
+    if (!weeklyStartDate) {
+      return [];
+    }
+
+    return Array.from({ length: 7 }, (_, index) => addDays(weeklyStartDate, index)).filter((date): date is string => Boolean(date));
+  }, [weeklyStartDate]);
 
   const weeklyRows = weeklyCompletion.rows.map((row) => ({
     id: String(row.user_id),
@@ -229,7 +246,7 @@ export default function UserQuranPage() {
           <Card>
             <SectionHeader
               title="ইনতিফাদাহ সদস্যদের সাপ্তাহিক Done"
-              subtitle={weeklyCompletion.fromDate ? `${toBanglaDate(weeklyCompletion.fromDate)} - ${toBanglaDate(weeklyCompletion.toDate)}` : 'শুক্রবার থেকে বৃহস্পতিবার'}
+              subtitle={weeklyStartDate && weeklyEndDate ? `${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}` : 'শুক্রবার থেকে বৃহস্পতিবার'}
             />
             {weeklyLoading ? <ApiLoadingNotice label="সাপ্তাহিক Done অবস্থা লোড হচ্ছে..." /> : (
               <DataTable
