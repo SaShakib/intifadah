@@ -117,12 +117,11 @@ async function getWeeklyReport({ fromDate, toDate }) {
   return res.rows;
 }
 
-async function listInternalActiveUsers() {
+async function listActiveUsers() {
   const res = await query(
     `SELECT id, full_name, mobile, email
      FROM app_users
      WHERE is_active = TRUE
-       AND user_kind = 1
      ORDER BY full_name ASC`,
   );
 
@@ -323,7 +322,7 @@ module.exports = {
   updateProgress,
   listProgress,
   getWeeklyReport,
-  listInternalActiveUsers,
+  listActiveUsers,
   listPenalties,
   createWeeklyPenaltyRun,
 };

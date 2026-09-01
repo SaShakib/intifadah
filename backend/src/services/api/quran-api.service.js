@@ -129,7 +129,7 @@ async function getInternalWeeklyCompletion() {
 }
 
 async function sendQuranReminderNotifications() {
-  const users = await quranRepository.listInternalActiveUsers();
+  const users = await quranRepository.listActiveUsers();
   const result = await notificationsRepository.createForUsers({
     userIds: users.map((user) => user.id),
     notifType: 20,

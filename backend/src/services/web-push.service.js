@@ -9,7 +9,8 @@ function isWebPushEnabled() {
 }
 
 function configureWebPush() {
-  if (!isWebPushEnabled() || configured) return false;
+  if (!isWebPushEnabled()) return false;
+  if (configured) return true;
 
   webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey);
   configured = true;
