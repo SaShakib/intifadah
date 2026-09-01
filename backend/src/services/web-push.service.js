@@ -158,7 +158,17 @@ async function sendTestNotification(userId) {
 }
 
 async function sendUserNotifications(notifications = []) {
-  await Promise.allSettled(notifications.map((notification) => sendUserNotification(notification)));
+  const results = await Promise.allSettled(notifications.map((notification) => sendUserNotification(notification)));
+  const fulfilled = results
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value);
+
+  return {
+    enabled: fulfilled.some((result) => result.enabled),
+    subscriptions: fulfilled.reduce((sum, result) => sum + result.subscriptions, 0),
+    sent: fulfilled.reduce((sum, result) => sum + result.sent, 0),
+    failed: fulfilled.reduce((sum, result) => sum + result.failed, 0) + results.filter((result) => result.status === 'rejected').length,
+  };
 }
 
 module.exports = {

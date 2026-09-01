@@ -74,7 +74,14 @@ export default function AdminQuranPage() {
     setSendingReminder(true);
     try {
       const result = await sendAdminQuranReminder();
-      setToast(`${result.data.notifiedUsers} জনকে Quran reminder পাঠানো হয়েছে।`);
+      const { notifiedUsers, devicePush } = result.data;
+      if (!devicePush.enabled) {
+        setToast(`${notifiedUsers} জনের in-app reminder তৈরি হয়েছে, কিন্তু device push server-এ চালু নেই।`);
+      } else if (!devicePush.sent) {
+        setToast(`${notifiedUsers} জনের in-app reminder তৈরি হয়েছে, কিন্তু কোনো device push পাঠানো যায়নি।`);
+      } else {
+        setToast(`${notifiedUsers} জনকে reminder এবং ${devicePush.sent}টি device push পাঠানো হয়েছে।`);
+      }
     } catch {
       setToast('Quran reminder পাঠানো যায়নি।');
     } finally {

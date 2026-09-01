@@ -10,10 +10,17 @@ async function deliverNotification(row) {
 }
 
 async function deliverNotifications(rows) {
-  await Promise.allSettled([
+  const results = await Promise.allSettled([
     publishUserNotifications(rows),
     sendUserNotifications(rows),
   ]);
+
+  const pushResult = results[1];
+  return {
+    devicePush: pushResult?.status === 'fulfilled'
+      ? pushResult.value
+      : { enabled: false, subscriptions: 0, sent: 0, failed: rows.length },
+  };
 }
 
 async function createForUser({ userId, notifType, payloadJson }) {
@@ -36,7 +43,7 @@ async function createForUser({ userId, notifType, payloadJson }) {
   return row;
 }
 
-async function createForUsers({ userIds, notifType, payloadJson }) {
+async function createForUsers({ userIds, notifType, payloadJson, includeDeliveryReport = false }) {
   const uniqueIds = Array.from(new Set((userIds || []).map(Number).filter(Boolean)));
   if (!uniqueIds.length) {
     return [];
@@ -57,8 +64,8 @@ async function createForUsers({ userIds, notifType, payloadJson }) {
     [uniqueIds, notifType, payloadJson || null],
   );
 
-  await deliverNotifications(res.rows);
-  return res.rows;
+  const delivery = await deliverNotifications(res.rows);
+  return includeDeliveryReport ? { rows: res.rows, delivery } : res.rows;
 }
 
 async function createForRoleKeys({ roleKeys, notifType, payloadJson, excludeUserId }) {

@@ -130,7 +130,7 @@ async function getInternalWeeklyCompletion() {
 
 async function sendQuranReminderNotifications() {
   const users = await quranRepository.listInternalActiveUsers();
-  const rows = await notificationsRepository.createForUsers({
+  const result = await notificationsRepository.createForUsers({
     userIds: users.map((user) => user.id),
     notifType: 20,
     payloadJson: {
@@ -138,10 +138,12 @@ async function sendQuranReminderNotifications() {
       title: 'Quran tracking reminder',
       message: 'আজকের Quran progress Done করুন।',
     },
+    includeDeliveryReport: true,
   });
 
   return {
-    notifiedUsers: rows.length,
+    notifiedUsers: result.rows.length,
+    devicePush: result.delivery.devicePush,
   };
 }
 
