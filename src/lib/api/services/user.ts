@@ -180,6 +180,12 @@ export async function removePushSubscription(endpoint: string) {
   });
 }
 
+export function testDevicePushNotification() {
+  return apiRequest<{ data: { enabled: boolean; subscriptions: number; sent: number; failed: number } }>('/user/push-subscriptions/test', {
+    method: 'POST',
+  });
+}
+
 export async function getUserQuranProgress(params: { fromDate?: string; toDate?: string } = {}) {
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiQuranProgressRow>>(`/user/quran/progress${query}`);

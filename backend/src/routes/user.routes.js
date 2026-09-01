@@ -43,6 +43,7 @@ router.patch('/notifications/:notificationId/read', userController.markNotificat
 router.post('/pusher/auth', userController.pusherAuth);
 router.post('/push-subscriptions', userController.savePushSubscription);
 router.delete('/push-subscriptions', userController.removePushSubscription);
+router.post('/push-subscriptions/test', userController.testPushNotification);
 
 router.get('/quran/progress', requirePermission('quran', 'read'), quranController.myProgress);
 router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);

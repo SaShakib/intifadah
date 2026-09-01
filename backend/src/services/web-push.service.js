@@ -113,7 +113,7 @@ async function removeSubscription(userId, endpoint) {
 
 async function sendUserNotification(notification) {
   if (!configureWebPush() || !notification?.recipient_user_id) {
-    return { enabled: false, sent: 0 };
+    return { enabled: false, subscriptions: 0, sent: 0, failed: 0 };
   }
 
   const subscriptions = await query(
@@ -138,7 +138,23 @@ async function sendUserNotification(notification) {
     }
   }));
 
-  return { enabled: true, sent: results.filter((item) => item.status === 'fulfilled').length };
+  return {
+    enabled: true,
+    subscriptions: subscriptions.rows.length,
+    sent: results.filter((item) => item.status === 'fulfilled').length,
+    failed: results.filter((item) => item.status === 'rejected').length,
+  };
+}
+
+async function sendTestNotification(userId) {
+  return sendUserNotification({
+    recipient_user_id: userId,
+    payload_json: {
+      event: 'push_test',
+      title: 'ইনতিফাদাহ বিজ্ঞপ্তি পরীক্ষা',
+      message: 'ডিভাইস পুশ বিজ্ঞপ্তি ঠিকভাবে কাজ করছে।',
+    },
+  });
 }
 
 async function sendUserNotifications(notifications = []) {
@@ -149,6 +165,7 @@ module.exports = {
   isWebPushEnabled,
   saveSubscription,
   removeSubscription,
+  sendTestNotification,
   sendUserNotification,
   sendUserNotifications,
 };

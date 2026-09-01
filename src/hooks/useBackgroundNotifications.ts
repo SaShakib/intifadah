@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, testDevicePushNotification } from '@/lib/api';
 
 type BackgroundNotificationStatus = 'unsupported' | 'unconfigured' | 'default' | 'enabled' | 'blocked' | 'error';
 
@@ -142,5 +142,22 @@ export function useBackgroundNotifications() {
     }
   }, []);
 
-  return { status, busy, error, enable, disable };
+  const test = useCallback(async (): Promise<boolean> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await testDevicePushNotification();
+      if (!result.data.sent) {
+        throw new Error('Push delivery failed');
+      }
+      return true;
+    } catch {
+      setError('ডিভাইস বিজ্ঞপ্তি পাঠানো যায়নি। সার্ভারের Push সেটিংস পরীক্ষা করুন।');
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  return { status, busy, error, enable, disable, test };
 }

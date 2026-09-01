@@ -4,21 +4,25 @@ import { BellRing, BellOff, LoaderCircle } from 'lucide-react';
 import { useBackgroundNotifications } from '@/hooks/useBackgroundNotifications';
 
 export function BackgroundNotificationsControl() {
-  const { status, busy, error, enable, disable } = useBackgroundNotifications();
+  const { status, busy, error, enable, disable, test } = useBackgroundNotifications();
 
   if (status === 'unsupported' || status === 'unconfigured') return null;
 
   if (status === 'enabled') {
     return (
-      <button
-        type="button"
-        onClick={() => void disable()}
-        disabled={busy}
-        className="flex w-full items-center gap-2 border-t border-border px-4 py-3 text-left text-xs font-medium text-emerald-700 hover:bg-surface-2 disabled:cursor-wait"
-      >
-        {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
-        <span>ব্যাকগ্রাউন্ড বিজ্ঞপ্তি চালু আছে</span>
-      </button>
+      <div className="border-t border-border px-4 py-3">
+        <p className="flex items-center gap-2 text-xs font-medium text-emerald-700">
+          <BellRing className="h-4 w-4" />
+          ব্যাকগ্রাউন্ড বিজ্ঞপ্তি চালু আছে
+        </p>
+        <div className="mt-2 flex gap-3 text-xs font-semibold">
+          <button type="button" onClick={() => void test()} disabled={busy} className="text-brand hover:text-brand-dark disabled:cursor-wait">
+            {busy ? 'পাঠানো হচ্ছে...' : 'ডিভাইসে পরীক্ষা করুন'}
+          </button>
+          <button type="button" onClick={() => void disable()} disabled={busy} className="text-muted hover:text-fg disabled:cursor-wait">বন্ধ করুন</button>
+        </div>
+        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+      </div>
     );
   }
 

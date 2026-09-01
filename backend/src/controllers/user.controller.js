@@ -25,7 +25,7 @@ const {
   markMyNotificationRead,
 } = require('../services/api/user-api.service');
 const { authorizeUserChannel } = require('../services/pusher.service');
-const { saveSubscription, removeSubscription } = require('../services/web-push.service');
+const { saveSubscription, removeSubscription, sendTestNotification } = require('../services/web-push.service');
 
 function parseBoolean(value) {
   if (value === undefined) return undefined;
@@ -333,6 +333,31 @@ async function removePushSubscription(req, res, next) {
   }
 }
 
+async function testPushNotification(req, res, next) {
+  try {
+    const result = await sendTestNotification(req.auth.userId);
+    if (!result.enabled) {
+      const error = new Error('Device push is not configured on the server');
+      error.statusCode = 503;
+      throw error;
+    }
+    if (!result.subscriptions) {
+      const error = new Error('Enable device notifications on this device first');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (!result.sent) {
+      const error = new Error('The push service rejected this device subscription');
+      error.statusCode = 502;
+      throw error;
+    }
+
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   dashboard,
   categories,
@@ -358,4 +383,5 @@ module.exports = {
   pusherAuth,
   savePushSubscription,
   removePushSubscription,
+  testPushNotification,
 };
