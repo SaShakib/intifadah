@@ -5,7 +5,7 @@
  *  - Receives push notifications while the app is closed
  */
 
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 
 /* ── Install ──────────────────────────────────────────────── */
 self.addEventListener('install', event => {

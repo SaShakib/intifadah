@@ -10,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
-const SERVICE_WORKER_URL = '/sw.js?v=8';
+const SERVICE_WORKER_URL = '/sw.js?v=9';
 
 function useServiceWorker() {
   useEffect(() => {
@@ -19,11 +19,21 @@ function useServiceWorker() {
     }
 
     let updateTimer: number | undefined;
+    let reloading = false;
+    const reloadForNewWorker = () => {
+      if (reloading) {
+        return;
+      }
+      reloading = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', reloadForNewWorker);
     navigator.serviceWorker
-      .register(SERVICE_WORKER_URL, { scope: '/' })
+      .register(SERVICE_WORKER_URL, { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         void registration.update();
-        updateTimer = window.setInterval(() => void registration.update(), 60 * 60 * 1000);
+        updateTimer = window.setInterval(() => void registration.update(), 5 * 60 * 1000);
       })
       .catch(() => {
         // silent
@@ -33,6 +43,7 @@ function useServiceWorker() {
       if (updateTimer) {
         window.clearInterval(updateTimer);
       }
+      navigator.serviceWorker.removeEventListener('controllerchange', reloadForNewWorker);
     };
   }, []);
 }
