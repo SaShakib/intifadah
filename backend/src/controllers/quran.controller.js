@@ -4,6 +4,7 @@ const {
   listMyProgress,
   getAdminWeeklyReport,
   getInternalWeeklyCompletion,
+  sendQuranReminderNotifications,
   getAdminPenaltyReport,
   runWeeklyPenaltyJob,
 } = require('../services/api/quran-api.service');
@@ -65,6 +66,15 @@ async function internalWeeklyCompletion(_req, res, next) {
   }
 }
 
+async function sendReminder(_req, res, next) {
+  try {
+    const result = await sendQuranReminderNotifications();
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function penalties(req, res, next) {
   try {
     const data = await getAdminPenaltyReport({
@@ -95,6 +105,7 @@ module.exports = {
   updateProgress,
   weeklyReport,
   internalWeeklyCompletion,
+  sendReminder,
   penalties,
   runPenalties,
 };

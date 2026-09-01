@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Play } from 'lucide-react';
+import { BellRing, Play } from 'lucide-react';
 import { Button } from '@/components/base/Button';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
@@ -9,11 +9,14 @@ import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { ApiErrorNotice, ApiLoadingNotice } from '@/components/custom/ApiNotice';
 import { PageStack } from '@/components/custom/PageStack';
+import { AppToast } from '@/components/semibase/AppModal';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getAdminQuranWeeklyReport,
   getAdminQuranPenalties,
   queryKeys,
   runAdminQuranPenalties,
+  sendAdminQuranReminder,
   toBanglaDate,
   toMinorNumber,
   useApiQuery,
@@ -21,13 +24,28 @@ import {
 import { formatCurrencyBn } from '@/lib/utils/format';
 
 function addDays(dateText: string, days: number) {
-  const date = new Date(dateText);
+  const date = new Date(`${dateText}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime());
+}
+
 export default function AdminQuranPage() {
+  const { roleKey } = useAuth();
   const [running, setRunning] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const loadReport = useCallback(async () => {
     const [weekly, penalties] = await Promise.all([
@@ -52,7 +70,24 @@ export default function AdminQuranPage() {
     }
   };
 
-  const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(data.weekly.fromDate, index)), [data.weekly.fromDate]);
+  const sendReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const result = await sendAdminQuranReminder();
+      setToast(`${result.data.notifiedUsers} জনকে Quran reminder পাঠানো হয়েছে।`);
+    } catch {
+      setToast('Quran reminder পাঠানো যায়নি।');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  const days = useMemo(() => {
+    if (!isCalendarDate(data.weekly.fromDate)) {
+      return [];
+    }
+    return Array.from({ length: 7 }, (_, index) => addDays(data.weekly.fromDate, index)).filter((date): date is string => Boolean(date));
+  }, [data.weekly.fromDate]);
   const completedUsers = data.weekly.rows.filter((row) => days.some((date) => row.days?.[date]?.done)).length;
   const totalMarks = data.weekly.rows.reduce((sum, row) => sum + days.filter((date) => row.days?.[date]?.done).length, 0);
   const totalPages = data.weekly.rows.reduce((sum, row) => (
@@ -128,7 +163,14 @@ export default function AdminQuranPage() {
             title="সদস্যভিত্তিক ৭ দিনের ট্র্যাক"
             subtitle="শুক্রবার থেকে বৃহস্পতিবারের Done অবস্থা"
             action={(
-              <Button onClick={() => void runPenalties()} disabled={running}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
+              <div className="flex flex-wrap gap-2">
+                {roleKey === 'super_admin' && (
+                  <Button variant="secondary" onClick={() => void sendReminder()} disabled={sendingReminder}>
+                    <BellRing className="h-4 w-4" />{sendingReminder ? 'পাঠানো হচ্ছে...' : 'Quran reminder পাঠান'}
+                  </Button>
+                )}
+                <Button onClick={() => void runPenalties()} disabled={running}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
+              </div>
             )}
           />
           <DataTable
@@ -155,6 +197,8 @@ export default function AdminQuranPage() {
           />
         </Card>
       </section>
+
+      <AppToast message={toast} />
     </PageStack>
   );
 }

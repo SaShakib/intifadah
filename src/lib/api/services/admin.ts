@@ -211,3 +211,9 @@ export function runAdminQuranPenalties(input: { fromDate?: string; toDate?: stri
     body: JSON.stringify(input),
   });
 }
+
+export function sendAdminQuranReminder() {
+  return apiRequest<ApiDataResponse<{ notifiedUsers: number }>>('/admin/quran/send-reminder', {
+    method: 'POST',
+  });
+}
