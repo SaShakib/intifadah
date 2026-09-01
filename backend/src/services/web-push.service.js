@@ -53,7 +53,10 @@ function notificationContent(notification) {
     body,
     url,
     notificationId: notification?.id || null,
-    tag: notification?.id ? `intifadah-notification-${notification.id}` : undefined,
+    tag: event === 'quran_daily_reminder'
+      ? 'intifadah-quran-reminder'
+      : notification?.id ? `intifadah-notification-${notification.id}` : undefined,
+    renotify: event === 'quran_daily_reminder',
   };
 }
 

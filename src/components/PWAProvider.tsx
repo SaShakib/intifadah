@@ -10,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
-const SERVICE_WORKER_URL = '/sw.js?v=9';
+const SERVICE_WORKER_URL = '/sw.js?v=10';
 
 function useServiceWorker() {
   useEffect(() => {

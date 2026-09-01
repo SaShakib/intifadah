@@ -5,7 +5,7 @@
  *  - Receives push notifications while the app is closed
  */
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 
 /* ── Install ──────────────────────────────────────────────── */
 self.addEventListener('install', event => {
@@ -45,6 +45,9 @@ self.addEventListener('push', event => {
     icon: '/icons/intifadah.jpeg',
     badge: '/icons/intifadah.jpeg',
     tag: payload.tag || 'intifadah-notification',
+    renotify: Boolean(payload.renotify),
+    silent: false,
+    vibrate: [150, 80, 150],
     data: { url: payload.url || '/user/dashboard' },
   };
 
