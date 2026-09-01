@@ -5,7 +5,7 @@
  *  - Receives push notifications while the app is closed
  */
 
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 
 /* ── Install ──────────────────────────────────────────────── */
 self.addEventListener('install', event => {
@@ -14,13 +14,20 @@ self.addEventListener('install', event => {
 
 /* ── Activate — clear legacy caches before claiming clients ─ */
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(names => Promise.all(
-        names.filter(name => name.startsWith('intifadah-') && !name.endsWith(CACHE_VERSION)).map(name => caches.delete(name))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter(name => name.startsWith('intifadah-') && !name.endsWith(CACHE_VERSION))
+        .map(name => caches.delete(name))
+    );
+    await self.clients.claim();
+
+    // The old worker cached incompatible Next.js assets. Reload each open
+    // window once the cleanup worker takes control so no manual refresh is needed.
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    await Promise.all(clients.map(client => client.navigate(client.url).catch(() => undefined)));
+  })());
 });
 
 /* ── Web Push: works while the installed app is closed ───── */

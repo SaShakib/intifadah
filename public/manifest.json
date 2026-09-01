@@ -2,7 +2,7 @@
   "name": "ইনতিফাদাহ — কর্যে হাসানাঃ",
   "short_name": "ইনতিফাদাহ",
   "description": "সুদমুক্ত আর্থিক সহযোগিতা — দান, সঞ্চয় ও ঋণ ব্যবস্থাপনা",
-  "start_url": "/?pwa=v7",
+  "start_url": "/?pwa=v8",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
