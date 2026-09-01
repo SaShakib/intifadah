@@ -145,11 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAuthSession();
     setSessionUser(null);
 
-    try {
-      await logoutApi(refreshToken);
-    } catch {
-      // A local sign-out must still succeed when the network is unavailable.
-    }
+    // Navigation must not wait for a slow or unavailable API. Credentials are
+    // already removed locally; this only revokes the server-side refresh token.
+    void logoutApi(refreshToken).catch(() => undefined);
   };
 
   const refreshMe = async () => {
