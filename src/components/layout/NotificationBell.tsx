@@ -110,12 +110,12 @@ export function NotificationBell({ defaultCount = 0 }: { defaultCount?: number }
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-white shadow-lg">
+        <div className="fixed inset-x-3 top-[calc(var(--topbar-h)+0.5rem)] z-50 max-h-[calc(100dvh-var(--topbar-h)-1.25rem)] overflow-hidden rounded-xl border border-border bg-white shadow-lg md:absolute md:inset-x-auto md:right-0 md:top-11 md:max-h-[min(34rem,calc(100dvh-4rem))] md:w-[22rem]">
           <div className="border-b border-border px-4 py-3">
             <p className="text-sm font-bold text-fg">বিজ্ঞপ্তি</p>
             <p className="text-xs text-muted">{liveCount}টি unread</p>
           </div>
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-[calc(100dvh-var(--topbar-h)-11rem)] overflow-y-auto md:max-h-80">
             {loading && <p className="px-4 py-5 text-center text-sm text-muted">লোড হচ্ছে...</p>}
             {error && <p className="px-4 py-5 text-center text-sm text-danger">{error}</p>}
             {!loading && !error && rows.length === 0 && <p className="px-4 py-5 text-center text-sm text-muted">কোনো বিজ্ঞপ্তি নেই</p>}
