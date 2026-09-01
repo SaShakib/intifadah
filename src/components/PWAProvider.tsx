@@ -10,6 +10,8 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+const SERVICE_WORKER_URL = '/sw.js?v=7';
+
 function useServiceWorker() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
@@ -18,7 +20,7 @@ function useServiceWorker() {
 
     let updateTimer: number | undefined;
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      .register(SERVICE_WORKER_URL, { scope: '/' })
       .then((registration) => {
         void registration.update();
         updateTimer = window.setInterval(() => void registration.update(), 60 * 60 * 1000);
