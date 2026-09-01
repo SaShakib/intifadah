@@ -151,8 +151,8 @@ export function useBackgroundNotifications() {
         throw new Error('Push delivery failed');
       }
       return true;
-    } catch {
-      setError('ডিভাইস বিজ্ঞপ্তি পাঠানো যায়নি। সার্ভারের Push সেটিংস পরীক্ষা করুন।');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'ডিভাইস বিজ্ঞপ্তি পাঠানো যায়নি। সার্ভারের Push সেটিংস পরীক্ষা করুন।');
       return false;
     } finally {
       setBusy(false);
