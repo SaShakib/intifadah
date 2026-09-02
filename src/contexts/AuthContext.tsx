@@ -79,13 +79,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!cancelled) {
+        // Keep the app on its loader until the stored session is validated or
+        // refreshed. This avoids briefly rendering a protected route with an
+        // expired access token.
         setSessionUser(current.user);
-        setIsReady(true);
       }
 
       try {
         const user = await meApi();
-        const next = { ...current, user };
+        // meApi can rotate tokens after a 401. Always preserve the session it
+        // just wrote instead of restoring the expired token captured above.
+        const next = { ...(getAuthSession() ?? current), user };
         setAuthSession(next);
         if (!cancelled) {
           setSessionUser(user);
@@ -158,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const user = await meApi();
-    setAuthSession({ ...current, user });
+    setAuthSession({ ...(getAuthSession() ?? current), user });
     setSessionUser(user);
   };
 
