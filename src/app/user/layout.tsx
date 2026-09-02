@@ -38,7 +38,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const fromDate = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
     void getOrFetchCached(
       queryKeys.user.quranProgress({ scope: '30d' }),
-      () => getUserQuranProgress({ fromDate }),
+      async () => ({ rows: await getUserQuranProgress({ fromDate }) }),
       5 * 60_000,
     ).catch(() => {
       // Quran data can load normally if the warm-up request is unavailable.

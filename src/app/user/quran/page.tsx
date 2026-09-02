@@ -22,7 +22,7 @@ import {
   useApiQuery,
   updateUserQuranProgress,
 } from '@/lib/api';
-import type { QuranProgressInput } from '@/lib/api';
+import type { ApiQuranProgressRow, QuranProgressInput } from '@/lib/api';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const thirtyDaysAgo = () => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -69,6 +69,11 @@ export default function UserQuranPage() {
     cacheKey: queryKeys.user.quranProgress({ scope: '30d' }),
     staleTimeMs: 5 * 60_000,
   });
+  // Earlier app versions warmed this cache with the raw array. Keep that cached
+  // shape valid while the current bundle replaces it with the object form.
+  const progressRows: ApiQuranProgressRow[] = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.rows) ? data.rows : [];
 
   const loadWeeklyCompletion = useCallback(() => getInternalQuranWeeklyCompletion(), []);
   const {
@@ -83,14 +88,14 @@ export default function UserQuranPage() {
   });
 
   const selectedDate = form.progressDate || today();
-  const selectedRecord = data.rows.find((item) => item.progress_date.slice(0, 10) === selectedDate);
+  const selectedRecord = progressRows.find((item) => item.progress_date.slice(0, 10) === selectedDate);
   const selectedRecordId = selectedRecord?.id;
   const selectedRecordPages = selectedRecord?.pages_read ?? null;
   const selectedRecordSurah = selectedRecord?.surah_name ?? '';
   const selectedRecordMinutes = selectedRecord?.minutes_read ?? null;
   const selectedRecordNote = selectedRecord?.note ?? '';
   const selectedDateDone = Boolean(selectedRecord);
-  const todayDone = data.rows.some((item) => item.progress_date.slice(0, 10) === today());
+  const todayDone = progressRows.some((item) => item.progress_date.slice(0, 10) === today());
 
   const showToast = (message: string) => {
     setToast(message);
@@ -102,7 +107,7 @@ export default function UserQuranPage() {
   };
 
   const selectRecordDate = (progressDate: string) => {
-    const record = data.rows.find((item) => item.progress_date.slice(0, 10) === progressDate);
+    const record = progressRows.find((item) => item.progress_date.slice(0, 10) === progressDate);
     setForm({
       progressDate,
       pagesRead: record?.pages_read ?? null,
@@ -154,7 +159,7 @@ export default function UserQuranPage() {
     }
   };
 
-  const rows = data.rows.map((item) => ({
+  const rows = progressRows.map((item) => ({
     id: String(item.id),
     searchText: `${item.progress_date} ${item.surah_name ?? ''} ${item.note ?? ''}`,
     sortValues: [item.progress_date, item.pages_read ?? 0, item.minutes_read ?? 0, item.surah_name ?? ''],
@@ -168,15 +173,15 @@ export default function UserQuranPage() {
   }));
 
   const metrics = useMemo(() => {
-    const pages = data.rows.reduce((sum, item) => sum + Number(item.pages_read ?? 0), 0);
-    const minutes = data.rows.reduce((sum, item) => sum + Number(item.minutes_read ?? 0), 0);
+    const pages = progressRows.reduce((sum, item) => sum + Number(item.pages_read ?? 0), 0);
+    const minutes = progressRows.reduce((sum, item) => sum + Number(item.minutes_read ?? 0), 0);
     return [
-      { label: '৩০ দিনের রেকর্ড', value: String(data.rows.length), hint: 'কুরআন পড়া হয়েছে এমন দিন' },
+      { label: '৩০ দিনের রেকর্ড', value: String(progressRows.length), hint: 'কুরআন পড়া হয়েছে এমন দিন' },
       { label: 'আজ', value: todayDone ? 'পড়া হয়েছে' : 'বাকি', hint: todayDone ? 'আজকের রেকর্ড আছে' : 'এখনও রেকর্ড করা হয়নি' },
       { label: 'মোট পৃষ্ঠা', value: String(pages), hint: 'দেওয়া তথ্য থেকে' },
       { label: 'মোট সময়', value: `${minutes} মিনিট`, hint: 'দেওয়া তথ্য থেকে' },
     ];
-  }, [data.rows, todayDone]);
+  }, [progressRows, todayDone]);
 
   const weeklyStartDate = isCalendarDate(weeklyCompletion.fromDate) ? weeklyCompletion.fromDate : null;
   const weeklyEndDate = isCalendarDate(weeklyCompletion.toDate) ? weeklyCompletion.toDate : null;
