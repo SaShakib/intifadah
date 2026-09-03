@@ -34,6 +34,10 @@ function notificationContent(notification) {
     title = 'Quran tracking penalty';
     body = `${payload.fromDate || ''} থেকে ${payload.toDate || ''} সময়ের penalty তৈরি হয়েছে।`;
     url = '/user/quran';
+  } else if (event === 'quran_weekly_penalty_reversed') {
+    title = 'Quran tracking penalty removed';
+    body = `${payload.fromDate || ''} থেকে ${payload.toDate || ''} সময়ের penalty বাতিল করা হয়েছে।`;
+    url = '/user/quran';
   } else if (event === 'quran_weekly_penalty_run') {
     title = 'সাপ্তাহিক Quran রিপোর্ট';
     body = `${payload.penaltyCount || 0} জনের penalty তৈরি হয়েছে।`;

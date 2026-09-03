@@ -163,9 +163,9 @@ async function sendQuranReminderNotifications() {
 }
 
 async function runWeeklyPenaltyJob(input = {}) {
-  const range = input.fromDate && input.toDate
-    ? { fromDate: input.fromDate, toDate: input.toDate }
-    : lastCompletedWeekRange(input.baseDate || new Date());
+  // Penalties are always limited to the immediately completed Friday-Thursday cycle.
+  // This prevents manual requests from charging a historical period.
+  const range = lastCompletedWeekRange(input.baseDate || new Date());
 
   const result = await quranRepository.createWeeklyPenaltyRun({
     ...range,
