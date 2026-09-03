@@ -104,11 +104,13 @@ async function getWeeklyReport({ fromDate, toDate }) {
         )
       ) FILTER (WHERE qp.id IS NOT NULL) AS days
      FROM app_users u
+     JOIN roles r ON r.id = u.role_id
      LEFT JOIN quran_progress qp
        ON qp.user_id = u.id
       AND qp.progress_date BETWEEN $1 AND $2
      WHERE u.is_active = TRUE
        AND u.user_kind = 1
+       AND r.role_key NOT IN ('super_admin', 'admin', 'manager')
      GROUP BY u.id, u.full_name, u.mobile
      ORDER BY u.full_name ASC`,
     [fromDate, toDate],
@@ -238,12 +240,14 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         u.email,
         COALESCE(COUNT(DISTINCT qp.progress_date), 0)::int AS done_days
        FROM app_users u
+       JOIN roles r ON r.id = u.role_id
        LEFT JOIN quran_progress qp
          ON qp.user_id = u.id
         AND qp.is_done = TRUE
         AND qp.progress_date BETWEEN $1 AND $2
        WHERE u.is_active = TRUE
          AND u.user_kind = 1
+         AND r.role_key NOT IN ('super_admin', 'admin', 'manager')
        GROUP BY u.id, u.full_name, u.mobile, u.email
        ORDER BY u.full_name ASC`,
       [fromDate, toDate],
