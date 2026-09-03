@@ -130,21 +130,29 @@ export default function AdminQuranPage() {
     ],
   }));
 
-  const penaltyRows = data.penalties.rows.map((row) => ({
-    id: String(row.id),
-    searchText: `${row.full_name} ${row.mobile} ${row.from_date} ${row.to_date}`,
-    sortValues: [row.full_name, row.missed_days, toMinorNumber(row.penalty_minor), row.to_date],
-    cells: [
-      <div key={`${row.id}-user`}>
-        <p className="font-bold text-fg">{row.full_name}</p>
-        <p className="text-xs text-muted">{row.mobile}</p>
-      </div>,
-      `${toBanglaDate(row.from_date)} - ${toBanglaDate(row.to_date)}`,
-      String(row.missed_days),
-      <span key={`${row.id}-amount`} className="font-semibold text-danger tabular-nums">{formatCurrencyBn(toMinorNumber(row.penalty_minor))}</span>,
-      row.transaction_id ? `#${row.transaction_id}` : '-',
-    ],
-  }));
+  const penaltiesByUserId = new Map(data.penalties.rows.map((row) => [row.user_id, row]));
+  const penaltyRows = data.weekly.rows.map((member) => {
+    const penalty = penaltiesByUserId.get(member.user_id);
+    const doneDays = days.filter((date) => member.days?.[date]?.done).length;
+    const missedDays = penalty?.missed_days ?? Math.max(0, 7 - doneDays);
+    const penaltyAmount = toMinorNumber(penalty?.penalty_minor);
+
+    return {
+      id: String(member.user_id),
+      searchText: `${member.full_name} ${member.mobile}`,
+      sortValues: [member.full_name, doneDays, missedDays, penaltyAmount],
+      cells: [
+        <div key={`${member.user_id}-user`}>
+          <p className="font-bold text-fg">{member.full_name}</p>
+          <p className="text-xs text-muted">{member.mobile}</p>
+        </div>,
+        `${doneDays}/7`,
+        String(missedDays),
+        <span key={`${member.user_id}-amount`} className={penaltyAmount ? 'font-semibold text-danger tabular-nums' : 'font-semibold text-success tabular-nums'}>{formatCurrencyBn(penaltyAmount)}</span>,
+        penalty?.transaction_id ? `#${penalty.transaction_id}` : '-',
+      ],
+    };
+  });
 
   if (loading) {
     return <PageStack><ApiLoadingNotice /></PageStack>;
@@ -195,12 +203,12 @@ export default function AdminQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
+          <SectionHeader title="সদস্যভিত্তিক Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
           <DataTable
-            headers={['সদস্য', 'ইন্টারভাল', 'Missed', 'Penalty', 'Transaction']}
+            headers={['সদস্য', 'Done', 'Missed', 'Penalty', 'Transaction']}
             rows={penaltyRows}
             searchPlaceholder="সদস্য, ফোন বা তারিখ..."
-            emptyMessage="এই ইন্টারভালে কোনো penalty নেই"
+            emptyMessage="এই ইন্টারভালে কোনো সদস্য পাওয়া যায়নি"
           />
         </Card>
       </section>
