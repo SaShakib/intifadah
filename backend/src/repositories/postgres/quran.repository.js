@@ -235,6 +235,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         u.id,
         u.full_name,
         u.mobile,
+        u.email,
         COALESCE(COUNT(DISTINCT qp.progress_date), 0)::int AS done_days
        FROM app_users u
        LEFT JOIN quran_progress qp
@@ -243,7 +244,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         AND qp.progress_date BETWEEN $1 AND $2
        WHERE u.is_active = TRUE
          AND u.user_kind = 1
-       GROUP BY u.id, u.full_name, u.mobile
+       GROUP BY u.id, u.full_name, u.mobile, u.email
        ORDER BY u.full_name ASC`,
       [fromDate, toDate],
     );
@@ -305,6 +306,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         ...penalty.rows[0],
         full_name: user.full_name,
         mobile: user.mobile,
+        email: user.email,
       });
     }
 

@@ -49,6 +49,7 @@ router.get('/quran/progress', requirePermission('quran', 'read'), quranControlle
 router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);
 router.patch('/quran/progress/:progressId', requirePermission('quran', 'write'), quranController.updateProgress);
 router.get('/quran/weekly-completion', requireUserKind(1), requirePermission('quran', 'read'), quranController.internalWeeklyCompletion);
+router.get('/quran/penalties', requirePermission('quran', 'read'), quranController.myPenalties);
 
 module.exports = {
   userRouter: router,

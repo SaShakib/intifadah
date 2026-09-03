@@ -16,13 +16,16 @@ import {
   createUserQuranProgress,
   getErrorMessage,
   getInternalQuranWeeklyCompletion,
+  getMyQuranPenalties,
   getUserQuranProgress,
   queryKeys,
   toBanglaDate,
+  toMinorNumber,
   useApiQuery,
   updateUserQuranProgress,
 } from '@/lib/api';
 import type { ApiQuranProgressRow, QuranProgressInput } from '@/lib/api';
+import { formatCurrencyBn } from '@/lib/utils/format';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const thirtyDaysAgo = () => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -87,6 +90,17 @@ export default function UserQuranPage() {
     enabled: isIntifadahMember,
   });
 
+  const loadPenalties = useCallback(() => getMyQuranPenalties(), []);
+  const {
+    data: penalties,
+    loading: penaltiesLoading,
+    error: penaltiesError,
+    refetch: refetchPenalties,
+  } = useApiQuery(loadPenalties, { rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 }, [], {
+    cacheKey: queryKeys.user.quranPenalties(),
+    staleTimeMs: 60_000,
+  });
+
   const selectedDate = form.progressDate || today();
   const selectedRecord = progressRows.find((item) => item.progress_date.slice(0, 10) === selectedDate);
   const selectedRecordId = selectedRecord?.id;
@@ -149,6 +163,7 @@ export default function UserQuranPage() {
         showToast(selectedDate === today() ? 'আজকের Quran পড়া রেকর্ড করা হয়েছে।' : 'Quran পড়ার রেকর্ড সংরক্ষণ হয়েছে।');
       }
       await refetch();
+      await refetchPenalties();
       if (isIntifadahMember) {
         await refetchWeeklyCompletion();
       }
@@ -208,6 +223,18 @@ export default function UserQuranPage() {
     ],
   }));
 
+  const penaltyRows = penalties.rows.map((row) => ({
+    id: String(row.id),
+    searchText: `${row.from_date} ${row.to_date}`,
+    sortValues: [row.to_date, row.missed_days, toMinorNumber(row.penalty_minor)],
+    cells: [
+      `${toBanglaDate(row.from_date)} - ${toBanglaDate(row.to_date)}`,
+      String(row.missed_days),
+      <span key={`${row.id}-amount`} className="font-semibold text-danger tabular-nums">{formatCurrencyBn(toMinorNumber(row.penalty_minor))}</span>,
+      row.transaction_id ? `#${row.transaction_id}` : '-',
+    ],
+  }));
+
   return (
     <PageStack>
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
@@ -264,6 +291,21 @@ export default function UserQuranPage() {
           </Card>
         </section>
       )}
+
+      <section>
+        {penaltiesError && <ApiErrorNotice message={penaltiesError} onRetry={() => void refetchPenalties()} />}
+        <Card>
+          <SectionHeader title="আপনার Quran penalty" subtitle={`${penalties.totalMissedDays} missed days, মোট ${formatCurrencyBn(penalties.totalPenaltyMinor)}`} />
+          {penaltiesLoading ? <ApiLoadingNotice label="Penalty হিসাব লোড হচ্ছে..." /> : (
+            <DataTable
+              headers={['ইন্টারভাল', 'Missed', 'Penalty', 'Transaction']}
+              rows={penaltyRows}
+              searchPlaceholder="তারিখ দিয়ে খুঁজুন..."
+              emptyMessage="আপনার কোনো Quran penalty নেই"
+            />
+          )}
+        </Card>
+      </section>
 
       <section>
         <Card>

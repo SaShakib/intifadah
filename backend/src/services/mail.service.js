@@ -83,9 +83,41 @@ async function sendPasswordResetOtpEmail({ to, fullName, otp, ttlMinutes }) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  })[character]);
+}
+
+async function sendQuranPenaltyEmail({ to, fullName, fromDate, toDate, missedDays, penaltyMinor }) {
+  const memberName = escapeHtml(fullName);
+  const interval = `${fromDate} to ${toDate}`;
+  const amount = `৳${Number(penaltyMinor || 0)}`;
+
+  return sendEmail({
+    to,
+    subject: 'Your Intifadah Quran tracking penalty',
+    text: `Assalamu alaikum ${fullName}, your Quran tracking penalty for ${interval} is ${amount}. Missed days: ${missedDays}. You can see the details in your Intifadah Quran page.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;">
+        <h2>Quran tracking penalty</h2>
+        <p>Assalamu alaikum ${memberName},</p>
+        <p>Your Quran tracking penalty for <strong>${escapeHtml(interval)}</strong> is <strong>${escapeHtml(amount)}</strong>.</p>
+        <p>Missed days: <strong>${Number(missedDays || 0)}</strong></p>
+        <p>You can see the details in your Intifadah Quran page.</p>
+      </div>
+    `,
+  });
+}
+
 module.exports = {
   sendEmail,
   sendTemporaryPasswordEmail,
   sendWelcomeEmail,
   sendPasswordResetOtpEmail,
+  sendQuranPenaltyEmail,
 };

@@ -301,6 +301,12 @@ export interface ApiQuranPenaltyReportResponse {
   totalMissedDays: number;
 }
 
+export interface ApiMyQuranPenaltyResponse {
+  rows: ApiQuranPenaltyRow[];
+  totalPenaltyMinor: number;
+  totalMissedDays: number;
+}
+
 export interface ApiQuranPenaltyRunResponse {
   skipped: boolean;
   fromDate: string;

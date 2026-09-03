@@ -1,5 +1,6 @@
 const { repositories } = require('../../repositories');
 const { env } = require('../../config/env');
+const { sendQuranPenaltyEmail } = require('../mail.service');
 
 const { notificationsRepository, quranRepository } = repositories;
 const QURAN_ADMIN_ROLE_KEYS = ['super_admin', 'admin'];
@@ -105,11 +106,25 @@ async function listMyProgress(userId, filters = {}) {
 }
 
 async function getAdminWeeklyReport(filters = {}) {
-  const range = defaultWeekRange(filters);
+  const range = filters.fromDate && filters.toDate
+    ? { fromDate: filters.fromDate, toDate: filters.toDate }
+    : lastCompletedWeekRange();
   const rows = await quranRepository.getWeeklyReport(range);
   return {
     ...range,
     rows,
+  };
+}
+
+async function getMyPenaltyReport(userId, filters = {}) {
+  const rows = await quranRepository.listPenalties({
+    userId,
+    limit: filters.limit,
+  });
+  return {
+    rows,
+    totalPenaltyMinor: rows.reduce((sum, row) => sum + Number(row.penalty_minor || 0), 0),
+    totalMissedDays: rows.reduce((sum, row) => sum + Number(row.missed_days || 0), 0),
   };
 }
 
@@ -180,6 +195,24 @@ async function runWeeklyPenaltyJob(input = {}) {
         penaltyPerMissedDayMinor: Number(input.penaltyPerMissedDayMinor || env.quranPenaltyPerMissedDayMinor),
       },
     });
+
+    const emailResults = await Promise.allSettled(
+      result.penalties
+        .filter((item) => item.email)
+        .map((item) => sendQuranPenaltyEmail({
+          to: item.email,
+          fullName: item.full_name,
+          fromDate: range.fromDate,
+          toDate: range.toDate,
+          missedDays: item.missed_days,
+          penaltyMinor: item.penalty_minor,
+        })),
+    );
+    result.emailDelivery = {
+      attempted: emailResults.length,
+      sent: emailResults.filter((item) => item.status === 'fulfilled').length,
+      failed: emailResults.filter((item) => item.status === 'rejected').length,
+    };
   }
 
   return {
@@ -207,6 +240,7 @@ module.exports = {
   createMyProgress,
   updateMyProgress,
   listMyProgress,
+  getMyPenaltyReport,
   getAdminWeeklyReport,
   getInternalWeeklyCompletion,
   sendQuranReminderNotifications,

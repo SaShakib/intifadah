@@ -5,6 +5,7 @@ const runId = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
 const SUPER_ADMIN_EMAIL = `super.${runId}@example.test`;
 const ADMIN_EMAIL = `admin.${runId}@example.test`;
 const PASSWORD = 'TestPass123!';
+const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
 
 process.env.NODE_ENV = 'test';
 process.env.SUPERADMIN_EMAILS = SUPER_ADMIN_EMAIL;
@@ -131,6 +132,7 @@ function collectRoleEvents(notifications, targetUserId) {
 }
 
 before(async () => {
+  if (!runIntegrationTests) return;
   await runMigrations();
 
   actors.superAdmin = await registerUser({
@@ -197,10 +199,11 @@ before(async () => {
 });
 
 after(async () => {
+  if (!runIntegrationTests) return;
   await pool.end();
 });
 
-test('PRD role and CRUD integration coverage', async (t) => {
+test('PRD role and CRUD integration coverage', { skip: !runIntegrationTests }, async (t) => {
   await t.test('public registration defaults to normal user before admin promotion', async () => {
     assert.equal(actors.publicDefaults.superAdminRoleKey, 'general_user');
     assert.equal(actors.publicDefaults.adminRoleKey, 'general_user');

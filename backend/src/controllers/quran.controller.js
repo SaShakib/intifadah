@@ -4,6 +4,7 @@ const {
   listMyProgress,
   getAdminWeeklyReport,
   getInternalWeeklyCompletion,
+  getMyPenaltyReport,
   sendQuranReminderNotifications,
   getAdminPenaltyReport,
   runWeeklyPenaltyJob,
@@ -66,6 +67,17 @@ async function internalWeeklyCompletion(_req, res, next) {
   }
 }
 
+async function myPenalties(req, res, next) {
+  try {
+    const data = await getMyPenaltyReport(req.auth.userId, {
+      limit: req.query.limit,
+    });
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function sendReminder(_req, res, next) {
   try {
     const result = await sendQuranReminderNotifications();
@@ -105,6 +117,7 @@ module.exports = {
   updateProgress,
   weeklyReport,
   internalWeeklyCompletion,
+  myPenalties,
   sendReminder,
   penalties,
   runPenalties,
