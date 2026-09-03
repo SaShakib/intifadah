@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { BellRing, Play } from 'lucide-react';
+import { BellRing, Play, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/base/Button';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
@@ -44,6 +44,7 @@ function isCalendarDate(value: unknown): value is string {
 export default function AdminQuranPage() {
   const { roleKey } = useAuth();
   const [running, setRunning] = useState(false);
+  const [reapplying, setReapplying] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -60,13 +61,21 @@ export default function AdminQuranPage() {
     staleTimeMs: 30_000,
   });
 
-  const runPenalties = async () => {
-    setRunning(true);
+  const runPenalties = async (reapply = false) => {
+    const setBusy = reapply ? setReapplying : setRunning;
+    setBusy(true);
     try {
-      await runAdminQuranPenalties();
+      const result = await runAdminQuranPenalties({ reapply });
+      if (result.skipped) {
+        setToast(result.unchanged ? 'Quran রেকর্ডে কোনো পরিবর্তন নেই, penalty অপরিবর্তিত আছে।' : 'এই সপ্তাহের penalty আগে থেকেই চালানো হয়েছে।');
+      } else if (reapply) {
+        setToast('সর্বশেষ সম্পূর্ণ সপ্তাহের penalty পুনরায় হিসাব করা হয়েছে।');
+      } else {
+        setToast('সর্বশেষ সম্পূর্ণ সপ্তাহের penalty হিসাব করা হয়েছে।');
+      }
       await refetch();
     } finally {
-      setRunning(false);
+      setBusy(false);
     }
   };
 
@@ -184,7 +193,8 @@ export default function AdminQuranPage() {
                     <BellRing className="h-4 w-4" />{sendingReminder ? 'পাঠানো হচ্ছে...' : 'Quran reminder পাঠান'}
                   </Button>
                 )}
-                <Button onClick={() => void runPenalties()} disabled={running}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
+                <Button variant="secondary" onClick={() => void runPenalties(true)} disabled={running || reapplying}><RefreshCw className="h-4 w-4" />{reapplying ? 'পুনরায় হিসাব হচ্ছে...' : 'Reapply penalty'}</Button>
+                <Button onClick={() => void runPenalties()} disabled={running || reapplying}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>
               </div>
             )}
           />

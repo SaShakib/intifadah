@@ -15,6 +15,7 @@ function notificationTitle(row: ApiNotificationRow) {
   if (payload.event === 'quran_daily_reminder') return 'Quran reminder';
   if (payload.event === 'quran_weekly_penalty_run') return 'Quran penalty report';
   if (payload.event === 'quran_weekly_penalty_assigned') return 'Quran penalty assigned';
+  if (payload.event === 'quran_weekly_penalty_reapplied') return 'Quran penalty updated';
   if (payload.event === 'quran_weekly_penalty_reversed') return 'Quran penalty removed';
   if (payload.event === 'user_transaction_created') return 'নতুন লেনদেন';
   if (payload.event === 'loan_request_created') return 'নতুন ঋণ আবেদন';
@@ -30,6 +31,9 @@ function notificationMessage(row: ApiNotificationRow) {
   if (payload.event === 'quran_weekly_penalty_assigned') {
     return `${payload.fromDate ?? ''} থেকে ${payload.toDate ?? ''} Quran tracking penalty তৈরি হয়েছে`;
   }
+  if (payload.event === 'quran_weekly_penalty_reapplied') {
+    return `${payload.fromDate ?? ''} থেকে ${payload.toDate ?? ''} Quran penalty আপডেট হয়েছে`;
+  }
   if (payload.event === 'quran_weekly_penalty_reversed') {
     return `${payload.fromDate ?? ''} থেকে ${payload.toDate ?? ''} Quran penalty বাতিল করা হয়েছে`;
   }
@@ -39,7 +43,7 @@ function notificationMessage(row: ApiNotificationRow) {
 function notificationUrl(row: ApiNotificationRow) {
   const payload = row.payload_json ?? {};
   if (typeof payload.url === 'string' && payload.url.startsWith('/')) return payload.url;
-  if (payload.event === 'quran_daily_reminder' || payload.event === 'quran_weekly_penalty_assigned' || payload.event === 'quran_weekly_penalty_reversed') return '/user/quran';
+  if (payload.event === 'quran_daily_reminder' || payload.event === 'quran_weekly_penalty_assigned' || payload.event === 'quran_weekly_penalty_reapplied' || payload.event === 'quran_weekly_penalty_reversed') return '/user/quran';
   if (payload.event === 'quran_weekly_penalty_run') return '/admin/quran';
   if (payload.event === 'loan_request_created') return '/admin/loans';
   if (payload.event === 'user_transaction_created') return '/admin/fund-collection';

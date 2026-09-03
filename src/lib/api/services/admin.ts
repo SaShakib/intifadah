@@ -205,7 +205,7 @@ export function getAdminQuranPenalties(params: { fromDate?: string; toDate?: str
   return apiRequest<ApiQuranPenaltyReportResponse>(`/admin/quran/penalties${query}`);
 }
 
-export function runAdminQuranPenalties(input: { fromDate?: string; toDate?: string } = {}) {
+export function runAdminQuranPenalties(input: { reapply?: boolean } = {}) {
   return apiRequest<ApiQuranPenaltyRunResponse>('/admin/quran/run-penalties', {
     method: 'POST',
     body: JSON.stringify(input),

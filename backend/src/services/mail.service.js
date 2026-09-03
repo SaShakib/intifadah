@@ -114,10 +114,26 @@ async function sendQuranPenaltyEmail({ to, fullName, fromDate, toDate, missedDay
   });
 }
 
+async function sendQuranPenaltyRemovalEmail({ to, fullName, fromDate, toDate }) {
+  return sendEmail({
+    to,
+    subject: 'Your Intifadah Quran tracking penalty was removed',
+    text: `Assalamu alaikum ${fullName}, your Quran tracking penalty for ${fromDate} to ${toDate} was removed after the record was updated.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;">
+        <h2>Quran tracking penalty removed</h2>
+        <p>Assalamu alaikum ${escapeHtml(fullName)},</p>
+        <p>Your Quran tracking penalty for <strong>${escapeHtml(fromDate)} to ${escapeHtml(toDate)}</strong> was removed after the record was updated.</p>
+      </div>
+    `,
+  });
+}
+
 module.exports = {
   sendEmail,
   sendTemporaryPasswordEmail,
   sendWelcomeEmail,
   sendPasswordResetOtpEmail,
   sendQuranPenaltyEmail,
+  sendQuranPenaltyRemovalEmail,
 };

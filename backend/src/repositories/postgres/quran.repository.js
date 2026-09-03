@@ -180,7 +180,21 @@ async function listPenalties(filters = {}) {
   return res.rows;
 }
 
-async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMinor }) {
+function hasSamePenaltyRows(previousPenalties, plannedPenalties) {
+  if (previousPenalties.length !== plannedPenalties.length) {
+    return false;
+  }
+
+  const previousByUserId = new Map(previousPenalties.map((penalty) => [Number(penalty.user_id), penalty]));
+  return plannedPenalties.every((penalty) => {
+    const previous = previousByUserId.get(Number(penalty.user.id));
+    return previous
+      && Number(previous.missed_days) === penalty.missedDays
+      && Number(previous.penalty_minor) === penalty.penaltyMinor;
+  });
+}
+
+async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMinor, reapplyExisting = false }) {
   return withTransaction(async (client) => {
     const category = await client.query(
       `WITH existing AS (
@@ -223,7 +237,21 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       [fromDate, toDate, penaltyPerMissedDayMinor],
     );
 
-    if (!run.rows[0]) {
+    let penaltyRun = run.rows[0];
+    const reapplied = !penaltyRun;
+    if (!penaltyRun) {
+      const existingRun = await client.query(
+        `SELECT id, from_date, to_date, penalty_per_missed_day_minor, created_at
+         FROM quran_penalty_runs
+         WHERE from_date = $1 AND to_date = $2
+         FOR UPDATE`,
+        [fromDate, toDate],
+      );
+
+      penaltyRun = existingRun.rows[0] || null;
+    }
+
+    if (!penaltyRun || (reapplied && !reapplyExisting)) {
       return {
         skipped: true,
         fromDate,
@@ -253,15 +281,64 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       [fromDate, toDate],
     );
 
-    const penalties = [];
-    for (const user of users.rows) {
+    const plannedPenalties = users.rows.map((user) => {
       const missedDays = Math.max(0, 7 - Number(user.done_days || 0));
       const penaltyMinor = missedDays * Number(penaltyPerMissedDayMinor);
+      return { user, missedDays, penaltyMinor };
+    }).filter((penalty) => penalty.penaltyMinor > 0);
 
-      if (penaltyMinor <= 0) {
-        continue;
+    let previousPenalties = [];
+    let removedPenalties = [];
+    let changedUserIds = plannedPenalties.map((penalty) => Number(penalty.user.id));
+    if (reapplied) {
+      const existingPenalties = await client.query(
+        `SELECT qp.user_id, qp.missed_days, qp.penalty_minor, qp.transaction_id, u.full_name, u.mobile, u.email, r.role_key
+         FROM quran_penalties qp
+         JOIN app_users u ON u.id = qp.user_id
+         JOIN roles r ON r.id = u.role_id
+         WHERE qp.run_id = $1
+         ORDER BY qp.user_id`,
+        [penaltyRun.id],
+      );
+      previousPenalties = existingPenalties.rows;
+
+      if (hasSamePenaltyRows(previousPenalties, plannedPenalties)) {
+        return {
+          skipped: true,
+          unchanged: true,
+          reapplied: true,
+          fromDate,
+          toDate,
+          penalties: [],
+        };
       }
 
+      const plannedByUserId = new Map(plannedPenalties.map((penalty) => [Number(penalty.user.id), penalty]));
+      changedUserIds = plannedPenalties
+        .filter((penalty) => {
+          const previous = previousPenalties.find((item) => Number(item.user_id) === Number(penalty.user.id));
+          return !previous
+            || Number(previous.missed_days) !== penalty.missedDays
+            || Number(previous.penalty_minor) !== penalty.penaltyMinor;
+        })
+        .map((penalty) => Number(penalty.user.id));
+      removedPenalties = previousPenalties.filter((penalty) => (
+        !plannedByUserId.has(Number(penalty.user_id))
+        && !['super_admin', 'admin', 'manager'].includes(penalty.role_key)
+      ));
+
+      const deletedPenalties = await client.query(
+        `DELETE FROM quran_penalties WHERE run_id = $1 RETURNING transaction_id`,
+        [penaltyRun.id],
+      );
+      const transactionIds = deletedPenalties.rows.map((penalty) => penalty.transaction_id).filter(Boolean);
+      if (transactionIds.length) {
+        await client.query(`DELETE FROM transactions WHERE id = ANY($1::bigint[])`, [transactionIds]);
+      }
+    }
+
+    const penalties = [];
+    for (const { user, missedDays, penaltyMinor } of plannedPenalties) {
       const tx = await client.query(
         `INSERT INTO transactions (
           tx_type,
@@ -303,7 +380,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
           transaction_id
         ) VALUES ($1,$2,$3,$4,$5)
         RETURNING id, run_id, user_id, missed_days, penalty_minor, transaction_id, created_at`,
-        [run.rows[0].id, user.id, missedDays, penaltyMinor, tx.rows[0].id],
+        [penaltyRun.id, user.id, missedDays, penaltyMinor, tx.rows[0].id],
       );
 
       penalties.push({
@@ -316,7 +393,10 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
 
     return {
       skipped: false,
-      ...run.rows[0],
+      reapplied,
+      changedUserIds,
+      removedPenalties,
+      ...penaltyRun,
       categoryId,
       penalties,
     };

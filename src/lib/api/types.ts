@@ -309,6 +309,8 @@ export interface ApiMyQuranPenaltyResponse {
 
 export interface ApiQuranPenaltyRunResponse {
   skipped: boolean;
+  unchanged?: boolean;
+  reapplied?: boolean;
   fromDate: string;
   toDate: string;
   penalties: ApiQuranPenaltyRow[];

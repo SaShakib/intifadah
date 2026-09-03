@@ -1,6 +1,6 @@
 const { repositories } = require('../../repositories');
 const { env } = require('../../config/env');
-const { sendQuranPenaltyEmail } = require('../mail.service');
+const { sendQuranPenaltyEmail, sendQuranPenaltyRemovalEmail } = require('../mail.service');
 
 const { notificationsRepository, quranRepository } = repositories;
 const QURAN_ADMIN_ROLE_KEYS = ['super_admin', 'admin'];
@@ -165,14 +165,17 @@ async function sendQuranReminderNotifications() {
 async function runWeeklyPenaltyJob(input = {}) {
   // Penalties are always limited to the immediately completed Friday-Thursday cycle.
   // This prevents manual requests from charging a historical period.
-  const range = lastCompletedWeekRange(input.baseDate || new Date());
+  const range = lastCompletedWeekRange();
 
   const result = await quranRepository.createWeeklyPenaltyRun({
     ...range,
     penaltyPerMissedDayMinor: Number(input.penaltyPerMissedDayMinor || env.quranPenaltyPerMissedDayMinor),
+    reapplyExisting: input.reapply === true,
   });
 
   if (!result.skipped) {
+    const changedUserIds = result.reapplied ? result.changedUserIds : result.penalties.map((item) => item.user_id);
+    const changedPenalties = result.penalties.filter((item) => changedUserIds.includes(Number(item.user_id)));
     await notificationsRepository.createForRoleKeys({
       roleKeys: QURAN_ADMIN_ROLE_KEYS,
       notifType: 21,
@@ -180,16 +183,16 @@ async function runWeeklyPenaltyJob(input = {}) {
         event: 'quran_weekly_penalty_run',
         fromDate: range.fromDate,
         toDate: range.toDate,
-        penaltyCount: result.penalties.length,
+        penaltyCount: changedPenalties.length,
         totalPenaltyMinor: result.penalties.reduce((sum, item) => sum + Number(item.penalty_minor || 0), 0),
       },
     });
 
     await notificationsRepository.createForUsers({
-      userIds: result.penalties.map((item) => item.user_id),
+      userIds: changedPenalties.map((item) => item.user_id),
       notifType: 22,
       payloadJson: {
-        event: 'quran_weekly_penalty_assigned',
+        event: result.reapplied ? 'quran_weekly_penalty_reapplied' : 'quran_weekly_penalty_assigned',
         fromDate: range.fromDate,
         toDate: range.toDate,
         penaltyPerMissedDayMinor: Number(input.penaltyPerMissedDayMinor || env.quranPenaltyPerMissedDayMinor),
@@ -197,7 +200,7 @@ async function runWeeklyPenaltyJob(input = {}) {
     });
 
     const emailResults = await Promise.allSettled(
-      result.penalties
+      changedPenalties
         .filter((item) => item.email)
         .map((item) => sendQuranPenaltyEmail({
           to: item.email,
@@ -213,6 +216,36 @@ async function runWeeklyPenaltyJob(input = {}) {
       sent: emailResults.filter((item) => item.status === 'fulfilled').length,
       failed: emailResults.filter((item) => item.status === 'rejected').length,
     };
+
+    if (result.removedPenalties.length) {
+      await notificationsRepository.createForUsers({
+        userIds: result.removedPenalties.map((item) => item.user_id),
+        notifType: 22,
+        payloadJson: {
+          event: 'quran_weekly_penalty_reversed',
+          fromDate: range.fromDate,
+          toDate: range.toDate,
+          title: 'Quran penalty removed',
+          message: 'Quran রেকর্ড আপডেট হওয়ায় penalty বাতিল করা হয়েছে।',
+          url: '/user/quran',
+        },
+      });
+      const removalEmails = await Promise.allSettled(
+        result.removedPenalties
+          .filter((item) => item.email)
+          .map((item) => sendQuranPenaltyRemovalEmail({
+            to: item.email,
+            fullName: item.full_name,
+            fromDate: range.fromDate,
+            toDate: range.toDate,
+          })),
+      );
+      result.emailDelivery.removed = {
+        attempted: removalEmails.length,
+        sent: removalEmails.filter((item) => item.status === 'fulfilled').length,
+        failed: removalEmails.filter((item) => item.status === 'rejected').length,
+      };
+    }
   }
 
   return {

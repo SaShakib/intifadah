@@ -104,7 +104,7 @@ async function penalties(req, res, next) {
 
 async function runPenalties(req, res, next) {
   try {
-    const data = await runWeeklyPenaltyJob();
+    const data = await runWeeklyPenaltyJob({ reapply: req.body?.reapply === true });
     res.status(data.skipped ? 200 : 201).json(data);
   } catch (error) {
     next(error);
