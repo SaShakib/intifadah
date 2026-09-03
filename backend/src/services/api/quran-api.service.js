@@ -59,6 +59,23 @@ function lastCompletedWeekRange(baseDate = new Date()) {
   return { fromDate, toDate: addCalendarDays(fromDate, 6) };
 }
 
+function weeklyTrackingRange(input = {}) {
+  if (input.fromDate && input.toDate) {
+    return { fromDate: input.fromDate, toDate: input.toDate };
+  }
+
+  const weekOffset = input.weekOffset === undefined ? 0 : Number(input.weekOffset);
+  if (!Number.isInteger(weekOffset) || weekOffset < 0 || weekOffset > 4) {
+    const error = new Error('weekOffset must be between 0 and 4');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const currentWeek = fridayToThursdayRange();
+  const fromDate = addCalendarDays(currentWeek.fromDate, -7 * weekOffset);
+  return { fromDate, toDate: addCalendarDays(fromDate, 6) };
+}
+
 async function createMyProgress(userId, input = {}) {
   const created = await quranRepository.createProgress({
     userId,
@@ -106,9 +123,7 @@ async function listMyProgress(userId, filters = {}) {
 }
 
 async function getAdminWeeklyReport(filters = {}) {
-  const range = filters.fromDate && filters.toDate
-    ? { fromDate: filters.fromDate, toDate: filters.toDate }
-    : lastCompletedWeekRange();
+  const range = weeklyTrackingRange(filters);
   const rows = await quranRepository.getWeeklyReport(range);
   return {
     ...range,
@@ -270,6 +285,7 @@ async function getAdminPenaltyReport(filters = {}) {
 module.exports = {
   fridayToThursdayRange,
   lastCompletedWeekRange,
+  weeklyTrackingRange,
   createMyProgress,
   updateMyProgress,
   listMyProgress,

@@ -195,7 +195,7 @@ export async function getCommentMessages(threadId: string | number) {
   return data.rows;
 }
 
-export function getAdminQuranWeeklyReport(params: { fromDate?: string; toDate?: string } = {}) {
+export function getAdminQuranWeeklyReport(params: { fromDate?: string; toDate?: string; weekOffset?: number } = {}) {
   const query = createQueryString(params);
   return apiRequest<ApiQuranWeeklyReportResponse>(`/admin/quran/weekly-report${query}`);
 }

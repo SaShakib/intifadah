@@ -43,21 +43,23 @@ function isCalendarDate(value: unknown): value is string {
 
 export default function AdminQuranPage() {
   const { roleKey } = useAuth();
+  const [weekOffset, setWeekOffset] = useState(0);
   const [running, setRunning] = useState(false);
   const [reapplying, setReapplying] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const loadReport = useCallback(async () => {
-    const [weekly, penalties] = await Promise.all([
-      getAdminQuranWeeklyReport(),
+    const [weekly, penaltyWeekly, penalties] = await Promise.all([
+      getAdminQuranWeeklyReport({ weekOffset }),
+      getAdminQuranWeeklyReport({ weekOffset: 1 }),
       getAdminQuranPenalties(),
     ]);
-    return { weekly, penalties };
-  }, []);
+    return { weekly, penaltyWeekly, penalties };
+  }, [weekOffset]);
 
-  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { fromDate: '', toDate: '', rows: [] }, penalties: { fromDate: '', toDate: '', rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 } }, [], {
-    cacheKey: `${queryKeys.admin.quranWeekly()}:${queryKeys.admin.quranPenalties()}`,
+  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { fromDate: '', toDate: '', rows: [] }, penaltyWeekly: { fromDate: '', toDate: '', rows: [] }, penalties: { fromDate: '', toDate: '', rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 } }, [weekOffset], {
+    cacheKey: `${queryKeys.admin.quranWeekly({ weekOffset })}:${queryKeys.admin.quranWeekly({ weekOffset: 1 })}:${queryKeys.admin.quranPenalties()}`,
     staleTimeMs: 30_000,
   });
 
@@ -104,6 +106,12 @@ export default function AdminQuranPage() {
     }
     return Array.from({ length: 7 }, (_, index) => addDays(data.weekly.fromDate, index)).filter((date): date is string => Boolean(date));
   }, [data.weekly.fromDate]);
+  const penaltyDays = useMemo(() => {
+    if (!isCalendarDate(data.penaltyWeekly.fromDate)) {
+      return [];
+    }
+    return Array.from({ length: 7 }, (_, index) => addDays(data.penaltyWeekly.fromDate, index)).filter((date): date is string => Boolean(date));
+  }, [data.penaltyWeekly.fromDate]);
   const completedUsers = data.weekly.rows.filter((row) => days.some((date) => row.days?.[date]?.done)).length;
   const totalMarks = data.weekly.rows.reduce((sum, row) => sum + days.filter((date) => row.days?.[date]?.done).length, 0);
   const totalPages = data.weekly.rows.reduce((sum, row) => (
@@ -140,9 +148,9 @@ export default function AdminQuranPage() {
   }));
 
   const penaltiesByUserId = new Map(data.penalties.rows.map((row) => [row.user_id, row]));
-  const penaltyRows = data.weekly.rows.map((member) => {
+  const penaltyRows = data.penaltyWeekly.rows.map((member) => {
     const penalty = penaltiesByUserId.get(member.user_id);
-    const doneDays = days.filter((date) => member.days?.[date]?.done).length;
+    const doneDays = penaltyDays.filter((date) => member.days?.[date]?.done).length;
     const missedDays = penalty?.missed_days ?? Math.max(0, 7 - doneDays);
     const penaltyAmount = toMinorNumber(penalty?.penalty_minor);
 
@@ -188,6 +196,16 @@ export default function AdminQuranPage() {
             subtitle="শুক্রবার থেকে বৃহস্পতিবারের Done অবস্থা"
             action={(
               <div className="flex flex-wrap gap-2">
+                <label className="relative">
+                  <span className="sr-only">সপ্তাহ বাছাই</span>
+                  <select value={weekOffset} onChange={(event) => setWeekOffset(Number(event.target.value))} className="h-10 rounded-lg border border-border bg-white px-3 pr-8 text-sm font-semibold text-fg outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20">
+                    <option value={0}>চলতি সপ্তাহ</option>
+                    <option value={1}>গত সপ্তাহ</option>
+                    <option value={2}>২ সপ্তাহ আগে</option>
+                    <option value={3}>৩ সপ্তাহ আগে</option>
+                    <option value={4}>৪ সপ্তাহ আগে</option>
+                  </select>
+                </label>
                 {roleKey === 'super_admin' && (
                   <Button variant="secondary" onClick={() => void sendReminder()} disabled={sendingReminder}>
                     <BellRing className="h-4 w-4" />{sendingReminder ? 'পাঠানো হচ্ছে...' : 'Quran reminder পাঠান'}

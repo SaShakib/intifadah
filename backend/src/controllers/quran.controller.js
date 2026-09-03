@@ -51,6 +51,7 @@ async function weeklyReport(req, res, next) {
     const data = await getAdminWeeklyReport({
       fromDate: req.query.fromDate,
       toDate: req.query.toDate,
+      weekOffset: req.query.weekOffset,
     });
     res.json(data);
   } catch (error) {
