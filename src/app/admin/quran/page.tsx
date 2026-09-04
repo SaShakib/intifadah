@@ -125,7 +125,7 @@ export default function AdminQuranPage() {
     sum + days.reduce((daySum, date) => daySum + Number(row.days?.[date]?.minutesRead ?? 0), 0)
   ), 0);
 
-  const rows = data.weekly.rows.map((row) => ({
+  const quranWeeklyRows = data.weekly.rows.map((row) => ({
     id: String(row.user_id),
     searchText: `${row.full_name} ${row.mobile}`,
     sortValues: [row.full_name, row.mobile, ...days.map((date) => row.days?.[date]?.done ? 1 : 0)],
@@ -139,15 +139,12 @@ export default function AdminQuranPage() {
         return (
           <div key={`${row.user_id}-${date}`} className="min-w-20 text-center">
             <span className={item?.done ? 'font-bold text-success' : 'text-muted'}>{item?.done ? 'Done' : '-'}</span>
-            {item?.namajDone && <p className="mt-1 text-[11px] font-semibold text-brand">Namaj Done</p>}
-            {(item?.pagesRead || item?.minutesRead || item?.surahName || item?.prayersOffered || item?.congregationalPrayers) && (
+            {item?.done && (item?.pagesRead || item?.minutesRead || item?.surahName) && (
               <p className="mt-1 text-[11px] leading-4 text-muted">
                 {[
                   item.surahName,
                   item.pagesRead ? `${item.pagesRead} পৃ.` : '',
                   item.minutesRead ? `${item.minutesRead} মি.` : '',
-                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `Namaj ${item.prayersOffered} ওয়াক্ত` : '',
-                  item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `Jamat ${item.congregationalPrayers} ওয়াক্ত` : '',
                 ].filter(Boolean).join(' · ')}
               </p>
             )}
@@ -158,26 +155,33 @@ export default function AdminQuranPage() {
     ],
   }));
 
-  const quranRecordRows = data.weekly.rows.flatMap((member) => days.flatMap((date) => {
-    const item = member.days?.[date];
-    if (!item?.done) return [];
-
-    return [{
-      id: `${member.user_id}-${date}`,
-      searchText: `${member.full_name} ${member.mobile} ${date} ${item.surahName ?? ''} ${item.note ?? ''}`,
-      sortValues: [member.full_name, date, item.pagesRead ?? 0, item.minutesRead ?? 0],
-      cells: [
-        <div key={`${member.user_id}-${date}-member`}>
-          <p className="font-bold text-fg">{member.full_name}</p>
-          <p className="text-xs text-muted">{member.mobile}</p>
-        </div>,
-        toBanglaDate(date),
-        item.pagesRead ?? '-',
-        item.surahName ?? '-',
-        item.minutesRead !== null && item.minutesRead !== undefined ? `${item.minutesRead} মিনিট` : '-',
-        item.note ?? '-',
-      ],
-    }];
+  const namajWeeklyRows = data.weekly.rows.map((row) => ({
+    id: `namaj-${row.user_id}`,
+    searchText: `${row.full_name} ${row.mobile}`,
+    sortValues: [row.full_name, row.mobile, ...days.map((date) => row.days?.[date]?.namajDone ? 1 : 0)],
+    cells: [
+      <div key={`${row.user_id}-namaj-user`}>
+        <p className="font-bold text-fg">{row.full_name}</p>
+        <p className="text-xs text-muted">{row.mobile}</p>
+      </div>,
+      ...days.map((date) => {
+        const item = row.days?.[date];
+        return (
+          <div key={`${row.user_id}-namaj-${date}`} className="min-w-20 text-center">
+            <span className={item?.namajDone ? 'font-bold text-success' : 'text-muted'}>{item?.namajDone ? 'Done' : '-'}</span>
+            {item?.namajDone && (item.prayersOffered !== null || item.congregationalPrayers !== null) && (
+              <p className="mt-1 text-[11px] leading-4 text-muted">
+                {[
+                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `ওয়াক্তে ${item.prayersOffered}` : '',
+                  item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `জামাতে ${item.congregationalPrayers}` : '',
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
+        );
+      }),
+      `${days.filter((date) => row.days?.[date]?.namajDone).length}/7`,
+    ],
   }));
 
   const penaltiesByUserId = new Map(data.penalties.rows.map((row) => [row.user_id, row]));
@@ -225,7 +229,7 @@ export default function AdminQuranPage() {
       <section>
         <Card>
           <SectionHeader
-            title="সদস্যভিত্তিক ৭ দিনের ট্র্যাক"
+            title="সদস্যভিত্তিক ৭ দিনের Quran ট্র্যাক"
             subtitle="শুক্রবার থেকে বৃহস্পতিবারের Done অবস্থা"
             action={(
               <div className="flex flex-wrap gap-2">
@@ -260,7 +264,7 @@ export default function AdminQuranPage() {
               ...days.map((date) => toBanglaDate(date)),
               'মোট',
             ]}
-            rows={rows}
+            rows={quranWeeklyRows}
             searchPlaceholder="সদস্য বা ফোন..."
             emptyMessage="এই সপ্তাহে কোনো সদস্য পাওয়া যায়নি"
           />
@@ -269,12 +273,16 @@ export default function AdminQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="সদস্যভিত্তিক Quran রেকর্ড" subtitle={`${toBanglaDate(data.weekly.fromDate)} - ${toBanglaDate(data.weekly.toDate)} এর আলাদা Quran তালিকা`} />
+          <SectionHeader title="সদস্যভিত্তিক ৭ দিনের Namaj ট্র্যাক" subtitle="একই সপ্তাহের Namaj ও Jamat Done অবস্থা" />
           <DataTable
-            headers={['সদস্য', 'তারিখ', 'পৃষ্ঠা', 'সুরা', 'সময়', 'নোট']}
-            rows={quranRecordRows}
-            searchPlaceholder="সদস্য, ফোন, তারিখ বা সুরা..."
-            emptyMessage="এই সপ্তাহে কোনো Quran রেকর্ড নেই"
+            headers={[
+              'সদস্য',
+              ...days.map((date) => toBanglaDate(date)),
+              'মোট',
+            ]}
+            rows={namajWeeklyRows}
+            searchPlaceholder="সদস্য বা ফোন..."
+            emptyMessage="এই সপ্তাহে কোনো সদস্য পাওয়া যায়নি"
           />
         </Card>
       </section>
