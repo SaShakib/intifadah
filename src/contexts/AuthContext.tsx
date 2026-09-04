@@ -96,9 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAuthError(null);
         }
       } catch {
-        clearAuthSession();
+        // A temporary offline/server failure must not discard a valid stored
+        // refresh session. The API client clears storage itself only when the
+        // refresh token is genuinely invalid.
+        const retained = getAuthSession();
         if (!cancelled) {
-          setSessionUser(null);
+          setSessionUser(retained?.user ?? null);
         }
       } finally {
         if (!cancelled) {
@@ -112,12 +115,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSessionUser(next?.user ?? null);
     };
 
+    const refreshWhenActive = () => {
+      if (document.visibilityState === 'visible') {
+        void syncSession();
+      }
+    };
+
     void syncSession();
     window.addEventListener(AUTH_SESSION_EVENT, onSessionChange);
+    window.addEventListener('online', refreshWhenActive);
+    document.addEventListener('visibilitychange', refreshWhenActive);
 
     return () => {
       cancelled = true;
       window.removeEventListener(AUTH_SESSION_EVENT, onSessionChange);
+      window.removeEventListener('online', refreshWhenActive);
+      document.removeEventListener('visibilitychange', refreshWhenActive);
     };
   }, []);
 

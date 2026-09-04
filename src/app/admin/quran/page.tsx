@@ -135,9 +135,15 @@ export default function AdminQuranPage() {
         return (
           <div key={`${row.user_id}-${date}`} className="min-w-20 text-center">
             <span className={item?.done ? 'font-bold text-success' : 'text-muted'}>{item?.done ? 'Done' : '-'}</span>
-            {(item?.pagesRead || item?.minutesRead || item?.surahName) && (
+            {(item?.pagesRead || item?.minutesRead || item?.surahName || item?.prayersOffered || item?.congregationalPrayers) && (
               <p className="mt-1 text-[11px] leading-4 text-muted">
-                {[item.surahName, item.pagesRead ? `${item.pagesRead} পৃ.` : '', item.minutesRead ? `${item.minutesRead} মি.` : ''].filter(Boolean).join(' · ')}
+                {[
+                  item.surahName,
+                  item.pagesRead ? `${item.pagesRead} পৃ.` : '',
+                  item.minutesRead ? `${item.minutesRead} মি.` : '',
+                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `Namaj ${item.prayersOffered} ওয়াক্ত` : '',
+                  item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `Jamat ${item.congregationalPrayers} ওয়াক্ত` : '',
+                ].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>

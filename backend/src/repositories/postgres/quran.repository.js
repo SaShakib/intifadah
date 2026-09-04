@@ -9,17 +9,21 @@ async function createProgress(input) {
       pages_read,
       surah_name,
       minutes_read,
+      prayers_offered,
+      congregational_prayers,
       note,
       is_done
-    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, TRUE)
+    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, TRUE)
     ON CONFLICT (user_id, progress_date) DO NOTHING
-    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, note, is_done, created_at, updated_at`,
+    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, is_done, created_at, updated_at`,
     [
       input.userId,
       input.progressDate || null,
       input.pagesRead ?? null,
       input.surahName || null,
       input.minutesRead ?? null,
+      input.prayersOffered ?? null,
+      input.congregationalPrayers ?? null,
       input.note || null,
     ],
   );
@@ -34,17 +38,21 @@ async function updateProgress(input) {
       pages_read = $3,
       surah_name = $4,
       minutes_read = $5,
-      note = $6,
+      prayers_offered = $6,
+      congregational_prayers = $7,
+      note = $8,
       updated_at = NOW()
      WHERE id = $1
        AND user_id = $2
-     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, note, is_done, created_at, updated_at`,
+     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, is_done, created_at, updated_at`,
     [
       input.progressId,
       input.userId,
       input.pagesRead ?? null,
       input.surahName || null,
       input.minutesRead ?? null,
+      input.prayersOffered ?? null,
+      input.congregationalPrayers ?? null,
       input.note || null,
     ],
   );
@@ -74,6 +82,8 @@ async function listProgress(filters = {}) {
       qp.pages_read,
       qp.surah_name,
       qp.minutes_read,
+      qp.prayers_offered,
+      qp.congregational_prayers,
       qp.note,
       qp.is_done,
       qp.created_at,
@@ -100,6 +110,8 @@ async function getWeeklyReport({ fromDate, toDate }) {
           'pagesRead', qp.pages_read,
           'surahName', qp.surah_name,
           'minutesRead', qp.minutes_read,
+          'prayersOffered', qp.prayers_offered,
+          'congregationalPrayers', qp.congregational_prayers,
           'note', qp.note
         )
       ) FILTER (WHERE qp.id IS NOT NULL) AS days

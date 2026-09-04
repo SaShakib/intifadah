@@ -12,7 +12,7 @@ import { BackgroundNotificationsControl } from '@/components/layout/BackgroundNo
 function notificationTitle(row: ApiNotificationRow) {
   const payload = row.payload_json ?? {};
   if (typeof payload.title === 'string') return payload.title;
-  if (payload.event === 'quran_daily_reminder') return 'Quran reminder';
+  if (payload.event === 'quran_daily_reminder') return 'Quran ও Namaj reminder';
   if (payload.event === 'quran_weekly_penalty_run') return 'Quran penalty report';
   if (payload.event === 'quran_weekly_penalty_assigned') return 'Quran penalty assigned';
   if (payload.event === 'quran_weekly_penalty_reapplied') return 'Quran penalty updated';

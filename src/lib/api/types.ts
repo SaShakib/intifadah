@@ -242,6 +242,8 @@ export interface ApiQuranProgressRow {
   pages_read: number | null;
   surah_name: string | null;
   minutes_read: number | null;
+  prayers_offered: number | null;
+  congregational_prayers: number | null;
   note: string | null;
   is_done: boolean;
   created_at: string;
@@ -257,6 +259,8 @@ export interface ApiQuranWeeklyReportRow {
     pagesRead: number | null;
     surahName: string | null;
     minutesRead: number | null;
+    prayersOffered: number | null;
+    congregationalPrayers: number | null;
     note: string | null;
   }> | null;
 }
@@ -442,6 +446,8 @@ export interface QuranProgressInput {
   pagesRead?: number | null;
   surahName?: string;
   minutesRead?: number | null;
+  prayersOffered?: number | null;
+  congregationalPrayers?: number | null;
   note?: string;
 }
 

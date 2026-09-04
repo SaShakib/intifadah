@@ -20,6 +20,27 @@ function parseOptionalPositiveInt(value, fieldName) {
   return parsed;
 }
 
+function parseOptionalPrayerCount(value, fieldName) {
+  const parsed = parseOptionalPositiveInt(value, fieldName);
+  if (parsed !== null && parsed > 5) {
+    const error = new Error(`${fieldName} must be between 0 and 5`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return parsed;
+}
+
+function parsePrayerCounts(input) {
+  const prayersOffered = parseOptionalPrayerCount(input.prayersOffered, 'prayersOffered');
+  const congregationalPrayers = parseOptionalPrayerCount(input.congregationalPrayers, 'congregationalPrayers');
+  if (prayersOffered !== null && congregationalPrayers !== null && congregationalPrayers > prayersOffered) {
+    const error = new Error('congregationalPrayers cannot exceed prayersOffered');
+    error.statusCode = 400;
+    throw error;
+  }
+  return { prayersOffered, congregationalPrayers };
+}
+
 function dateTextInTimezone(value = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: env.quranCronTimezone,
@@ -77,12 +98,14 @@ function weeklyTrackingRange(input = {}) {
 }
 
 async function createMyProgress(userId, input = {}) {
+  const prayerCounts = parsePrayerCounts(input);
   const created = await quranRepository.createProgress({
     userId,
     progressDate: input.progressDate || input.date || null,
     pagesRead: parseOptionalPositiveInt(input.pagesRead, 'pagesRead'),
     surahName: String(input.surahName || '').trim() || null,
     minutesRead: parseOptionalPositiveInt(input.minutesRead, 'minutesRead'),
+    ...prayerCounts,
     note: String(input.note || '').trim() || null,
   });
 
@@ -96,12 +119,14 @@ async function createMyProgress(userId, input = {}) {
 }
 
 async function updateMyProgress(userId, progressId, input = {}) {
+  const prayerCounts = parsePrayerCounts(input);
   const updated = await quranRepository.updateProgress({
     progressId,
     userId,
     pagesRead: parseOptionalPositiveInt(input.pagesRead, 'pagesRead'),
     surahName: String(input.surahName || '').trim() || null,
     minutesRead: parseOptionalPositiveInt(input.minutesRead, 'minutesRead'),
+    ...prayerCounts,
     note: String(input.note || '').trim() || null,
   });
 
@@ -165,8 +190,8 @@ async function sendQuranReminderNotifications() {
     notifType: 20,
     payloadJson: {
       event: 'quran_daily_reminder',
-      title: 'Quran tracking reminder',
-      message: 'আজকের Quran progress Done করুন।',
+      title: 'Quran ও Namaj tracking reminder',
+      message: 'আজকের Quran ও Namaj অগ্রগতি রেকর্ড করুন।',
     },
     includeDeliveryReport: true,
   });

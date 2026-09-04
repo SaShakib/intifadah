@@ -57,7 +57,7 @@ export function BackgroundNotificationsPrompt() {
         </>
       )}
     >
-      <p className="text-sm leading-6 text-muted">প্রতিদিন রাত ৭:৩০টায় Quran tracking করার স্মরণিকা পেতে বিজ্ঞপ্তি চালু করুন। অ্যাপ বন্ধ থাকলেও এটি আসবে।</p>
+      <p className="text-sm leading-6 text-muted">প্রতিদিন রাত ৯টায় Quran ও Namaj tracking করার স্মরণিকা পেতে বিজ্ঞপ্তি চালু করুন। অ্যাপ বন্ধ থাকলেও এটি আসবে।</p>
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
     </AppModal>
   );

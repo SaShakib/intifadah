@@ -27,8 +27,8 @@ function notificationContent(notification) {
   let url = '/user/dashboard';
 
   if (event === 'quran_daily_reminder') {
-    title = 'আজকের Quran tracking';
-    body = 'আজকের Quran অগ্রগতি এখনই Done করুন।';
+    title = 'আজকের Quran ও Namaj';
+    body = 'আজকের Quran ও Namaj অগ্রগতি এখনই রেকর্ড করুন।';
     url = '/user/quran';
   } else if (event === 'quran_weekly_penalty_assigned') {
     title = 'Quran tracking penalty';

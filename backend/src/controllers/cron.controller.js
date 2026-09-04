@@ -16,7 +16,7 @@ async function dailyQuranReminder(req, res, next) {
   try {
     requireCronAuthorization(req);
     const result = await sendQuranReminderNotifications();
-    res.json({ ok: true, schedule: '19:30 Asia/Dhaka', ...result });
+    res.json({ ok: true, schedule: '21:00 Asia/Dhaka', ...result });
   } catch (error) {
     next(error);
   }
