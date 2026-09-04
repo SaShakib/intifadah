@@ -191,7 +191,12 @@ async function getInternalWeeklyCompletion(filters = {}) {
       user_id: row.user_id,
       full_name: row.full_name,
       days: Object.fromEntries(
-        Object.entries(row.days || {}).map(([date, value]) => [date, { done: Boolean(value?.done) }]),
+        Object.entries(row.days || {}).map(([date, value]) => [date, {
+          done: Boolean(value?.done),
+          namajDone: Boolean(value?.namajDone),
+          prayersOffered: value?.prayersOffered ?? null,
+          congregationalPrayers: value?.congregationalPrayers ?? null,
+        }]),
       ),
     })),
   };

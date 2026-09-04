@@ -260,7 +260,7 @@ export default function UserQuranPage() {
     return Array.from({ length: 7 }, (_, index) => addDays(weeklyStartDate, index)).filter((date): date is string => Boolean(date));
   }, [weeklyStartDate]);
 
-  const weeklyRows = weeklyCompletion.rows.map((row) => ({
+  const quranWeeklyRows = weeklyCompletion.rows.map((row) => ({
     id: String(row.user_id),
     searchText: row.full_name,
     sortValues: [row.full_name, ...weeklyDays.map((date) => row.days?.[date]?.done ? 1 : 0)],
@@ -272,6 +272,32 @@ export default function UserQuranPage() {
         </span>
       )),
       `${weeklyDays.filter((date) => row.days?.[date]?.done).length}/7`,
+    ],
+  }));
+
+  const namajWeeklyRows = weeklyCompletion.rows.map((row) => ({
+    id: `namaj-${row.user_id}`,
+    searchText: row.full_name,
+    sortValues: [row.full_name, ...weeklyDays.map((date) => row.days?.[date]?.namajDone ? 1 : 0)],
+    cells: [
+      <p key={`${row.user_id}-namaj-name`} className="font-bold text-fg">{row.full_name}</p>,
+      ...weeklyDays.map((date) => {
+        const item = row.days?.[date];
+        return (
+          <div key={`${row.user_id}-namaj-${date}`} className="min-w-20 text-center">
+            <span className={item?.namajDone ? 'font-bold text-success' : 'text-muted'}>{item?.namajDone ? 'Done' : '-'}</span>
+            {item?.namajDone && (item.prayersOffered !== null || item.congregationalPrayers !== null) && (
+              <p className="mt-1 text-[11px] leading-4 text-muted">
+                {[
+                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `ওয়াক্তে ${item.prayersOffered}` : '',
+                  item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `জামাতে ${item.congregationalPrayers}` : '',
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
+        );
+      }),
+      `${weeklyDays.filter((date) => row.days?.[date]?.namajDone).length}/7`,
     ],
   }));
 
@@ -400,13 +426,32 @@ export default function UserQuranPage() {
           {weeklyError && <ApiErrorNotice message={weeklyError} onRetry={() => void refetchWeeklyCompletion()} />}
           <Card>
             <SectionHeader
-              title="ইনতিফাদাহ সদস্যদের সাপ্তাহিক Done"
+              title="ইনতিফাদাহ সদস্যদের ৭ দিনের Quran ট্র্যাক"
               subtitle={`${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}`}
             />
             {weeklyLoading ? <ApiLoadingNotice label="সাপ্তাহিক Done অবস্থা লোড হচ্ছে..." /> : (
               <DataTable
                 headers={['সদস্য', ...weeklyDays.map((date) => toBanglaDate(date)), 'মোট']}
-                rows={weeklyRows}
+                rows={quranWeeklyRows}
+                searchPlaceholder="সদস্যের নাম..."
+                emptyMessage="এই সপ্তাহে কোনো ইনতিফাদাহ সদস্য পাওয়া যায়নি"
+              />
+            )}
+          </Card>
+        </section>
+      )}
+
+      {isIntifadahMember && (
+        <section>
+          <Card>
+            <SectionHeader
+              title="ইনতিফাদাহ সদস্যদের ৭ দিনের Namaj ট্র্যাক"
+              subtitle={`${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}`}
+            />
+            {weeklyLoading ? <ApiLoadingNotice label="সাপ্তাহিক Namaj অবস্থা লোড হচ্ছে..." /> : (
+              <DataTable
+                headers={['সদস্য', ...weeklyDays.map((date) => toBanglaDate(date)), 'মোট']}
+                rows={namajWeeklyRows}
                 searchPlaceholder="সদস্যের নাম..."
                 emptyMessage="এই সপ্তাহে কোনো ইনতিফাদাহ সদস্য পাওয়া যায়নি"
               />

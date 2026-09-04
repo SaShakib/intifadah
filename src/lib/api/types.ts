@@ -277,7 +277,12 @@ export interface ApiQuranWeeklyReportResponse {
 export interface ApiQuranWeeklyCompletionRow {
   user_id: number;
   full_name: string;
-  days: Record<string, { done: boolean }> | null;
+  days: Record<string, {
+    done: boolean;
+    namajDone: boolean;
+    prayersOffered: number | null;
+    congregationalPrayers: number | null;
+  }> | null;
 }
 
 export interface ApiQuranWeeklyCompletionResponse {
