@@ -193,7 +193,7 @@ export default function UserQuranPage() {
     }
   };
 
-  const rows = progressRows.map((item) => ({
+  const quranRows = progressRows.map((item) => ({
     id: String(item.id),
     searchText: `${item.progress_date} ${item.surah_name ?? ''} ${item.note ?? ''}`,
     sortValues: [item.progress_date, item.pages_read ?? 0, item.minutes_read ?? 0, item.surah_name ?? ''],
@@ -202,17 +202,29 @@ export default function UserQuranPage() {
       item.pages_read ?? '-',
       item.surah_name ?? '-',
       item.minutes_read ? `${item.minutes_read} মিনিট` : '-',
-      item.prayers_offered ?? '-',
-      item.congregational_prayers ?? '-',
       item.note ?? '-',
     ],
   }));
+
+  const namajRows = progressRows
+    .filter((item) => item.prayers_offered !== null || item.congregational_prayers !== null)
+    .map((item) => ({
+      id: `namaj-${item.id}`,
+      searchText: `${item.progress_date} ${item.note ?? ''}`,
+      sortValues: [item.progress_date, item.prayers_offered ?? -1, item.congregational_prayers ?? -1],
+      cells: [
+        toBanglaDate(item.progress_date),
+        item.prayers_offered ?? '-',
+        item.congregational_prayers ?? '-',
+        item.note ?? '-',
+      ],
+    }));
 
   const metrics = useMemo(() => {
     const pages = progressRows.reduce((sum, item) => sum + Number(item.pages_read ?? 0), 0);
     const minutes = progressRows.reduce((sum, item) => sum + Number(item.minutes_read ?? 0), 0);
     return [
-      { label: '৩০ দিনের রেকর্ড', value: String(progressRows.length), hint: 'কুরআন পড়া হয়েছে এমন দিন' },
+      { label: '৪২ দিনের রেকর্ড', value: String(progressRows.length), hint: 'রেকর্ড করা দিন' },
       { label: 'আজ', value: todayDone ? 'পড়া হয়েছে' : 'বাকি', hint: todayDone ? 'আজকের রেকর্ড আছে' : 'এখনও রেকর্ড করা হয়নি' },
       { label: 'মোট পৃষ্ঠা', value: String(pages), hint: 'দেওয়া তথ্য থেকে' },
       { label: 'মোট সময়', value: `${minutes} মিনিট`, hint: 'দেওয়া তথ্য থেকে' },
@@ -382,13 +394,27 @@ export default function UserQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Quran ও Namaj progress" />
+          <SectionHeader title="Quran রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Quran progress" />
           {loading ? <ApiLoadingNotice label="Quran ও Namaj রেকর্ড লোড হচ্ছে..." /> : (
             <DataTable
-              headers={['তারিখ', 'পৃষ্ঠা', 'সুরা', 'সময়', 'Namaj', 'Jamat', 'নোট']}
-              rows={rows}
+              headers={['তারিখ', 'পৃষ্ঠা', 'সুরা', 'সময়', 'নোট']}
+              rows={quranRows}
               searchPlaceholder="তারিখ, সুরা বা নোট..."
               emptyMessage="এখনও কোনো Quran রেকর্ড নেই"
+            />
+          )}
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <SectionHeader title="Namaj রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Namaj ও Jamat progress" />
+          {loading ? <ApiLoadingNotice label="Namaj রেকর্ড লোড হচ্ছে..." /> : (
+            <DataTable
+              headers={['তারিখ', 'Namaj', 'Jamat', 'নোট']}
+              rows={namajRows}
+              searchPlaceholder="তারিখ বা নোট দিয়ে খুঁজুন..."
+              emptyMessage="এখনও কোনো Namaj রেকর্ড নেই"
             />
           )}
         </Card>
