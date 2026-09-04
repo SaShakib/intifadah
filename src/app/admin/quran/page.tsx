@@ -16,6 +16,7 @@ import {
   getAdminQuranPenalties,
   queryKeys,
   runAdminQuranPenalties,
+  sendAdminNamajReminder,
   sendAdminQuranReminder,
   toBanglaDate,
   toMinorNumber,
@@ -47,6 +48,7 @@ export default function AdminQuranPage() {
   const [running, setRunning] = useState(false);
   const [reapplying, setReapplying] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [sendingNamajReminder, setSendingNamajReminder] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const loadReport = useCallback(async () => {
@@ -81,22 +83,24 @@ export default function AdminQuranPage() {
     }
   };
 
-  const sendReminder = async () => {
-    setSendingReminder(true);
+  const sendReminder = async (kind: 'quran' | 'namaj') => {
+    const setBusy = kind === 'quran' ? setSendingReminder : setSendingNamajReminder;
+    const label = kind === 'quran' ? 'Quran ও Namaj reminder' : 'Namaj reminder';
+    setBusy(true);
     try {
-      const result = await sendAdminQuranReminder();
+      const result = kind === 'quran' ? await sendAdminQuranReminder() : await sendAdminNamajReminder();
       const { notifiedUsers, devicePush } = result.data;
       if (!devicePush.enabled) {
-        setToast(`${notifiedUsers} জনের in-app reminder তৈরি হয়েছে, কিন্তু device push server-এ চালু নেই।`);
+        setToast(`${notifiedUsers} জনের ${label} in-app notification তৈরি হয়েছে, কিন্তু device push server-এ চালু নেই।`);
       } else if (!devicePush.sent) {
-        setToast(`${notifiedUsers} জনের in-app reminder তৈরি হয়েছে, কিন্তু কোনো device push পাঠানো যায়নি।`);
+        setToast(`${notifiedUsers} জনের ${label} in-app notification তৈরি হয়েছে, কিন্তু কোনো device push পাঠানো যায়নি।`);
       } else {
-        setToast(`${notifiedUsers} জনকে reminder এবং ${devicePush.sent}টি device push পাঠানো হয়েছে।`);
+        setToast(`${notifiedUsers} জনকে ${label} এবং ${devicePush.sent}টি device push পাঠানো হয়েছে।`);
       }
     } catch {
-      setToast('Quran reminder পাঠানো যায়নি।');
+      setToast(`${label} পাঠানো যায়নি।`);
     } finally {
-      setSendingReminder(false);
+      setBusy(false);
     }
   };
 
@@ -213,9 +217,14 @@ export default function AdminQuranPage() {
                   </select>
                 </label>
                 {roleKey === 'super_admin' && (
-                  <Button variant="secondary" onClick={() => void sendReminder()} disabled={sendingReminder}>
-                    <BellRing className="h-4 w-4" />{sendingReminder ? 'পাঠানো হচ্ছে...' : 'Quran reminder পাঠান'}
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={() => void sendReminder('quran')} disabled={sendingReminder || sendingNamajReminder}>
+                      <BellRing className="h-4 w-4" />{sendingReminder ? 'পাঠানো হচ্ছে...' : 'Quran ও Namaj reminder পাঠান'}
+                    </Button>
+                    <Button variant="secondary" onClick={() => void sendReminder('namaj')} disabled={sendingReminder || sendingNamajReminder}>
+                      <BellRing className="h-4 w-4" />{sendingNamajReminder ? 'পাঠানো হচ্ছে...' : 'Namaj reminder পাঠান'}
+                    </Button>
+                  </>
                 )}
                 <Button variant="secondary" onClick={() => void runPenalties(true)} disabled={running || reapplying}><RefreshCw className="h-4 w-4" />{reapplying ? 'পুনরায় হিসাব হচ্ছে...' : 'Reapply penalty'}</Button>
                 <Button onClick={() => void runPenalties()} disabled={running || reapplying}><Play className="h-4 w-4" />{running ? 'চলছে...' : 'Penalty run'}</Button>

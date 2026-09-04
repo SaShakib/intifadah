@@ -202,6 +202,25 @@ async function sendQuranReminderNotifications() {
   };
 }
 
+async function sendNamajReminderNotifications() {
+  const users = await quranRepository.listActiveUsers();
+  const result = await notificationsRepository.createForUsers({
+    userIds: users.map((user) => user.id),
+    notifType: 20,
+    payloadJson: {
+      event: 'namaj_daily_reminder',
+      title: 'Namaj tracking reminder',
+      message: 'আজকের Namaj-এর ওয়াক্ত ও Jamat রেকর্ড করুন।',
+    },
+    includeDeliveryReport: true,
+  });
+
+  return {
+    notifiedUsers: result.rows.length,
+    devicePush: result.delivery.devicePush,
+  };
+}
+
 async function runWeeklyPenaltyJob(input = {}) {
   // Penalties are always limited to the immediately completed Friday-Thursday cycle.
   // This prevents manual requests from charging a historical period.
@@ -318,6 +337,7 @@ module.exports = {
   getAdminWeeklyReport,
   getInternalWeeklyCompletion,
   sendQuranReminderNotifications,
+  sendNamajReminderNotifications,
   runWeeklyPenaltyJob,
   getAdminPenaltyReport,
 };

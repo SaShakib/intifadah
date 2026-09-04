@@ -30,6 +30,10 @@ function notificationContent(notification) {
     title = 'আজকের Quran ও Namaj';
     body = 'আজকের Quran ও Namaj অগ্রগতি এখনই রেকর্ড করুন।';
     url = '/user/quran';
+  } else if (event === 'namaj_daily_reminder') {
+    title = 'আজকের Namaj';
+    body = 'আজকের Namaj-এর ওয়াক্ত ও Jamat এখনই রেকর্ড করুন।';
+    url = '/user/quran';
   } else if (event === 'quran_weekly_penalty_assigned') {
     title = 'Quran tracking penalty';
     body = `${payload.fromDate || ''} থেকে ${payload.toDate || ''} সময়ের penalty তৈরি হয়েছে।`;
@@ -61,11 +65,11 @@ function notificationContent(notification) {
     body,
     url,
     notificationId: notification?.id || null,
-    tag: event === 'quran_daily_reminder'
-      ? 'intifadah-quran-reminder'
+    tag: event === 'quran_daily_reminder' || event === 'namaj_daily_reminder'
+      ? `intifadah-${event}`
       : notification?.id ? `intifadah-notification-${notification.id}` : undefined,
-    renotify: event === 'quran_daily_reminder',
-    urgency: event === 'quran_daily_reminder' || event === 'push_test' ? 'high' : 'normal',
+    renotify: event === 'quran_daily_reminder' || event === 'namaj_daily_reminder',
+    urgency: event === 'quran_daily_reminder' || event === 'namaj_daily_reminder' || event === 'push_test' ? 'high' : 'normal',
   };
 }
 

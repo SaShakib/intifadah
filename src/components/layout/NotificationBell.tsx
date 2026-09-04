@@ -13,6 +13,7 @@ function notificationTitle(row: ApiNotificationRow) {
   const payload = row.payload_json ?? {};
   if (typeof payload.title === 'string') return payload.title;
   if (payload.event === 'quran_daily_reminder') return 'Quran ও Namaj reminder';
+  if (payload.event === 'namaj_daily_reminder') return 'Namaj reminder';
   if (payload.event === 'quran_weekly_penalty_run') return 'Quran penalty report';
   if (payload.event === 'quran_weekly_penalty_assigned') return 'Quran penalty assigned';
   if (payload.event === 'quran_weekly_penalty_reapplied') return 'Quran penalty updated';
@@ -43,7 +44,7 @@ function notificationMessage(row: ApiNotificationRow) {
 function notificationUrl(row: ApiNotificationRow) {
   const payload = row.payload_json ?? {};
   if (typeof payload.url === 'string' && payload.url.startsWith('/')) return payload.url;
-  if (payload.event === 'quran_daily_reminder' || payload.event === 'quran_weekly_penalty_assigned' || payload.event === 'quran_weekly_penalty_reapplied' || payload.event === 'quran_weekly_penalty_reversed') return '/user/quran';
+  if (payload.event === 'quran_daily_reminder' || payload.event === 'namaj_daily_reminder' || payload.event === 'quran_weekly_penalty_assigned' || payload.event === 'quran_weekly_penalty_reapplied' || payload.event === 'quran_weekly_penalty_reversed') return '/user/quran';
   if (payload.event === 'quran_weekly_penalty_run') return '/admin/quran';
   if (payload.event === 'loan_request_created') return '/admin/loans';
   if (payload.event === 'user_transaction_created') return '/admin/fund-collection';

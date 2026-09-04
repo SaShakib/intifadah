@@ -6,6 +6,7 @@ const {
   getInternalWeeklyCompletion,
   getMyPenaltyReport,
   sendQuranReminderNotifications,
+  sendNamajReminderNotifications,
   getAdminPenaltyReport,
   runWeeklyPenaltyJob,
 } = require('../services/api/quran-api.service');
@@ -88,6 +89,15 @@ async function sendReminder(_req, res, next) {
   }
 }
 
+async function sendNamajReminder(_req, res, next) {
+  try {
+    const result = await sendNamajReminderNotifications();
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function penalties(req, res, next) {
   try {
     const data = await getAdminPenaltyReport({
@@ -120,6 +130,7 @@ module.exports = {
   internalWeeklyCompletion,
   myPenalties,
   sendReminder,
+  sendNamajReminder,
   penalties,
   runPenalties,
 };

@@ -220,3 +220,12 @@ export function sendAdminQuranReminder() {
     method: 'POST',
   });
 }
+
+export function sendAdminNamajReminder() {
+  return apiRequest<ApiDataResponse<{
+    notifiedUsers: number;
+    devicePush: { enabled: boolean; subscriptions: number; sent: number; failed: number };
+  }>>('/admin/quran/send-namaj-reminder', {
+    method: 'POST',
+  });
+}

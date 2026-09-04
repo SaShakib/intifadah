@@ -49,6 +49,7 @@ router.get('/quran/weekly-report', requireRoles('super_admin', 'admin'), require
 router.get('/quran/penalties', requireRoles('super_admin', 'admin'), requirePermission('quran', 'read'), quranController.penalties);
 router.post('/quran/run-penalties', requireRoles('super_admin', 'admin'), requirePermission('quran', 'update'), quranController.runPenalties);
 router.post('/quran/send-reminder', requireRoles('super_admin'), requirePermission('quran', 'update'), quranController.sendReminder);
+router.post('/quran/send-namaj-reminder', requireRoles('super_admin'), requirePermission('quran', 'update'), quranController.sendNamajReminder);
 
 router.get('/roles-permissions', requireRoles('super_admin', 'admin'), adminController.rolesPermissions);
 
