@@ -41,6 +41,16 @@ function parsePrayerCounts(input) {
   return { prayersOffered, congregationalPrayers };
 }
 
+function parseOptionalBoolean(value, fieldName) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'boolean') {
+    const error = new Error(`${fieldName} must be a boolean`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return value;
+}
+
 function dateTextInTimezone(value = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: env.quranCronTimezone,
@@ -107,6 +117,8 @@ async function createMyProgress(userId, input = {}) {
     minutesRead: parseOptionalPositiveInt(input.minutesRead, 'minutesRead'),
     ...prayerCounts,
     note: String(input.note || '').trim() || null,
+    quranDone: parseOptionalBoolean(input.quranDone, 'quranDone'),
+    namajDone: parseOptionalBoolean(input.namajDone, 'namajDone'),
   });
 
   if (!created) {
@@ -128,6 +140,8 @@ async function updateMyProgress(userId, progressId, input = {}) {
     minutesRead: parseOptionalPositiveInt(input.minutesRead, 'minutesRead'),
     ...prayerCounts,
     note: String(input.note || '').trim() || null,
+    quranDone: parseOptionalBoolean(input.quranDone, 'quranDone'),
+    namajDone: parseOptionalBoolean(input.namajDone, 'namajDone'),
   });
 
   if (!updated) {

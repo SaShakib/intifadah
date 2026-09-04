@@ -12,10 +12,12 @@ async function createProgress(input) {
       prayers_offered,
       congregational_prayers,
       note,
+      quran_done,
+      namaj_done,
       is_done
-    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, TRUE)
+    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
     ON CONFLICT (user_id, progress_date) DO NOTHING
-    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, is_done, created_at, updated_at`,
+    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, quran_done, namaj_done, is_done, created_at, updated_at`,
     [
       input.userId,
       input.progressDate || null,
@@ -25,6 +27,8 @@ async function createProgress(input) {
       input.prayersOffered ?? null,
       input.congregationalPrayers ?? null,
       input.note || null,
+      input.quranDone !== false,
+      input.namajDone === true,
     ],
   );
 
@@ -41,10 +45,13 @@ async function updateProgress(input) {
       prayers_offered = $6,
       congregational_prayers = $7,
       note = $8,
+      quran_done = COALESCE($9, quran_done),
+      namaj_done = COALESCE($10, namaj_done),
+      is_done = COALESCE($9, quran_done) OR COALESCE($10, namaj_done),
       updated_at = NOW()
      WHERE id = $1
        AND user_id = $2
-     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, is_done, created_at, updated_at`,
+     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, quran_done, namaj_done, is_done, created_at, updated_at`,
     [
       input.progressId,
       input.userId,
@@ -54,6 +61,8 @@ async function updateProgress(input) {
       input.prayersOffered ?? null,
       input.congregationalPrayers ?? null,
       input.note || null,
+      typeof input.quranDone === 'boolean' ? input.quranDone : null,
+      typeof input.namajDone === 'boolean' ? input.namajDone : null,
     ],
   );
 
@@ -85,6 +94,8 @@ async function listProgress(filters = {}) {
       qp.prayers_offered,
       qp.congregational_prayers,
       qp.note,
+      qp.quran_done,
+      qp.namaj_done,
       qp.is_done,
       qp.created_at,
       qp.updated_at
@@ -106,7 +117,8 @@ async function getWeeklyReport({ fromDate, toDate }) {
       jsonb_object_agg(
         to_char(qp.progress_date, 'YYYY-MM-DD'),
         jsonb_build_object(
-          'done', qp.is_done,
+          'done', qp.quran_done,
+          'namajDone', qp.namaj_done,
           'pagesRead', qp.pages_read,
           'surahName', qp.surah_name,
           'minutesRead', qp.minutes_read,
@@ -283,7 +295,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN quran_progress qp
          ON qp.user_id = u.id
-        AND qp.is_done = TRUE
+        AND qp.quran_done = TRUE
         AND qp.progress_date BETWEEN $1 AND $2
        WHERE u.is_active = TRUE
          AND u.user_kind = 1

@@ -121,6 +121,8 @@ export default function UserQuranPage() {
   const selectedRecordPrayersOffered = selectedRecord?.prayers_offered ?? null;
   const selectedRecordCongregationalPrayers = selectedRecord?.congregational_prayers ?? null;
   const selectedRecordNote = selectedRecord?.note ?? '';
+  const selectedRecordQuranDone = selectedRecord?.quran_done ?? false;
+  const selectedRecordNamajDone = selectedRecord?.namaj_done ?? false;
   const selectedDateDone = Boolean(selectedRecord);
   const todayDone = progressRows.some((item) => item.progress_date.slice(0, 10) === today());
 
@@ -172,6 +174,8 @@ export default function UserQuranPage() {
         prayersOffered: selectedRecordPrayersOffered,
         congregationalPrayers: selectedRecordCongregationalPrayers,
         note: form.note?.trim() || undefined,
+        quranDone: true,
+        namajDone: selectedRecordNamajDone,
       } : {
         progressDate: selectedDate,
         pagesRead: selectedRecordPages,
@@ -180,6 +184,8 @@ export default function UserQuranPage() {
         prayersOffered: form.prayersOffered ?? null,
         congregationalPrayers: form.congregationalPrayers ?? null,
         note: selectedRecordNote || undefined,
+        quranDone: selectedRecordQuranDone,
+        namajDone: true,
       };
 
       if (selectedRecord) {
@@ -203,7 +209,9 @@ export default function UserQuranPage() {
     }
   };
 
-  const quranRows = progressRows.map((item) => ({
+  const quranRows = progressRows
+    .filter((item) => item.quran_done)
+    .map((item) => ({
     id: String(item.id),
     searchText: `${item.progress_date} ${item.surah_name ?? ''} ${item.note ?? ''}`,
     sortValues: [item.progress_date, item.pages_read ?? 0, item.minutes_read ?? 0, item.surah_name ?? ''],
@@ -214,10 +222,10 @@ export default function UserQuranPage() {
       item.minutes_read ? `${item.minutes_read} মিনিট` : '-',
       item.note ?? '-',
     ],
-  }));
+    }));
 
   const namajRows = progressRows
-    .filter((item) => item.prayers_offered !== null || item.congregational_prayers !== null)
+    .filter((item) => item.namaj_done)
     .map((item) => ({
       id: `namaj-${item.id}`,
       searchText: `${item.progress_date} ${item.note ?? ''}`,
@@ -278,10 +286,11 @@ export default function UserQuranPage() {
     return {
       id: date,
       searchText: date,
-      sortValues: [date, record ? 1 : 0],
+      sortValues: [date, record?.quran_done ? 1 : 0, record?.namaj_done ? 1 : 0],
       cells: [
         toBanglaDate(date),
-        <span key={`${date}-done`} className={record ? 'font-bold text-success' : 'text-muted'}>{record ? 'Done' : '-'}</span>,
+        <span key={`${date}-quran`} className={record?.quran_done ? 'font-bold text-success' : 'text-muted'}>{record?.quran_done ? 'Done' : '-'}</span>,
+        <span key={`${date}-namaj`} className={record?.namaj_done ? 'font-bold text-success' : 'text-muted'}>{record?.namaj_done ? 'Done' : '-'}</span>,
         quranDetails || '-',
         record?.prayers_offered ?? '-',
         record?.congregational_prayers ?? '-',
@@ -378,7 +387,7 @@ export default function UserQuranPage() {
             )}
           />
           <DataTable
-            headers={['তারিখ', 'Done', 'Quran', 'ওয়াক্তের মধ্যে', 'জামাতে']}
+            headers={['তারিখ', 'Quran', 'Namaj', 'Quran তথ্য', 'ওয়াক্তের মধ্যে', 'জামাতে']}
             rows={personalWeeklyRows}
             searchPlaceholder="তারিখ দিয়ে খুঁজুন..."
             emptyMessage="এই সপ্তাহে কোনো দিন নেই"
