@@ -28,7 +28,7 @@ import type { ApiQuranProgressRow, QuranProgressInput } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 
 const today = () => new Date().toISOString().slice(0, 10);
-const thirtyDaysAgo = () => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+const fortyTwoDaysAgo = () => new Date(Date.now() - 42 * 86400000).toISOString().slice(0, 10);
 
 function addDays(dateText: string, days: number) {
   const date = new Date(`${dateText}T00:00:00.000Z`);
@@ -48,6 +48,14 @@ function isCalendarDate(value: unknown): value is string {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+function weekRange(offset: number) {
+  const dateText = today();
+  const dayOfWeek = new Date(`${dateText}T00:00:00.000Z`).getUTCDay();
+  const daysSinceFriday = (dayOfWeek + 2) % 7;
+  const fromDate = addDays(dateText, -daysSinceFriday - (offset * 7)) || dateText;
+  return { fromDate, toDate: addDays(fromDate, 6) || fromDate };
+}
+
 const DEFAULT_FORM: QuranProgressInput = {
   progressDate: today(),
   pagesRead: null,
@@ -64,9 +72,10 @@ export default function UserQuranPage() {
   const [form, setForm] = useState<QuranProgressInput>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   const loadProgress = useCallback(async () => {
-    const rows = await getUserQuranProgress({ fromDate: thirtyDaysAgo() });
+    const rows = await getUserQuranProgress({ fromDate: fortyTwoDaysAgo() });
     return { rows };
   }, []);
 
@@ -80,14 +89,14 @@ export default function UserQuranPage() {
     ? data
     : Array.isArray(data?.rows) ? data.rows : [];
 
-  const loadWeeklyCompletion = useCallback(() => getInternalQuranWeeklyCompletion(), []);
+  const loadWeeklyCompletion = useCallback(() => getInternalQuranWeeklyCompletion({ weekOffset }), [weekOffset]);
   const {
     data: weeklyCompletion,
     loading: weeklyLoading,
     error: weeklyError,
     refetch: refetchWeeklyCompletion,
-  } = useApiQuery(loadWeeklyCompletion, { fromDate: '', toDate: '', rows: [] }, [], {
-    cacheKey: queryKeys.user.quranWeeklyCompletion(),
+  } = useApiQuery(loadWeeklyCompletion, { fromDate: '', toDate: '', rows: [] }, [weekOffset], {
+    cacheKey: queryKeys.user.quranWeeklyCompletion({ weekOffset }),
     staleTimeMs: 60_000,
     enabled: isIntifadahMember,
   });
@@ -210,8 +219,9 @@ export default function UserQuranPage() {
     ];
   }, [progressRows, todayDone]);
 
-  const weeklyStartDate = isCalendarDate(weeklyCompletion.fromDate) ? weeklyCompletion.fromDate : null;
-  const weeklyEndDate = isCalendarDate(weeklyCompletion.toDate) ? weeklyCompletion.toDate : null;
+  const selectedWeek = useMemo(() => weekRange(weekOffset), [weekOffset]);
+  const weeklyStartDate = isCalendarDate(weeklyCompletion.fromDate) ? weeklyCompletion.fromDate : selectedWeek.fromDate;
+  const weeklyEndDate = isCalendarDate(weeklyCompletion.toDate) ? weeklyCompletion.toDate : selectedWeek.toDate;
   const weeklyDays = useMemo(() => {
     if (!weeklyStartDate) {
       return [];
@@ -234,6 +244,28 @@ export default function UserQuranPage() {
       `${weeklyDays.filter((date) => row.days?.[date]?.done).length}/7`,
     ],
   }));
+
+  const personalWeeklyRows = weeklyDays.map((date) => {
+    const record = progressRows.find((item) => item.progress_date.slice(0, 10) === date);
+    const quranDetails = [
+      record?.surah_name,
+      record?.pages_read !== null && record?.pages_read !== undefined ? `${record.pages_read} পৃষ্ঠা` : '',
+      record?.minutes_read !== null && record?.minutes_read !== undefined ? `${record.minutes_read} মিনিট` : '',
+    ].filter(Boolean).join(' · ');
+
+    return {
+      id: date,
+      searchText: date,
+      sortValues: [date, record ? 1 : 0],
+      cells: [
+        toBanglaDate(date),
+        <span key={`${date}-done`} className={record ? 'font-bold text-success' : 'text-muted'}>{record ? 'Done' : '-'}</span>,
+        quranDetails || '-',
+        record?.prayers_offered ?? '-',
+        record?.congregational_prayers ?? '-',
+      ],
+    };
+  });
 
   const penaltyRows = penalties.rows.map((row) => ({
     id: String(row.id),
@@ -286,13 +318,40 @@ export default function UserQuranPage() {
         </div>
       </section>
 
+      <section>
+        <Card>
+          <SectionHeader
+            title="আমার সাপ্তাহিক Quran ও Namaj"
+            subtitle={`${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}`}
+            action={(
+              <label className="relative">
+                <span className="sr-only">সপ্তাহ বাছাই</span>
+                <select value={weekOffset} onChange={(event) => setWeekOffset(Number(event.target.value))} className="h-10 rounded-lg border border-border bg-white px-3 pr-8 text-sm font-semibold text-fg outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20">
+                  <option value={0}>চলতি সপ্তাহ</option>
+                  <option value={1}>গত সপ্তাহ</option>
+                  <option value={2}>২ সপ্তাহ আগে</option>
+                  <option value={3}>৩ সপ্তাহ আগে</option>
+                  <option value={4}>৪ সপ্তাহ আগে</option>
+                </select>
+              </label>
+            )}
+          />
+          <DataTable
+            headers={['তারিখ', 'Done', 'Quran', 'Namaj', 'Jamat']}
+            rows={personalWeeklyRows}
+            searchPlaceholder="তারিখ দিয়ে খুঁজুন..."
+            emptyMessage="এই সপ্তাহে কোনো দিন নেই"
+          />
+        </Card>
+      </section>
+
       {isIntifadahMember && (
         <section>
           {weeklyError && <ApiErrorNotice message={weeklyError} onRetry={() => void refetchWeeklyCompletion()} />}
           <Card>
             <SectionHeader
               title="ইনতিফাদাহ সদস্যদের সাপ্তাহিক Done"
-              subtitle={weeklyStartDate && weeklyEndDate ? `${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}` : 'শুক্রবার থেকে বৃহস্পতিবার'}
+              subtitle={`${toBanglaDate(weeklyStartDate)} - ${toBanglaDate(weeklyEndDate)}`}
             />
             {weeklyLoading ? <ApiLoadingNotice label="সাপ্তাহিক Done অবস্থা লোড হচ্ছে..." /> : (
               <DataTable
@@ -323,7 +382,7 @@ export default function UserQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৩০ দিনের Quran ও Namaj progress" />
+          <SectionHeader title="রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Quran ও Namaj progress" />
           {loading ? <ApiLoadingNotice label="Quran ও Namaj রেকর্ড লোড হচ্ছে..." /> : (
             <DataTable
               headers={['তারিখ', 'পৃষ্ঠা', 'সুরা', 'সময়', 'Namaj', 'Jamat', 'নোট']}

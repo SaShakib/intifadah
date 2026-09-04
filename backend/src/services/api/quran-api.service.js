@@ -168,8 +168,8 @@ async function getMyPenaltyReport(userId, filters = {}) {
   };
 }
 
-async function getInternalWeeklyCompletion() {
-  const range = defaultWeekRange();
+async function getInternalWeeklyCompletion(filters = {}) {
+  const range = weeklyTrackingRange(filters);
   const rows = await quranRepository.getWeeklyReport(range);
   return {
     ...range,

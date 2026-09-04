@@ -197,8 +197,9 @@ export function getMyQuranPenalties() {
   return apiRequest<ApiMyQuranPenaltyResponse>('/user/quran/penalties');
 }
 
-export function getInternalQuranWeeklyCompletion() {
-  return apiRequest<ApiQuranWeeklyCompletionResponse>('/user/quran/weekly-completion');
+export function getInternalQuranWeeklyCompletion(params: { fromDate?: string; toDate?: string; weekOffset?: number } = {}) {
+  const query = createQueryString(params);
+  return apiRequest<ApiQuranWeeklyCompletionResponse>(`/user/quran/weekly-completion${query}`);
 }
 
 export async function createUserQuranProgress(input: QuranProgressInput = {}) {

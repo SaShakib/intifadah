@@ -60,9 +60,13 @@ async function weeklyReport(req, res, next) {
   }
 }
 
-async function internalWeeklyCompletion(_req, res, next) {
+async function internalWeeklyCompletion(req, res, next) {
   try {
-    const data = await getInternalWeeklyCompletion();
+    const data = await getInternalWeeklyCompletion({
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      weekOffset: req.query.weekOffset,
+    });
     res.json(data);
   } catch (error) {
     next(error);
