@@ -70,7 +70,7 @@ export default function UserQuranPage() {
   const { userKind } = useAuth();
   const isIntifadahMember = userKind === 1;
   const [form, setForm] = useState<QuranProgressInput>(DEFAULT_FORM);
-  const [saving, setSaving] = useState(false);
+  const [savingSection, setSavingSection] = useState<'quran' | 'namaj' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -161,25 +161,35 @@ export default function UserQuranPage() {
     }));
   }, [selectedRecordCongregationalPrayers, selectedRecordId, selectedRecordMinutes, selectedRecordNote, selectedRecordPages, selectedRecordPrayersOffered, selectedRecordSurah]);
 
-  const saveProgress = async () => {
-    setSaving(true);
+  const saveProgress = async (section: 'quran' | 'namaj') => {
+    setSavingSection(section);
     try {
-      const input = {
+      const input = section === 'quran' ? {
         progressDate: selectedDate,
         pagesRead: form.pagesRead ?? null,
         surahName: form.surahName?.trim() || undefined,
         minutesRead: form.minutesRead ?? null,
+        prayersOffered: selectedRecordPrayersOffered,
+        congregationalPrayers: selectedRecordCongregationalPrayers,
+        note: form.note?.trim() || undefined,
+      } : {
+        progressDate: selectedDate,
+        pagesRead: selectedRecordPages,
+        surahName: selectedRecordSurah || undefined,
+        minutesRead: selectedRecordMinutes,
         prayersOffered: form.prayersOffered ?? null,
         congregationalPrayers: form.congregationalPrayers ?? null,
-        note: form.note?.trim() || undefined,
+        note: selectedRecordNote || undefined,
       };
 
       if (selectedRecord) {
         await updateUserQuranProgress(selectedRecord.id, input);
-        showToast('Quran ও Namaj রেকর্ডের তথ্য আপডেট করা হয়েছে।');
+        showToast(section === 'quran' ? 'Quran রেকর্ডের তথ্য আপডেট করা হয়েছে।' : 'Namaj রেকর্ডের তথ্য আপডেট করা হয়েছে।');
       } else {
         await createUserQuranProgress(input);
-        showToast(selectedDate === today() ? 'আজকের Quran ও Namaj রেকর্ড করা হয়েছে।' : 'Quran ও Namaj রেকর্ড সংরক্ষণ হয়েছে।');
+        showToast(selectedDate === today()
+          ? `আজকের ${section === 'quran' ? 'Quran' : 'Namaj'} রেকর্ড করা হয়েছে।`
+          : `${section === 'quran' ? 'Quran' : 'Namaj'} রেকর্ড সংরক্ষণ হয়েছে।`);
       }
       await refetch();
       await refetchPenalties();
@@ -189,7 +199,7 @@ export default function UserQuranPage() {
     } catch (err) {
       showToast(getErrorMessage(err));
     } finally {
-      setSaving(false);
+      setSavingSection(null);
     }
   };
 
@@ -307,21 +317,40 @@ export default function UserQuranPage() {
           {selectedDateDone && <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-3 py-1.5 text-xs font-bold text-success"><CheckCircle2 className="h-4 w-4" />রেকর্ড করা হয়েছে, তথ্য আপডেট করা যাবে</span>}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 max-w-sm">
           <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">তারিখ</span><Input type="date" value={selectedDate} onChange={(event) => selectRecordDate(event.target.value)} /></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">পৃষ্ঠা</span><Input type="number" value={form.pagesRead ?? ''} onChange={(event) => updateForm('pagesRead', event.target.value ? Number(event.target.value) : null)} placeholder="ঐচ্ছিক" /></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">সুরা</span><Input value={form.surahName ?? ''} onChange={(event) => updateForm('surahName', event.target.value)} placeholder="ঐচ্ছিক" /></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">সময়</span><Input type="number" value={form.minutesRead ?? ''} onChange={(event) => updateForm('minutesRead', event.target.value ? Number(event.target.value) : null)} placeholder="মিনিট (ঐচ্ছিক)" /></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">Namaj পড়া হয়েছে</span><Input type="number" min="0" max="5" value={form.prayersOffered ?? ''} onChange={(event) => updateForm('prayersOffered', event.target.value ? Number(event.target.value) : null)} placeholder="কত ওয়াক্ত" /></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">Jamat-এ পড়া হয়েছে</span><Input type="number" min="0" max="5" value={form.congregationalPrayers ?? ''} onChange={(event) => updateForm('congregationalPrayers', event.target.value ? Number(event.target.value) : null)} placeholder="কত ওয়াক্ত" /></label>
-          <label className="space-y-1 sm:col-span-2 xl:col-span-3"><span className="text-xs font-semibold text-fg-2">নোট</span><Input value={form.note ?? ''} onChange={(event) => updateForm('note', event.target.value)} placeholder="ঐচ্ছিক নোট" /></label>
-          <div className="flex items-end">
-            <Button fullWidth size="lg" onClick={() => void saveProgress()} disabled={saving}>
-              <Save className="h-4 w-4" />{saving ? 'সংরক্ষণ হচ্ছে...' : selectedRecord ? 'তথ্য আপডেট করুন' : selectedDate === today() ? 'আজ Quran ও Namaj হয়েছে' : 'রেকর্ড সংরক্ষণ করুন'}
-            </Button>
-          </div>
         </div>
       </Card>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <SectionHeader title="Quran রেকর্ড" subtitle="পড়া হলে তথ্য দিন, না দিলেও শুধু দিনটির Quran রেকর্ড সংরক্ষণ করা যাবে" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">পৃষ্ঠা</span><Input type="number" value={form.pagesRead ?? ''} onChange={(event) => updateForm('pagesRead', event.target.value ? Number(event.target.value) : null)} placeholder="ঐচ্ছিক" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">সুরা</span><Input value={form.surahName ?? ''} onChange={(event) => updateForm('surahName', event.target.value)} placeholder="ঐচ্ছিক" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">সময়</span><Input type="number" value={form.minutesRead ?? ''} onChange={(event) => updateForm('minutesRead', event.target.value ? Number(event.target.value) : null)} placeholder="মিনিট (ঐচ্ছিক)" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">নোট</span><Input value={form.note ?? ''} onChange={(event) => updateForm('note', event.target.value)} placeholder="ঐচ্ছিক নোট" /></label>
+            <div className="sm:col-span-2">
+              <Button fullWidth size="lg" onClick={() => void saveProgress('quran')} disabled={savingSection !== null}>
+                <Save className="h-4 w-4" />{savingSection === 'quran' ? 'সংরক্ষণ হচ্ছে...' : selectedRecord ? 'Quran তথ্য আপডেট করুন' : 'Quran রেকর্ড সংরক্ষণ করুন'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader title="Namaj রেকর্ড" subtitle="নামাজের দুই ধরনের হিসাব আলাদা করে দিন" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">ওয়াক্তের মধ্যে পড়া হয়েছে কত ওয়াক্ত?</span><Input type="number" min="0" max="5" value={form.prayersOffered ?? ''} onChange={(event) => updateForm('prayersOffered', event.target.value ? Number(event.target.value) : null)} placeholder="০ থেকে ৫" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">জামাতে পড়া হয়েছে কত ওয়াক্ত?</span><Input type="number" min="0" max="5" value={form.congregationalPrayers ?? ''} onChange={(event) => updateForm('congregationalPrayers', event.target.value ? Number(event.target.value) : null)} placeholder="০ থেকে ৫" /></label>
+            <div className="sm:col-span-2">
+              <Button fullWidth size="lg" onClick={() => void saveProgress('namaj')} disabled={savingSection !== null}>
+                <Save className="h-4 w-4" />{savingSection === 'namaj' ? 'সংরক্ষণ হচ্ছে...' : selectedRecord ? 'Namaj তথ্য আপডেট করুন' : 'Namaj রেকর্ড সংরক্ষণ করুন'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </section>
 
       <section>
         <SectionHeader title="Quran ও Namaj অগ্রগতি" subtitle="প্রতিদিনের অগ্রগতি একবারে রেকর্ড করুন" />
@@ -349,7 +378,7 @@ export default function UserQuranPage() {
             )}
           />
           <DataTable
-            headers={['তারিখ', 'Done', 'Quran', 'Namaj', 'Jamat']}
+            headers={['তারিখ', 'Done', 'Quran', 'ওয়াক্তের মধ্যে', 'জামাতে']}
             rows={personalWeeklyRows}
             searchPlaceholder="তারিখ দিয়ে খুঁজুন..."
             emptyMessage="এই সপ্তাহে কোনো দিন নেই"
@@ -411,7 +440,7 @@ export default function UserQuranPage() {
           <SectionHeader title="Namaj রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Namaj ও Jamat progress" />
           {loading ? <ApiLoadingNotice label="Namaj রেকর্ড লোড হচ্ছে..." /> : (
             <DataTable
-              headers={['তারিখ', 'Namaj', 'Jamat', 'নোট']}
+              headers={['তারিখ', 'ওয়াক্তের মধ্যে', 'জামাতে', 'নোট']}
               rows={namajRows}
               searchPlaceholder="তারিখ বা নোট দিয়ে খুঁজুন..."
               emptyMessage="এখনও কোনো Namaj রেকর্ড নেই"
