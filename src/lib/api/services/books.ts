@@ -4,7 +4,8 @@ export interface BookCategoryRow { id: number; category_name: string; created_at
 export interface BookRow {
   id: string | number; owner_user_id: number; category_id: number | null; title: string; author_name: string | null;
   book_price_minor: string | number; cover_url: string | null; cover_public_id: string | null; external_source: string | null;
-  external_volume_id: string | null; status: number; description: string | null; owner_name: string; category_name: string | null;
+  external_volume_id: string | null; status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
+  total_copy_count: number; available_copy_count: number; estimated_available_on: string | null;
 }
 export interface BookMetadataRow { source: string; id: string; title: string; authorName: string; coverUrl: string | null; }
 export interface BookActivationInput {
@@ -13,8 +14,9 @@ export interface BookActivationInput {
 }
 export interface BookRequestRow {
   id: string | number; book_id: string | number; requester_user_id: number; requested_days: number; status: number;
+  request_group_id?: string | null;
   due_on: string | null; title: string; cover_url: string | null; book_price_minor: string | number; owner_user_id: number;
-  owner_name: string; requester_name: string;
+  owner_name: string; requester_name: string; return_initiated_at?: string | null; return_received_at?: string | null;
   extensions?: Array<{ id: string | number; requestedDays: number; status: number }>;
 }
 
@@ -28,10 +30,10 @@ export function getBookActivation() { return apiRequest<{ row: BookActivationInp
 export function activateBooks(input: BookActivationInput) { return apiRequest<{ row: BookActivationInput }>('/books/me/activation', { method: 'POST', body: JSON.stringify(input) }); }
 export function createBookCategory(categoryName: string) { return apiRequest<{ row: BookCategoryRow }>('/books/categories', { method: 'POST', body: JSON.stringify({ categoryName }) }); }
 export function createBook(input: Record<string, unknown>) { return apiRequest<{ row: BookRow }>('/books', { method: 'POST', body: JSON.stringify(input) }); }
-export function requestBook(bookId: string | number, requestedDays: number) { return apiRequest<{ row: unknown }>(`/books/${bookId}/requests`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }
+export function requestBook(bookId: string | number, requestedDays: number) { return apiRequest<{ row: { copiesNotified?: number } }>(`/books/${bookId}/requests`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }
 export function getMyBookRequests() { return apiRequest<{ rows: BookRequestRow[] }>('/books/me/requests'); }
-export function ownerBookRequestAction(requestId: string | number, action: 'accept' | 'reject' | 'given' | 'returned', ownerNote?: string) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/owner`, { method: 'PATCH', body: JSON.stringify({ action, ownerNote }) }); }
-export function confirmBookReceived(requestId: string | number, received: boolean) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/received`, { method: 'PATCH', body: JSON.stringify({ received }) }); }
+export function ownerBookRequestAction(requestId: string | number, action: 'accept' | 'reject' | 'given' | 'return_received', ownerNote?: string) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/owner`, { method: 'PATCH', body: JSON.stringify({ action, ownerNote }) }); }
+export function confirmBookReceived(requestId: string | number, action: 'received' | 'returned') { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/received`, { method: 'PATCH', body: JSON.stringify({ action }) }); }
 export function requestBookExtension(requestId: string | number, requestedDays: number) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/extensions`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }
 export function resolveBookExtension(extensionId: string | number, accepted: boolean) { return apiRequest<{ data: unknown }>(`/books/extensions/${extensionId}`, { method: 'PATCH', body: JSON.stringify({ accepted }) }); }
 

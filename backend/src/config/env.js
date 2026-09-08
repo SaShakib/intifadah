@@ -56,6 +56,7 @@ const env = {
   passwordResetOtpTtlMinutes: parseNumber(process.env.PASSWORD_RESET_OTP_TTL_MINUTES, 10),
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY,
+  googleSearchEngineId: process.env.GOOGLE_SEARCH_ENGINE_ID,
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,

@@ -4,6 +4,11 @@ const { env } = require('../config/env');
 
 const { booksRepository, notificationsRepository } = repositories;
 const REQUEST_DAYS = new Set([3, 7, 10, 15, 30]);
+const EXTERNAL_SEARCH_TIMEOUT_MS = 2000;
+
+function fetchExternal(url) {
+  return fetch(url, { signal: AbortSignal.timeout(EXTERNAL_SEARCH_TIMEOUT_MS) });
+}
 
 function badRequest(message) {
   const error = new Error(message);
@@ -22,6 +27,13 @@ function parsePositive(value, field) {
   const number = Number(value);
   if (!Number.isInteger(number) || number <= 0) throw badRequest(`${field} must be a positive number`);
   return number;
+}
+
+function normalizeBookKey(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('bn-BD')
+    .replace(/[\s.,:;!?'"()[\]{}\\/|+*=~`@#$%^&…।-]+/g, '');
 }
 
 async function requireActivation(userId) {
@@ -61,6 +73,7 @@ async function createBookCategory(userId, input) {
 async function addBook(userId, input) {
   await requireActivation(userId);
   const categoryId = input.categoryId ? parsePositive(input.categoryId, 'categoryId') : null;
+  const searchAliases = cleanText(input.searchAliases, 'searchAliases', 600, false);
   const book = await booksRepository.createBook({
     ownerUserId: userId,
     categoryId,
@@ -72,6 +85,8 @@ async function addBook(userId, input) {
     externalSource: cleanText(input.externalSource, 'externalSource', 32, false),
     externalVolumeId: cleanText(input.externalVolumeId, 'externalVolumeId', 120, false),
     description: cleanText(input.description, 'description', 3000, false),
+    canonicalKey: normalizeBookKey(input.title),
+    searchText: [input.title, input.authorName, searchAliases].filter(Boolean).join(' ').trim(),
   });
   await notificationsRepository.createForRoleKeys({
     roleKeys: ['super_admin', 'admin'],
@@ -86,19 +101,24 @@ async function requestBook(userId, bookId, input) {
   await requireActivation(userId);
   const requestedDays = parsePositive(input.requestedDays, 'requestedDays');
   if (!REQUEST_DAYS.has(requestedDays)) throw badRequest('requestedDays must be 3, 7, 10, 15, or 30');
-  const result = await booksRepository.createRequest({ bookId, requesterUserId: userId, requestedDays });
-  if (!result) throw badRequest('This book is not currently available');
-  await notificationsRepository.createForUser({
-    userId: result.ownerUserId,
+  const result = await booksRepository.createRequest({
+    bookId,
+    requesterUserId: userId,
+    requestedDays,
+    requestGroupId: crypto.randomUUID(),
+  });
+  if (!result) throw badRequest('No available copy of this book was found');
+  await Promise.all(result.ownerUserIds.map((ownerUserId) => notificationsRepository.createForUser({
+    userId: ownerUserId,
     notifType: 30,
     payloadJson: { event: 'book_request_created', requestId: result.request.id, bookId, url: '/books' },
-  });
-  return result.request;
+  })));
+  return { ...result.request, copiesNotified: result.copyCount };
 }
 
 async function ownerUpdateRequest(userId, requestId, input) {
   const action = cleanText(input.action, 'action', 16);
-  if (!['accept', 'reject', 'given', 'returned'].includes(action)) throw badRequest('action is invalid');
+  if (!['accept', 'reject', 'given', 'return_received'].includes(action)) throw badRequest('action is invalid');
   const result = await booksRepository.updateRequestByOwner({
     requestId, ownerUserId: userId, action, ownerNote: cleanText(input.ownerNote, 'ownerNote', 500, false),
   });
@@ -116,7 +136,9 @@ async function ownerUpdateRequest(userId, requestId, input) {
 }
 
 async function receiverConfirmRequest(userId, requestId, input) {
-  const result = await booksRepository.confirmReceived({ requestId, requesterUserId: userId, received: input.received === true });
+  const action = cleanText(input.action, 'action', 16);
+  if (!['received', 'returned'].includes(action)) throw badRequest('action is invalid');
+  const result = await booksRepository.confirmReceived({ requestId, requesterUserId: userId, action });
   if (!result) {
     const error = new Error('Book handover confirmation is not available');
     error.statusCode = 404;
@@ -125,7 +147,7 @@ async function receiverConfirmRequest(userId, requestId, input) {
   await notificationsRepository.createForUser({
     userId: result.owner_user_id,
     notifType: 31,
-    payloadJson: { event: input.received ? 'book_received_confirmed' : 'book_received_disputed', requestId, bookId: result.book_id, url: '/books' },
+    payloadJson: { event: action === 'received' ? 'book_received_confirmed' : 'book_returned_by_borrower', requestId, bookId: result.book_id, url: '/books' },
   });
   return result;
 }
@@ -186,24 +208,37 @@ function optimizedCoverUrl(url, width = 640) {
 
 async function searchBookMetadata(queryText) {
   const query = cleanText(queryText, 'q', 180);
-  const openLibrary = fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8`)
+  const openLibrary = fetchExternal(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8`)
     .then((response) => response.ok ? response.json() : { docs: [] })
     .then((data) => (data.docs || []).map((item) => ({
       source: 'open_library', id: String(item.key || ''), title: item.title, authorName: item.author_name?.[0] || '',
       coverUrl: item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : null,
-    })));
+    }))).catch(() => []);
   const googleUrl = new URL('https://www.googleapis.com/books/v1/volumes');
   googleUrl.searchParams.set('q', query);
   googleUrl.searchParams.set('maxResults', '8');
   if (env.googleBooksApiKey) googleUrl.searchParams.set('key', env.googleBooksApiKey);
-  const googleBooks = fetch(googleUrl)
+  const googleBooks = fetchExternal(googleUrl)
     .then((response) => response.ok ? response.json() : { items: [] })
     .then((data) => (data.items || []).map((item) => ({
       source: 'google_books', id: item.id, title: item.volumeInfo?.title || '', authorName: item.volumeInfo?.authors?.[0] || '',
       coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
     }))).catch(() => []);
-  const [openLibraryResults, googleResults] = await Promise.all([openLibrary, googleBooks]);
-  return [...googleResults, ...openLibraryResults].filter((item) => item.title);
+  const googleImages = env.googleBooksApiKey && env.googleSearchEngineId
+    ? fetchExternal(`https://www.googleapis.com/customsearch/v1?${new URLSearchParams({
+      q: `${query} book cover`,
+      cx: env.googleSearchEngineId,
+      key: env.googleBooksApiKey,
+      searchType: 'image',
+      num: '8',
+    })}`)
+      .then((response) => response.ok ? response.json() : { items: [] })
+      .then((data) => (data.items || []).map((item) => ({
+        source: 'google_images', id: item.link, title: item.title || query, authorName: '', coverUrl: item.link || null,
+      }))).catch(() => [])
+    : Promise.resolve([]);
+  const [openLibraryResults, googleResults, googleImageResults] = await Promise.all([openLibrary, googleBooks, googleImages]);
+  return [...googleResults, ...openLibraryResults, ...googleImageResults].filter((item) => item.title);
 }
 
 module.exports = {
