@@ -169,11 +169,11 @@ export default function AdminQuranPage() {
         return (
           <div key={`${row.user_id}-namaj-${date}`} className="min-w-20 text-center">
             <span className={item?.namajDone ? 'font-bold text-success' : 'text-muted'}>{item?.namajDone ? 'Done' : '-'}</span>
-            {item?.namajDone && (item.prayersOffered !== null || item.congregationalPrayers !== null) && (
+            {item?.namajDone && (item.naflRakat !== null || item.congregationalPrayers !== null) && (
               <p className="mt-1 text-[11px] leading-4 text-muted">
                 {[
-                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `ওয়াক্তে ${item.prayersOffered}` : '',
                   item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `জামাতে ${item.congregationalPrayers}` : '',
+                  item.naflRakat !== null && item.naflRakat !== undefined ? `নফল ${item.naflRakat} রাকাত` : '',
                 ].filter(Boolean).join(' · ')}
               </p>
             )}

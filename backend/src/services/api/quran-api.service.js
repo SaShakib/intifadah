@@ -33,12 +33,8 @@ function parseOptionalPrayerCount(value, fieldName) {
 function parsePrayerCounts(input) {
   const prayersOffered = parseOptionalPrayerCount(input.prayersOffered, 'prayersOffered');
   const congregationalPrayers = parseOptionalPrayerCount(input.congregationalPrayers, 'congregationalPrayers');
-  if (prayersOffered !== null && congregationalPrayers !== null && congregationalPrayers > prayersOffered) {
-    const error = new Error('congregationalPrayers cannot exceed prayersOffered');
-    error.statusCode = 400;
-    throw error;
-  }
-  return { prayersOffered, congregationalPrayers };
+  const naflRakat = parseOptionalPositiveInt(input.naflRakat, 'naflRakat');
+  return { prayersOffered, congregationalPrayers, naflRakat };
 }
 
 function parseOptionalBoolean(value, fieldName) {
@@ -194,8 +190,8 @@ async function getInternalWeeklyCompletion(filters = {}) {
         Object.entries(row.days || {}).map(([date, value]) => [date, {
           done: Boolean(value?.done),
           namajDone: Boolean(value?.namajDone),
-          prayersOffered: value?.prayersOffered ?? null,
           congregationalPrayers: value?.congregationalPrayers ?? null,
+          naflRakat: value?.naflRakat ?? null,
         }]),
       ),
     })),

@@ -244,6 +244,7 @@ export interface ApiQuranProgressRow {
   minutes_read: number | null;
   prayers_offered: number | null;
   congregational_prayers: number | null;
+  nafl_rakat: number | null;
   note: string | null;
   quran_done: boolean;
   namaj_done: boolean;
@@ -264,6 +265,7 @@ export interface ApiQuranWeeklyReportRow {
     minutesRead: number | null;
     prayersOffered: number | null;
     congregationalPrayers: number | null;
+    naflRakat: number | null;
     note: string | null;
   }> | null;
 }
@@ -280,8 +282,8 @@ export interface ApiQuranWeeklyCompletionRow {
   days: Record<string, {
     done: boolean;
     namajDone: boolean;
-    prayersOffered: number | null;
     congregationalPrayers: number | null;
+    naflRakat: number | null;
   }> | null;
 }
 
@@ -456,6 +458,7 @@ export interface QuranProgressInput {
   minutesRead?: number | null;
   prayersOffered?: number | null;
   congregationalPrayers?: number | null;
+  naflRakat?: number | null;
   note?: string;
   quranDone?: boolean;
   namajDone?: boolean;

@@ -61,8 +61,8 @@ const DEFAULT_FORM: QuranProgressInput = {
   pagesRead: null,
   surahName: '',
   minutesRead: null,
-  prayersOffered: null,
   congregationalPrayers: null,
+  naflRakat: null,
   note: '',
 };
 
@@ -80,7 +80,7 @@ export default function UserQuranPage() {
   }, []);
 
   const { data, loading, error, refetch } = useApiQuery(loadProgress, { rows: [] }, [], {
-    cacheKey: queryKeys.user.quranProgress({ scope: '30d' }),
+    cacheKey: queryKeys.user.quranProgress({ scope: '42d' }),
     staleTimeMs: 5 * 60_000,
   });
   // Earlier app versions warmed this cache with the raw array. Keep that cached
@@ -120,6 +120,7 @@ export default function UserQuranPage() {
   const selectedRecordMinutes = selectedRecord?.minutes_read ?? null;
   const selectedRecordPrayersOffered = selectedRecord?.prayers_offered ?? null;
   const selectedRecordCongregationalPrayers = selectedRecord?.congregational_prayers ?? null;
+  const selectedRecordNaflRakat = selectedRecord?.nafl_rakat ?? null;
   const selectedRecordNote = selectedRecord?.note ?? '';
   const selectedRecordQuranDone = selectedRecord?.quran_done ?? false;
   const selectedRecordNamajDone = selectedRecord?.namaj_done ?? false;
@@ -142,8 +143,8 @@ export default function UserQuranPage() {
       pagesRead: record?.pages_read ?? null,
       surahName: record?.surah_name ?? '',
       minutesRead: record?.minutes_read ?? null,
-      prayersOffered: record?.prayers_offered ?? null,
       congregationalPrayers: record?.congregational_prayers ?? null,
+      naflRakat: record?.nafl_rakat ?? null,
       note: record?.note ?? '',
     });
   };
@@ -157,11 +158,11 @@ export default function UserQuranPage() {
       pagesRead: selectedRecordPages,
       surahName: selectedRecordSurah,
       minutesRead: selectedRecordMinutes,
-      prayersOffered: selectedRecordPrayersOffered,
       congregationalPrayers: selectedRecordCongregationalPrayers,
+      naflRakat: selectedRecordNaflRakat,
       note: selectedRecordNote,
     }));
-  }, [selectedRecordCongregationalPrayers, selectedRecordId, selectedRecordMinutes, selectedRecordNote, selectedRecordPages, selectedRecordPrayersOffered, selectedRecordSurah]);
+  }, [selectedRecordCongregationalPrayers, selectedRecordId, selectedRecordMinutes, selectedRecordNaflRakat, selectedRecordNote, selectedRecordPages, selectedRecordSurah]);
 
   const saveProgress = async (section: 'quran' | 'namaj') => {
     setSavingSection(section);
@@ -173,6 +174,7 @@ export default function UserQuranPage() {
         minutesRead: form.minutesRead ?? null,
         prayersOffered: selectedRecordPrayersOffered,
         congregationalPrayers: selectedRecordCongregationalPrayers,
+        naflRakat: selectedRecordNaflRakat,
         note: form.note?.trim() || undefined,
         quranDone: true,
         namajDone: selectedRecordNamajDone,
@@ -181,8 +183,9 @@ export default function UserQuranPage() {
         pagesRead: selectedRecordPages,
         surahName: selectedRecordSurah || undefined,
         minutesRead: selectedRecordMinutes,
-        prayersOffered: form.prayersOffered ?? null,
+        prayersOffered: selectedRecordPrayersOffered,
         congregationalPrayers: form.congregationalPrayers ?? null,
+        naflRakat: form.naflRakat ?? null,
         note: selectedRecordNote || undefined,
         quranDone: selectedRecordQuranDone,
         namajDone: true,
@@ -229,10 +232,10 @@ export default function UserQuranPage() {
     .map((item) => ({
       id: `namaj-${item.id}`,
       searchText: `${item.progress_date} ${item.note ?? ''}`,
-      sortValues: [item.progress_date, item.prayers_offered ?? -1, item.congregational_prayers ?? -1],
+      sortValues: [item.progress_date, item.nafl_rakat ?? -1, item.congregational_prayers ?? -1],
       cells: [
         toBanglaDate(item.progress_date),
-        item.prayers_offered ?? '-',
+        item.nafl_rakat ?? '-',
         item.congregational_prayers ?? '-',
         item.note ?? '-',
       ],
@@ -286,11 +289,11 @@ export default function UserQuranPage() {
         return (
           <div key={`${row.user_id}-namaj-${date}`} className="min-w-20 text-center">
             <span className={item?.namajDone ? 'font-bold text-success' : 'text-muted'}>{item?.namajDone ? 'Done' : '-'}</span>
-            {item?.namajDone && (item.prayersOffered !== null || item.congregationalPrayers !== null) && (
+            {item?.namajDone && (item.naflRakat !== null || item.congregationalPrayers !== null) && (
               <p className="mt-1 text-[11px] leading-4 text-muted">
                 {[
-                  item.prayersOffered !== null && item.prayersOffered !== undefined ? `ওয়াক্তে ${item.prayersOffered}` : '',
                   item.congregationalPrayers !== null && item.congregationalPrayers !== undefined ? `জামাতে ${item.congregationalPrayers}` : '',
+                  item.naflRakat !== null && item.naflRakat !== undefined ? `নফল ${item.naflRakat} রাকাত` : '',
                 ].filter(Boolean).join(' · ')}
               </p>
             )}
@@ -318,7 +321,7 @@ export default function UserQuranPage() {
         <span key={`${date}-quran`} className={record?.quran_done ? 'font-bold text-success' : 'text-muted'}>{record?.quran_done ? 'Done' : '-'}</span>,
         <span key={`${date}-namaj`} className={record?.namaj_done ? 'font-bold text-success' : 'text-muted'}>{record?.namaj_done ? 'Done' : '-'}</span>,
         quranDetails || '-',
-        record?.prayers_offered ?? '-',
+        record?.nafl_rakat ?? '-',
         record?.congregational_prayers ?? '-',
       ],
     };
@@ -376,8 +379,8 @@ export default function UserQuranPage() {
         <Card>
           <SectionHeader title="Namaj রেকর্ড" subtitle="নামাজের দুই ধরনের হিসাব আলাদা করে দিন" />
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">ওয়াক্তের মধ্যে পড়া হয়েছে কত ওয়াক্ত?</span><Input type="number" min="0" max="5" value={form.prayersOffered ?? ''} onChange={(event) => updateForm('prayersOffered', event.target.value ? Number(event.target.value) : null)} placeholder="০ থেকে ৫" /></label>
             <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">জামাতে পড়া হয়েছে কত ওয়াক্ত?</span><Input type="number" min="0" max="5" value={form.congregationalPrayers ?? ''} onChange={(event) => updateForm('congregationalPrayers', event.target.value ? Number(event.target.value) : null)} placeholder="০ থেকে ৫" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">নফল নামাজ পড়া হয়েছে কত রাকাত?</span><Input type="number" min="0" value={form.naflRakat ?? ''} onChange={(event) => updateForm('naflRakat', event.target.value ? Number(event.target.value) : null)} placeholder="রাকাত সংখ্যা" /></label>
             <div className="sm:col-span-2">
               <Button fullWidth size="lg" onClick={() => void saveProgress('namaj')} disabled={savingSection !== null}>
                 <Save className="h-4 w-4" />{savingSection === 'namaj' ? 'সংরক্ষণ হচ্ছে...' : selectedRecord ? 'Namaj তথ্য আপডেট করুন' : 'Namaj রেকর্ড সংরক্ষণ করুন'}
@@ -413,7 +416,7 @@ export default function UserQuranPage() {
             )}
           />
           <DataTable
-            headers={['তারিখ', 'Quran', 'Namaj', 'Quran তথ্য', 'ওয়াক্তের মধ্যে', 'জামাতে']}
+            headers={['তারিখ', 'Quran', 'Namaj', 'Quran তথ্য', 'নফল রাকাত', 'জামাতে']}
             rows={personalWeeklyRows}
             searchPlaceholder="তারিখ দিয়ে খুঁজুন..."
             emptyMessage="এই সপ্তাহে কোনো দিন নেই"
@@ -494,7 +497,7 @@ export default function UserQuranPage() {
           <SectionHeader title="Namaj রেকর্ড ইতিহাস" subtitle="সর্বশেষ ৪২ দিনের Namaj ও Jamat progress" />
           {loading ? <ApiLoadingNotice label="Namaj রেকর্ড লোড হচ্ছে..." /> : (
             <DataTable
-              headers={['তারিখ', 'ওয়াক্তের মধ্যে', 'জামাতে', 'নোট']}
+              headers={['তারিখ', 'নফল রাকাত', 'জামাতে', 'নোট']}
               rows={namajRows}
               searchPlaceholder="তারিখ বা নোট দিয়ে খুঁজুন..."
               emptyMessage="এখনও কোনো Namaj রেকর্ড নেই"

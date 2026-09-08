@@ -11,13 +11,14 @@ async function createProgress(input) {
       minutes_read,
       prayers_offered,
       congregational_prayers,
+      nafl_rakat,
       note,
       quran_done,
       namaj_done,
       is_done
-    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
+    ) VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE)
     ON CONFLICT (user_id, progress_date) DO NOTHING
-    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, quran_done, namaj_done, is_done, created_at, updated_at`,
+    RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, nafl_rakat, note, quran_done, namaj_done, is_done, created_at, updated_at`,
     [
       input.userId,
       input.progressDate || null,
@@ -26,6 +27,7 @@ async function createProgress(input) {
       input.minutesRead ?? null,
       input.prayersOffered ?? null,
       input.congregationalPrayers ?? null,
+      input.naflRakat ?? null,
       input.note || null,
       input.quranDone !== false,
       input.namajDone === true,
@@ -44,14 +46,15 @@ async function updateProgress(input) {
       minutes_read = $5,
       prayers_offered = $6,
       congregational_prayers = $7,
-      note = $8,
-      quran_done = COALESCE($9, quran_done),
-      namaj_done = COALESCE($10, namaj_done),
-      is_done = COALESCE($9, quran_done) OR COALESCE($10, namaj_done),
+      nafl_rakat = $8,
+      note = $9,
+      quran_done = COALESCE($10, quran_done),
+      namaj_done = COALESCE($11, namaj_done),
+      is_done = COALESCE($10, quran_done) OR COALESCE($11, namaj_done),
       updated_at = NOW()
      WHERE id = $1
        AND user_id = $2
-     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, note, quran_done, namaj_done, is_done, created_at, updated_at`,
+     RETURNING id, user_id, progress_date, pages_read, surah_name, minutes_read, prayers_offered, congregational_prayers, nafl_rakat, note, quran_done, namaj_done, is_done, created_at, updated_at`,
     [
       input.progressId,
       input.userId,
@@ -60,6 +63,7 @@ async function updateProgress(input) {
       input.minutesRead ?? null,
       input.prayersOffered ?? null,
       input.congregationalPrayers ?? null,
+      input.naflRakat ?? null,
       input.note || null,
       typeof input.quranDone === 'boolean' ? input.quranDone : null,
       typeof input.namajDone === 'boolean' ? input.namajDone : null,
@@ -93,6 +97,7 @@ async function listProgress(filters = {}) {
       qp.minutes_read,
       qp.prayers_offered,
       qp.congregational_prayers,
+      qp.nafl_rakat,
       qp.note,
       qp.quran_done,
       qp.namaj_done,
@@ -124,6 +129,7 @@ async function getWeeklyReport({ fromDate, toDate }) {
           'minutesRead', qp.minutes_read,
           'prayersOffered', qp.prayers_offered,
           'congregationalPrayers', qp.congregational_prayers,
+          'naflRakat', qp.nafl_rakat,
           'note', qp.note
         )
       ) FILTER (WHERE qp.id IS NOT NULL) AS days
