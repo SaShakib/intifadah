@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  BookOpen,
   BookOpenCheck,
   ChartNoAxesCombined,
   CircleDollarSign,
@@ -23,6 +24,7 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 const ICONS: Record<string, IconComponent> = {
   'arrow-left-right': ArrowLeftRight,
   'book-open-check': BookOpenCheck,
+  'book-open': BookOpen,
   'chart-no-axes-combined': ChartNoAxesCombined,
   'circle-dollar-sign': CircleDollarSign,
   'circle-user-round': CircleUserRound,

@@ -7,6 +7,7 @@ const { systemRouter } = require('./routes/system.routes');
 const { authRouter } = require('./routes/auth.routes');
 const { adminRouter } = require('./routes/admin.routes');
 const { userRouter } = require('./routes/user.routes');
+const { booksRouter } = require('./routes/books.routes');
 
 function buildCorsOptions() {
   if (env.corsOrigin === '*') {
@@ -41,6 +42,7 @@ function createApp() {
   app.use('/auth', authRouter);
   app.use('/admin', adminRouter);
   app.use('/user', userRouter);
+  app.use('/books', booksRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

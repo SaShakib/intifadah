@@ -1,5 +1,6 @@
 import Image from 'next/image';
-import { Eye, EyeOff, Smartphone, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Eye, EyeOff, Smartphone, UserPlus } from 'lucide-react';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { LOGIN_FEATURES } from './constants';
@@ -146,6 +147,7 @@ export function LoginMiddleSection({
       </form>
 
       <div className="grid gap-2">
+        <Link href="/books"><Button type="button" variant="secondary" fullWidth><BookOpen className="h-4 w-4" />বইঘর দেখুন</Button></Link>
         <Button type="button" variant="secondary" fullWidth onClick={onRegister} disabled={loading}>
           <UserPlus className="h-4 w-4" />নতুন অ্যাকাউন্ট তৈরি করুন
         </Button>

@@ -11,3 +11,4 @@ export * from './ui';
 export * from './services/auth';
 export * from './services/admin';
 export * from './services/user';
+export * from './services/books';

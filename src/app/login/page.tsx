@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Script from 'next/script';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { AppModal } from '@/components/semibase/AppModal';
@@ -25,7 +25,7 @@ declare global {
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [identifier, setIdentifier] = useState('');
@@ -51,6 +51,11 @@ export default function LoginPage() {
   const [googleReady, setGoogleReady] = useState(false);
   const { isAuthenticated, isReady, login, loginWithGoogle, register, roleKey, needsProfileCompletion } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('books') === '1') setRegisterOpen(true);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isReady || !isAuthenticated) {
@@ -62,7 +67,7 @@ export default function LoginPage() {
 
   const routeAfterAuth = () => {
     const nextUser = getAuthSession()?.user;
-    router.push(nextUser?.needsProfileCompletion ? '/onboarding' : nextUser?.roleKey && isAdminRoleKey(nextUser.roleKey) ? '/admin/dashboard' : '/user/dashboard');
+    router.push(nextUser?.needsProfileCompletion ? '/onboarding' : searchParams.get('books') === '1' ? '/books' : nextUser?.roleKey && isAdminRoleKey(nextUser.roleKey) ? '/admin/dashboard' : '/user/dashboard');
   };
 
   const handleLogin = async () => {
@@ -311,4 +316,8 @@ export default function LoginPage() {
       </AppModal>
     </div>
   );
+}
+
+export default function LoginPage() {
+  return <Suspense fallback={<div className="min-h-screen bg-surface-2" />}><LoginPageContent /></Suspense>;
 }
