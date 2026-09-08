@@ -184,14 +184,14 @@ async function updateCollectionTransaction(id, input) {
   await query(
     `UPDATE transactions
      SET
-      tx_type = $2,
-      status = $3,
+      tx_type = $2::smallint,
+      status = $3::smallint,
       subject_user_id = $4,
       category_id = $5,
       amount_minor = $6,
       occurred_on = $7,
-      approved_by_user_id = CASE WHEN $3 = ${TX_STATUS.APPROVED} THEN $8 ELSE NULL END,
-      approved_at = CASE WHEN $3 = ${TX_STATUS.APPROVED} THEN COALESCE($9, NOW()) ELSE NULL END,
+      approved_by_user_id = CASE WHEN $3::smallint = ${TX_STATUS.APPROVED}::smallint THEN $8 ELSE NULL END,
+      approved_at = CASE WHEN $3::smallint = ${TX_STATUS.APPROVED}::smallint THEN COALESCE($9, NOW()) ELSE NULL END,
       note = $10,
       updated_at = NOW()
      WHERE id = $1`,
@@ -214,9 +214,9 @@ async function updateTransactionStatus(id, status, approvedByUserId) {
   await query(
     `UPDATE transactions
      SET
-      status = $2,
-      approved_by_user_id = CASE WHEN $2 = ${TX_STATUS.APPROVED} THEN $3 ELSE NULL END,
-      approved_at = CASE WHEN $2 = ${TX_STATUS.APPROVED} THEN NOW() ELSE NULL END,
+      status = $2::smallint,
+      approved_by_user_id = CASE WHEN $2::smallint = ${TX_STATUS.APPROVED}::smallint THEN $3 ELSE NULL END,
+      approved_at = CASE WHEN $2::smallint = ${TX_STATUS.APPROVED}::smallint THEN NOW() ELSE NULL END,
       updated_at = NOW()
      WHERE id = $1`,
     [id, status, approvedByUserId],
