@@ -139,6 +139,7 @@ export function mapTransactionRow(row: ApiTransactionRow): Transaction {
     categoryName: row.category_name ?? undefined,
     actorName: row.actor_name ?? undefined,
     date: toBanglaDate(row.occurred_on),
+    occurredOn: row.occurred_on ?? undefined,
     status: mapTxStatus(row.status),
     note: row.note ?? undefined,
   };

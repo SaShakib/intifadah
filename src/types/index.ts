@@ -46,6 +46,7 @@ export interface Transaction {
   categoryName?: string;
   actorName?: string;
   date: string;
+  occurredOn?: string;
   status: TransactionStatus;
   note?: string;
 }

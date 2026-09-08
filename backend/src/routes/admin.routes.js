@@ -25,6 +25,7 @@ router.delete('/categories/:categoryId', requirePermission('categories', 'delete
 router.get('/collections', requirePermission('collections', 'read'), adminController.collectionsList);
 router.post('/collections', requirePermission('collections', 'write'), adminController.collectionsCreate);
 router.patch('/collections/:transactionId/receive', requirePermission('collections', 'update'), adminController.collectionsReceive);
+router.patch('/collections/:transactionId', requirePermission('collections', 'update'), adminController.collectionsUpdate);
 
 router.get('/loans', requirePermission('loans', 'read'), adminController.loansList);
 router.post('/loans', requirePermission('loans', 'write'), adminController.loansCreate);

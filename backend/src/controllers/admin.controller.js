@@ -19,6 +19,7 @@ const {
   listCollections,
   createCollectionEntry,
   receiveSavingsDue,
+  updateCollectionEntry,
   listLoans,
   createLoanRequest,
   approveLoan,
@@ -216,6 +217,19 @@ async function collectionsReceive(req, res, next) {
   try {
     const transactionId = parseRequiredId(req.params.transactionId, 'transactionId');
     const row = await receiveSavingsDue(transactionId, req.auth.userId);
+    res.json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function collectionsUpdate(req, res, next) {
+  try {
+    const transactionId = parseRequiredId(req.params.transactionId, 'transactionId');
+    const row = await updateCollectionEntry(transactionId, req.body || {}, {
+      actorUserId: req.auth.userId,
+      roleKey: req.auth.roleKey,
+    });
     res.json({ row });
   } catch (error) {
     next(error);
@@ -490,6 +504,7 @@ module.exports = {
   collectionsList,
   collectionsCreate,
   collectionsReceive,
+  collectionsUpdate,
   loansList,
   loansCreate,
   loansApprove,

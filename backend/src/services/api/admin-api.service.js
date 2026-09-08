@@ -308,6 +308,74 @@ async function receiveSavingsDue(transactionId, actorUserId) {
   return transactionsRepository.getTransactionById(transactionId);
 }
 
+const COLLECTION_TX_TYPES = new Set([
+  TX_TYPE.COLLECTION,
+  TX_TYPE.DONATION,
+  TX_TYPE.SAVINGS,
+  TX_TYPE.ORG_FUND,
+]);
+
+function parseCollectionStatus(value) {
+  const status = Number(value);
+  if (!Object.values(TX_STATUS).includes(status)) {
+    const error = new Error('Invalid transaction status');
+    error.statusCode = 400;
+    throw error;
+  }
+  return status;
+}
+
+function assertCollectionTransaction(transaction) {
+  if (!transaction || !COLLECTION_TX_TYPES.has(Number(transaction.tx_type))) {
+    const error = new Error('Collection entry not found');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function updateCollectionEntry(transactionId, input, actorContext) {
+  const transaction = await transactionsRepository.getTransactionById(transactionId);
+  assertCollectionTransaction(transaction);
+
+  const roleKey = actorContext.roleKey;
+  if (!['super_admin', 'admin', 'manager'].includes(roleKey)) {
+    const error = new Error('You do not have permission to update this entry');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const status = parseCollectionStatus(input.status ?? transaction.status);
+  if (roleKey !== 'super_admin') {
+    await transactionsRepository.updateTransactionStatus(transactionId, status, actorContext.actorUserId);
+    return transactionsRepository.getTransactionById(transactionId);
+  }
+
+  const txType = Number(input.txType ?? transaction.tx_type);
+  if (!COLLECTION_TX_TYPES.has(txType)) {
+    const error = new Error('Invalid collection type');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await transactionsRepository.updateCollectionTransaction(transactionId, {
+    txType,
+    status,
+    subjectUserId: input.subjectUserId === undefined
+      ? Number(transaction.subject_user_id)
+      : parseRequiredId(input.subjectUserId, 'subjectUserId'),
+    categoryId: input.categoryId === undefined ? transaction.category_id : input.categoryId,
+    amountMinor: input.amountMinor === undefined
+      ? Number(transaction.amount_minor)
+      : parseMinorAmount(input.amountMinor),
+    occurredOn: input.occurredOn === undefined ? transaction.occurred_on : input.occurredOn,
+    approvedByUserId: actorContext.actorUserId,
+    approvedAt: new Date(),
+    note: input.note === undefined ? transaction.note : input.note,
+  });
+
+  return transactionsRepository.getTransactionById(transactionId);
+}
+
 async function listLoans(filters) {
   return loansRepository.listLoans(filters);
 }
@@ -469,6 +537,7 @@ module.exports = {
   listCollections,
   createCollectionEntry,
   receiveSavingsDue,
+  updateCollectionEntry,
   listLoans,
   createLoanRequest,
   approveLoan,

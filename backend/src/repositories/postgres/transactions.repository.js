@@ -180,6 +180,49 @@ async function updateTransaction(id, input) {
   );
 }
 
+async function updateCollectionTransaction(id, input) {
+  await query(
+    `UPDATE transactions
+     SET
+      tx_type = $2,
+      status = $3,
+      subject_user_id = $4,
+      category_id = $5,
+      amount_minor = $6,
+      occurred_on = $7,
+      approved_by_user_id = CASE WHEN $3 = ${TX_STATUS.APPROVED} THEN $8 ELSE NULL END,
+      approved_at = CASE WHEN $3 = ${TX_STATUS.APPROVED} THEN COALESCE($9, NOW()) ELSE NULL END,
+      note = $10,
+      updated_at = NOW()
+     WHERE id = $1`,
+    [
+      id,
+      input.txType,
+      input.status,
+      input.subjectUserId,
+      input.categoryId || null,
+      input.amountMinor,
+      input.occurredOn,
+      input.approvedByUserId || null,
+      input.approvedAt || null,
+      input.note || null,
+    ],
+  );
+}
+
+async function updateTransactionStatus(id, status, approvedByUserId) {
+  await query(
+    `UPDATE transactions
+     SET
+      status = $2,
+      approved_by_user_id = CASE WHEN $2 = ${TX_STATUS.APPROVED} THEN $3 ELSE NULL END,
+      approved_at = CASE WHEN $2 = ${TX_STATUS.APPROVED} THEN NOW() ELSE NULL END,
+      updated_at = NOW()
+     WHERE id = $1`,
+    [id, status, approvedByUserId],
+  );
+}
+
 async function transferBetweenCategories(input) {
   return withTransaction(async (client) => {
     const outTx = await client.query(
@@ -266,5 +309,7 @@ module.exports = {
   getTransactionById,
   createTransaction,
   updateTransaction,
+  updateCollectionTransaction,
+  updateTransactionStatus,
   transferBetweenCategories,
 };
