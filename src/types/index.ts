@@ -44,6 +44,7 @@ export interface Transaction {
   amount: number;
   categoryId?: string;
   categoryName?: string;
+  actorName?: string;
   date: string;
   status: TransactionStatus;
   note?: string;

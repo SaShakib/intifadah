@@ -25,10 +25,12 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ message: 'Invalid user session' });
     }
 
+    const useStaffMode = payload.accountMode === 'staff' && user.staff_role_id && user.staff_role_key;
     req.auth = {
       userId: user.id,
-      roleId: user.role_id,
-      roleKey: user.role_key,
+      roleId: useStaffMode ? user.staff_role_id : user.role_id,
+      roleKey: useStaffMode ? user.staff_role_key : user.role_key,
+      accountMode: useStaffMode ? 'staff' : 'personal',
       userKind: user.user_kind,
       email: user.email,
       needsProfileCompletion: needsProfileCompletion(user),

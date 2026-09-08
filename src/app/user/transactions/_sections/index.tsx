@@ -45,12 +45,13 @@ export function TransactionsMiddleSection({ rows: transactions = TRANSACTION_ROW
     id: item.id,
     tabValue: item.type,
     filterValues: { type: item.type, status: item.status },
-    searchText: `${item.date} ${TYPE_LABEL[item.type] ?? item.type} ${item.categoryName ?? ''}`,
-    sortValues: [item.date, TYPE_LABEL[item.type] ?? item.type, item.categoryName ?? '', item.amount, item.status],
+    searchText: `${item.date} ${item.actorName ?? ''} ${TYPE_LABEL[item.type] ?? item.type} ${item.categoryName ?? ''}`,
+    sortValues: [item.date, TYPE_LABEL[item.type] ?? item.type, item.categoryName ?? '', item.actorName ?? '', item.amount, item.status],
     cells: [
       item.date,
       TYPE_LABEL[item.type] ?? item.type,
       item.categoryName ?? '-',
+      item.actorName ?? '-',
       <span key={`${item.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(item.amount)}</span>,
       <Badge key={item.id} variant={item.status === 'pending' ? 'warning' : 'success'}>
         {item.status === 'pending' ? 'অপেক্ষমাণ' : 'সম্পন্ন'}
@@ -63,7 +64,7 @@ export function TransactionsMiddleSection({ rows: transactions = TRANSACTION_ROW
       <Card>
         <SectionHeader title="লেনদেন তালিকা" subtitle="তারিখ অনুযায়ী সাজানো" />
         <DataTable
-          headers={['তারিখ', 'ধরণ', 'খাত', 'পরিমাণ', 'স্ট্যাটাস']}
+          headers={['তারিখ', 'ধরণ', 'খাত', { header: 'রেকর্ড করেছেন', hideOnMobile: true }, 'পরিমাণ', 'স্ট্যাটাস']}
           rows={rows}
           tabs={[
             { value: 'all', label: 'সব' },

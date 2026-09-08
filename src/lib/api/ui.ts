@@ -137,6 +137,7 @@ export function mapTransactionRow(row: ApiTransactionRow): Transaction {
     amount: toMinorNumber(row.amount_minor),
     categoryId: row.category_id ? String(row.category_id) : undefined,
     categoryName: row.category_name ?? undefined,
+    actorName: row.actor_name ?? undefined,
     date: toBanglaDate(row.occurred_on),
     status: mapTxStatus(row.status),
     note: row.note ?? undefined,

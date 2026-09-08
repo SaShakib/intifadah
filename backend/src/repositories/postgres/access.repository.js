@@ -194,6 +194,31 @@ async function assignUserRoleWithAudit({
   });
 }
 
+async function assignUserStaffRoleWithAudit({ actorUserId, userId, beforeStaffRoleId, afterStaffRoleId }) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE app_users
+       SET staff_role_id = $2,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId, afterStaffRoleId],
+    );
+
+    await client.query(
+      `INSERT INTO audit_logs (actor_user_id, action_type, entity_type, entity_id, before_json, after_json)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        actorUserId,
+        2,
+        2,
+        userId,
+        JSON.stringify({ staffRoleId: beforeStaffRoleId }),
+        JSON.stringify({ staffRoleId: afterStaffRoleId }),
+      ],
+    );
+  });
+}
+
 module.exports = {
   getRolePermissionMap,
   listModules,
@@ -203,4 +228,5 @@ module.exports = {
   updateRolePermissions,
   countActiveUsersByRoleKey,
   assignUserRoleWithAudit,
+  assignUserStaffRoleWithAudit,
 };

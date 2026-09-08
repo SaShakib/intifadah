@@ -62,16 +62,38 @@ function resolveLoginRoleKey({ email, currentRoleKey }) {
   return resolveEmailRoleOverride(email) || currentRoleKey;
 }
 
-function sanitizeUser(user) {
+function activeRoleForUser(user, accountMode = 'personal') {
+  if (accountMode === 'staff' && user.staff_role_id && user.staff_role_key) {
+    return {
+      accountMode: 'staff',
+      roleId: user.staff_role_id,
+      roleKey: user.staff_role_key,
+      roleName: user.staff_role_name,
+    };
+  }
+
+  return {
+    accountMode: 'personal',
+    roleId: user.role_id,
+    roleKey: user.role_key,
+    roleName: user.role_name,
+  };
+}
+
+function sanitizeUser(user, accountMode = 'personal') {
+  const activeRole = activeRoleForUser(user, accountMode);
   return {
     id: user.id,
     fullName: user.full_name,
     mobile: user.mobile,
     email: user.email,
     userKind: user.user_kind,
-    roleId: user.role_id,
-    roleKey: user.role_key,
-    roleName: user.role_name,
+    roleId: activeRole.roleId,
+    roleKey: activeRole.roleKey,
+    roleName: activeRole.roleName,
+    accountMode: activeRole.accountMode,
+    personalRoleKey: user.role_key,
+    staffRoleKey: user.staff_role_key || null,
     organizationId: user.organization_id,
     gender: user.gender,
     addressLine: user.address_line,
@@ -107,20 +129,23 @@ function generateOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-async function issueTokenPair(user, context) {
+async function issueTokenPair(user, context, accountMode = 'personal') {
+  const activeRole = activeRoleForUser(user, accountMode);
   const payload = {
     sub: user.id,
     userKind: user.user_kind,
-    roleId: user.role_id,
-    roleKey: user.role_key,
+    roleId: activeRole.roleId,
+    roleKey: activeRole.roleKey,
+    accountMode: activeRole.accountMode,
     email: user.email,
   };
 
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken({
     sub: user.id,
-    roleId: user.role_id,
-    roleKey: user.role_key,
+    roleId: activeRole.roleId,
+    roleKey: activeRole.roleKey,
+    accountMode: activeRole.accountMode,
     jti: randomToken(16),
   });
   const refreshExpiresAt = getRefreshExpiryDate(refreshToken);
@@ -420,12 +445,31 @@ async function refreshSession(input, req) {
   }
 
   await authRepository.revokeRefreshTokenById(tokenRecord.id);
-  const tokens = await issueTokenPair(user, getContextFromRequest(req));
+  const accountMode = decoded.accountMode === 'personal' ? 'personal' : user.staff_role_id ? 'staff' : 'personal';
+  const tokens = await issueTokenPair(user, getContextFromRequest(req), accountMode);
 
   return {
-    user: sanitizeUser(user),
+    user: sanitizeUser(user, accountMode),
     tokens,
   };
+}
+
+async function switchAccountMode(input, user, req) {
+  const accountMode = input.accountMode === 'staff' ? 'staff' : input.accountMode === 'personal' ? 'personal' : null;
+  if (!accountMode) {
+    const error = new Error('accountMode must be personal or staff');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (accountMode === 'staff' && !user.staff_role_id) {
+    const error = new Error('No linked staff account is available');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const tokens = await issueTokenPair(user, getContextFromRequest(req), accountMode);
+  return { user: sanitizeUser(user, accountMode), tokens };
 }
 
 async function requestPasswordReset(input, req) {
@@ -567,6 +611,8 @@ module.exports = {
   requestPasswordReset,
   resetPasswordWithOtp,
   changePassword,
+  switchAccountMode,
   sanitizeUser,
+  activeRoleForUser,
   needsProfileCompletion,
 };

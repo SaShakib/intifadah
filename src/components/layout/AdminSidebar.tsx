@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from '@/components/base/Avatar';
 import { NavIcon } from '@/components/layout/NavIcon';
@@ -19,7 +19,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, roleKey, canManagePermissions, logout } = useAuth();
+  const { user, roleKey, canManagePermissions, canSwitchAccounts, logout, switchAccountMode } = useAuth();
   const navItems = ADMIN_NAV_ITEMS.filter((item) => {
     if (item.permissionOnly && !canManagePermissions) return false;
     return true;
@@ -34,6 +34,13 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     onClose();
     await logout();
     router.replace('/login');
+    router.refresh();
+  };
+
+  const handleSwitchToPersonal = async () => {
+    onClose();
+    await switchAccountMode('personal');
+    router.replace('/user/dashboard');
     router.refresh();
   };
 
@@ -102,6 +109,15 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         </nav>
 
         <div className="border-t border-white/10 p-3">
+          {canSwitchAccounts && (
+            <button
+              onClick={() => void handleSwitchToPersonal()}
+              className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              ব্যক্তিগত অ্যাকাউন্ট
+            </button>
+          )}
           <button
             onClick={() => void handleLogout()}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"

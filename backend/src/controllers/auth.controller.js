@@ -7,6 +7,7 @@ const {
   requestPasswordReset,
   resetPasswordWithOtp,
   changePassword,
+  switchAccountMode,
   sanitizeUser,
 } = require('../services/auth.service');
 
@@ -83,7 +84,16 @@ async function changePasswordForCurrentUser(req, res, next) {
 }
 
 function me(req, res) {
-  res.json({ user: sanitizeUser(req.auth.user) });
+  res.json({ user: sanitizeUser(req.auth.user, req.auth.accountMode) });
+}
+
+async function switchMode(req, res, next) {
+  try {
+    const result = await switchAccountMode(req.body || {}, req.auth.user, req);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
 }
 
 module.exports = {
@@ -95,5 +105,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePasswordForCurrentUser,
+  switchMode,
   me,
 };

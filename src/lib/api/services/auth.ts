@@ -73,3 +73,13 @@ export async function changePasswordApi(input: { currentPassword: string; newPas
   setAuthSession({ user: data.user, tokens: data.tokens });
   return data;
 }
+
+export async function switchAccountModeApi(accountMode: 'personal' | 'staff') {
+  const data = await apiRequest<ApiAuthResponse>('/auth/switch-mode', {
+    method: 'POST',
+    body: JSON.stringify({ accountMode }),
+  });
+
+  setAuthSession({ user: data.user, tokens: data.tokens });
+  return data;
+}

@@ -49,7 +49,7 @@ function toRoleLevel(permMasks: number[]): RoleSummary['level'] {
 
 export default function RolesPermissionsPage() {
   const router = useRouter();
-  const { canManagePermissions, isReady } = useAuth();
+  const { canManagePermissions, isReady, roleKey } = useAuth();
   useEffect(() => {
     if (isReady && !canManagePermissions) {
       router.replace('/admin/settings');
@@ -97,13 +97,15 @@ export default function RolesPermissionsPage() {
       moduleRows,
       matrix,
       modules,
-      assignableMembers: members.map((member) => ({
-        id: String(member.id),
-        name: member.full_name,
-        mobile: member.mobile,
-        initials: toInitials(member.full_name),
-        roleKey: member.role_key,
-      })),
+      assignableMembers: members
+        .filter((member) => member.user_kind === 1 && member.role_key === 'member_internal')
+        .map((member) => ({
+          id: String(member.id),
+          name: member.full_name,
+          mobile: member.mobile,
+          initials: toInitials(member.full_name),
+          roleKey: member.role_key,
+        })),
     };
   }, []);
 
@@ -130,6 +132,7 @@ export default function RolesPermissionsPage() {
         matrix={data.matrix}
         modules={data.modules}
         assignableMembers={data.assignableMembers}
+        canAssignStaff={roleKey === 'super_admin'}
         onMutationSuccess={() => void refetch()}
       />
       <RolesBottomSection moduleRows={data.moduleRows} />

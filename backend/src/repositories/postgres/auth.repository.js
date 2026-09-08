@@ -18,6 +18,7 @@ async function getUserByIdentifier(identifier) {
       u.id,
       u.user_kind,
       u.role_id,
+      u.staff_role_id,
       u.organization_id,
       u.full_name,
       u.mobile,
@@ -35,9 +36,12 @@ async function getUserByIdentifier(identifier) {
       u.created_at,
       u.updated_at,
       r.role_key,
-      r.role_name
+      r.role_name,
+      sr.role_key AS staff_role_key,
+      sr.role_name AS staff_role_name
     FROM app_users u
     JOIN roles r ON r.id = u.role_id
+    LEFT JOIN roles sr ON sr.id = u.staff_role_id
     WHERE lower(u.email) = $1 OR u.mobile = $2
     LIMIT 1`,
     [normalized, identifier],
@@ -51,6 +55,7 @@ async function getUserByGoogleSub(googleSub) {
       u.id,
       u.user_kind,
       u.role_id,
+      u.staff_role_id,
       u.organization_id,
       u.full_name,
       u.mobile,
@@ -68,9 +73,12 @@ async function getUserByGoogleSub(googleSub) {
       u.created_at,
       u.updated_at,
       r.role_key,
-      r.role_name
+      r.role_name,
+      sr.role_key AS staff_role_key,
+      sr.role_name AS staff_role_name
     FROM app_users u
     JOIN roles r ON r.id = u.role_id
+    LEFT JOIN roles sr ON sr.id = u.staff_role_id
     WHERE u.google_sub = $1
     LIMIT 1`,
     [googleSub],
@@ -84,6 +92,7 @@ async function getUserById(id) {
       u.id,
       u.user_kind,
       u.role_id,
+      u.staff_role_id,
       u.organization_id,
       u.full_name,
       u.mobile,
@@ -101,9 +110,12 @@ async function getUserById(id) {
       u.created_at,
       u.updated_at,
       r.role_key,
-      r.role_name
+      r.role_name,
+      sr.role_key AS staff_role_key,
+      sr.role_name AS staff_role_name
     FROM app_users u
     JOIN roles r ON r.id = u.role_id
+    LEFT JOIN roles sr ON sr.id = u.staff_role_id
     WHERE u.id = $1
     LIMIT 1`,
     [id],

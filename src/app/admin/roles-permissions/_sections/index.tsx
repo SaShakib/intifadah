@@ -30,6 +30,7 @@ interface RolesMiddleSectionProps {
   matrix?: ApiRolePermissionRow[];
   modules?: ApiAccessModuleRow[];
   assignableMembers?: Array<{ id: string; name: string; mobile: string; initials: string; roleKey: string }>;
+  canAssignStaff?: boolean;
   onMutationSuccess?: () => void | Promise<void>;
 }
 
@@ -77,6 +78,7 @@ export function RolesMiddleSection({
   matrix = [],
   modules = [],
   assignableMembers = [],
+  canAssignStaff = false,
   onMutationSuccess,
 }: RolesMiddleSectionProps) {
   const [modal, setModal] = useState<'admin' | null>(null);
@@ -138,14 +140,14 @@ export function RolesMiddleSection({
         <SectionHeader
           title="ভূমিকা ও অনুমতি"
           subtitle="ভূমিকা অনুযায়ী মডিউল অ্যাক্সেস নিয়ন্ত্রণ"
-          action={(
+          action={canAssignStaff ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => {
                 setAssignment(DEFAULT_ROLE_ASSIGNMENT);
                 setModal('admin');
               }}><UserPlus className="h-4 w-4" />অ্যাডমিন যোগ</Button>
             </div>
-          )}
+          ) : undefined}
         />
         <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
           <div className="space-y-3">
@@ -216,9 +218,9 @@ export function RolesMiddleSection({
           </div>
         </div>
       </Card>
-      <AppModal
+      {canAssignStaff && <AppModal
         open={modal === 'admin'}
-        title="অ্যাডমিন যোগ করুন"
+        title="লিঙ্কড ম্যানেজমেন্ট দায়িত্ব দিন"
         onClose={() => setModal(null)}
         footer={(
           <>
@@ -229,9 +231,9 @@ export function RolesMiddleSection({
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1 sm:col-span-2">
-            <span className="text-xs font-semibold text-fg-2">সদস্য</span>
+            <span className="text-xs font-semibold text-fg-2">ইনতিফাদাহ সদস্য</span>
             <select value={assignment.userId} onChange={(event) => setAssignment((current) => ({ ...current, userId: event.target.value }))} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
-              <option value="">সদস্য নির্বাচন করুন</option>
+              <option value="">ইনতিফাদাহ সদস্য নির্বাচন করুন</option>
               {assignableMembers.map((member) => (
                 <option key={member.id} value={member.id}>{member.name} ({member.mobile})</option>
               ))}
@@ -256,7 +258,7 @@ export function RolesMiddleSection({
             ))}
           </div>
         </div>
-      </AppModal>
+      </AppModal>}
       <AppToast message={toast} />
     </section>
   );

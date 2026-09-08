@@ -102,6 +102,36 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     throw error;
   }
 
+  if (['admin', 'manager'].includes(targetRole.role_key)) {
+    if (Number(user.user_kind) !== 1 || user.role_key !== 'member_internal') {
+      const error = new Error('Admin and manager access can only be linked to an Intifadah member account');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const changed = Number(user.staff_role_id || 0) !== targetRole.id;
+    if (changed) {
+      await accessRepository.assignUserStaffRoleWithAudit({
+        actorUserId,
+        userId: user.id,
+        beforeStaffRoleId: user.staff_role_id,
+        afterStaffRoleId: targetRole.id,
+      });
+    }
+
+    return {
+      userId: user.id,
+      roleId: user.role_id,
+      roleKey: user.role_key,
+      roleName: user.role_name,
+      userKind: user.user_kind,
+      staffRoleId: targetRole.id,
+      staffRoleKey: targetRole.role_key,
+      staffRoleName: targetRole.role_name,
+      changed,
+    };
+  }
+
   const targetUserKind = USER_KIND_BY_ROLE_KEY[targetRole.role_key] ?? null;
   const roleChanged = user.role_id !== targetRole.id;
   const userKindChanged = targetUserKind !== null && Number(user.user_kind) !== targetUserKind;

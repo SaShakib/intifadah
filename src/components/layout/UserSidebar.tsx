@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from '@/components/base/Avatar';
 import { NavIcon } from '@/components/layout/NavIcon';
@@ -19,7 +19,7 @@ interface UserSidebarProps {
 export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, roleKey, logout } = useAuth();
+  const { user, roleKey, canSwitchAccounts, logout, switchAccountMode } = useAuth();
   const navItems = USER_NAV_ITEMS;
   const sections = [...new Set(navItems.map((item) => item.section))];
 
@@ -27,6 +27,13 @@ export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
     onClose();
     await logout();
     router.replace('/login');
+    router.refresh();
+  };
+
+  const handleSwitchToStaff = async () => {
+    onClose();
+    await switchAccountMode('staff');
+    router.replace('/admin/dashboard');
     router.refresh();
   };
 
@@ -96,6 +103,15 @@ export function UserSidebar({ isOpen, onClose }: UserSidebarProps) {
 
         <div className="space-y-2 border-t border-white/10 p-3">
           <p className="text-center text-[11px] text-white/50">ইনতিফাদাহ — সদস্য পোর্টাল</p>
+          {canSwitchAccounts && (
+            <button
+              onClick={() => void handleSwitchToStaff()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              ম্যানেজমেন্ট অ্যাকাউন্ট
+            </button>
+          )}
           <button
             onClick={() => void handleLogout()}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"

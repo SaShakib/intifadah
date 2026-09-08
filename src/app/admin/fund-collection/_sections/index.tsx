@@ -104,12 +104,13 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
     id: item.id,
     tabValue: item.status,
     filterValues: { type: item.type, status: item.status },
-    searchText: `${item.memberName} ${TYPE_LABEL[item.type] ?? item.type} ${item.categoryName ?? ''} ${item.date}`,
-    sortValues: [item.memberName, TYPE_LABEL[item.type] ?? item.type, item.categoryName ?? '', item.amount, item.date, item.status],
+    searchText: `${item.memberName} ${item.actorName ?? ''} ${TYPE_LABEL[item.type] ?? item.type} ${item.categoryName ?? ''} ${item.date}`,
+    sortValues: [item.memberName, TYPE_LABEL[item.type] ?? item.type, item.categoryName ?? '', item.actorName ?? '', item.amount, item.date, item.status],
     cells: [
       item.memberName,
       TYPE_LABEL[item.type] ?? item.type,
       item.categoryName ?? '-',
+      item.actorName ?? '-',
       <span key={`${item.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(item.amount)}</span>,
       item.date,
       <Badge key={item.id} variant={item.status === 'pending' ? 'warning' : 'success'}>
@@ -127,7 +128,7 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
           action={<Button onClick={openCreateModal}><Plus className="h-4 w-4" />নতুন কালেকশন</Button>}
         />
         <DataTable
-          headers={['সদস্য', 'ধরণ', 'খাত', 'পরিমাণ', 'তারিখ', 'স্ট্যাটাস']}
+          headers={['সদস্য', 'ধরণ', 'খাত', { header: 'রেকর্ড করেছেন', hideOnMobile: true }, 'পরিমাণ', 'তারিখ', 'স্ট্যাটাস']}
           rows={rows}
           tabs={[
             { value: 'all', label: 'সব' },

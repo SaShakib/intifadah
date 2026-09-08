@@ -92,6 +92,12 @@ async function resolveRoleId({ userKind, roleKey }) {
 }
 
 async function createMember(input) {
+  if (['admin', 'manager'].includes(String(input.roleKey || ''))) {
+    const error = new Error('Link Admin or Manager duty to an existing Intifadah member from Roles & Permissions');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const fullName = String(input.fullName || '').trim();
   const mobile = String(input.mobile || '').trim();
   const providedPassword = String(input.password || '').trim();
@@ -169,6 +175,12 @@ async function createMember(input) {
 }
 
 async function updateMember(userId, input) {
+  if (['admin', 'manager'].includes(String(input.roleKey || ''))) {
+    const error = new Error('Link Admin or Manager duty to an existing Intifadah member from Roles & Permissions');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const roleId = input.roleKey ? await resolveRoleId({ userKind: input.userKind, roleKey: input.roleKey }) : undefined;
   await authRepository.updateUserAdmin(userId, {
     userKind: input.userKind !== undefined ? Number(input.userKind) : undefined,

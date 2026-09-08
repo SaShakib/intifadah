@@ -16,6 +16,7 @@ import {
   meApi,
   registerApi,
   setAuthSession,
+  switchAccountModeApi,
   type BackendRoleKey,
   type GoogleLoginInput,
   type LoginInput,
@@ -26,6 +27,8 @@ interface AuthContextValue {
   user: Member | null;
   role: UserRole | null;
   roleKey: BackendRoleKey | null;
+  accountMode: 'personal' | 'staff' | null;
+  canSwitchAccounts: boolean;
   userKind: number | null;
   isAdmin: boolean;
   canManagePermissions: boolean;
@@ -38,6 +41,7 @@ interface AuthContextValue {
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
+  switchAccountMode: (accountMode: 'personal' | 'staff') => Promise<void>;
 }
 
 const noopAsync = async () => {};
@@ -46,6 +50,8 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   role: null,
   roleKey: null,
+  accountMode: null,
+  canSwitchAccounts: false,
   userKind: null,
   isAdmin: false,
   canManagePermissions: false,
@@ -58,6 +64,7 @@ const AuthContext = createContext<AuthContextValue>({
   register: noopAsync,
   logout: noopAsync,
   refreshMe: noopAsync,
+  switchAccountMode: noopAsync,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -179,6 +186,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSessionUser(user);
   };
 
+  const switchAccountMode = async (accountMode: 'personal' | 'staff') => {
+    clearApiCache();
+    const response = await switchAccountModeApi(accountMode);
+    setSessionUser(response.user);
+  };
+
   const memberUser = useMemo(() => {
     if (!sessionUser) {
       return null;
@@ -195,6 +208,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: memberUser,
       role,
       roleKey,
+      accountMode: sessionUser?.accountMode ?? null,
+      canSwitchAccounts: Boolean(sessionUser?.staffRoleKey),
       userKind: sessionUser?.userKind ?? null,
       isAdmin: roleKey ? isAdminRoleKey(roleKey) : false,
       canManagePermissions: canManagePermissions(roleKey),
@@ -207,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refreshMe,
+      switchAccountMode,
     };
   }, [memberUser, sessionUser, isReady, authError]);
 

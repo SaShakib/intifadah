@@ -6,7 +6,7 @@ const quranController = require('../controllers/quran.controller');
 const router = express.Router();
 
 router.use(requireAuth);
-router.use(requireRoles('super_admin', 'admin', 'manager', 'member_internal'));
+router.use(requireRoles('super_admin', 'admin', 'manager'));
 
 router.get('/dashboard/summary', requirePermission('dashboard', 'read'), adminController.dashboardSummary);
 
@@ -57,7 +57,7 @@ router.get('/access-control/modules', requireRoles('super_admin', 'admin'), admi
 router.get('/access-control/roles', requireRoles('super_admin', 'admin'), adminController.accessRoles);
 router.get('/access-control/matrix', requireRoles('super_admin', 'admin'), adminController.accessMatrix);
 router.put('/access-control/roles/:roleKey/permissions', requireRoles('super_admin', 'admin'), adminController.updateRolePermissionSet);
-router.patch('/access-control/users/:userId/role', requireRoles('super_admin', 'admin'), adminController.updateUserRole);
+router.patch('/access-control/users/:userId/role', requireRoles('super_admin'), adminController.updateUserRole);
 
 module.exports = {
   adminRouter: router,

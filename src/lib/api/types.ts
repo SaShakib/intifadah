@@ -11,6 +11,9 @@ export interface ApiAuthUser {
   roleId: number;
   roleKey: BackendRoleKey;
   roleName: string;
+  accountMode: 'personal' | 'staff';
+  personalRoleKey: BackendRoleKey;
+  staffRoleKey: BackendRoleKey | null;
   organizationId: number | null;
   gender: number;
   addressLine: string | null;

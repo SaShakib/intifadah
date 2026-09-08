@@ -57,8 +57,6 @@ const ROLE_OPTIONS: Array<{ value: BackendRoleKey; label: string }> = [
   { value: 'member_internal', label: 'ইনতিফাদাহ সদস্য' },
   { value: 'general_user', label: 'সাধারণ সদস্য' },
   { value: 'org_user', label: 'সংগঠন সদস্য' },
-  { value: 'manager', label: 'ম্যানেজার' },
-  { value: 'admin', label: 'অ্যাডমিন' },
 ];
 
 function roleForKind(userKind: number): BackendRoleKey {
