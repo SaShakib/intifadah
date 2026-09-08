@@ -10,16 +10,17 @@ import {
 } from './_sections';
 import { USER_CATEGORY_METRICS, USER_CATEGORY_ROWS } from './_sections/constants';
 import { queryKeys, useApiQuery } from '@/lib/api';
-import { getUserCategories, mapCategoryRow } from '@/lib/api';
+import { getUserCategories, getUserSavingsSubscriptions, mapCategoryRow, updateUserSavingsSubscription } from '@/lib/api';
 
 const initialData = {
   metrics: [] as typeof USER_CATEGORY_METRICS,
   categories: [] as typeof USER_CATEGORY_ROWS,
+  subscribedCategoryIds: [] as string[],
 };
 
 export default function UserCategoriesPage() {
   const loadCategories = useCallback(async () => {
-    const rows = await getUserCategories();
+    const [rows, subscriptions] = await Promise.all([getUserCategories(), getUserSavingsSubscriptions()]);
     const categories = rows.map(mapCategoryRow);
 
     return {
@@ -30,6 +31,7 @@ export default function UserCategoriesPage() {
         { label: 'সঞ্চয় খাত', value: String(categories.filter((item) => item.type === 'savings').length), hint: 'নিয়মিত সঞ্চয়' },
       ],
       categories,
+      subscribedCategoryIds: subscriptions.filter((item) => item.is_active).map((item) => String(item.category_id)),
     };
   }, []);
 
@@ -47,7 +49,14 @@ export default function UserCategoriesPage() {
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <UserCategoriesTopSection metrics={data.metrics} />
-      <UserCategoriesMiddleSection categories={data.categories} />
+      <UserCategoriesMiddleSection
+        categories={data.categories}
+        subscribedCategoryIds={data.subscribedCategoryIds}
+        onSubscriptionChange={async (categoryId, isActive) => {
+          await updateUserSavingsSubscription(categoryId, isActive);
+          await refetch();
+        }}
+      />
       <UserCategoriesBottomSection />
     </PageStack>
   );

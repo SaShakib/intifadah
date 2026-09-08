@@ -18,6 +18,7 @@ const {
   updateCategory,
   listCollections,
   createCollectionEntry,
+  receiveSavingsDue,
   listLoans,
   createLoanRequest,
   approveLoan,
@@ -206,6 +207,16 @@ async function collectionsCreate(req, res, next) {
   try {
     const created = await createCollectionEntry(req.body, req.auth.userId);
     res.status(201).json({ row: created });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function collectionsReceive(req, res, next) {
+  try {
+    const transactionId = parseRequiredId(req.params.transactionId, 'transactionId');
+    const row = await receiveSavingsDue(transactionId, req.auth.userId);
+    res.json({ row });
   } catch (error) {
     next(error);
   }
@@ -478,6 +489,7 @@ module.exports = {
   categoriesDelete,
   collectionsList,
   collectionsCreate,
+  collectionsReceive,
   loansList,
   loansCreate,
   loansApprove,

@@ -3,6 +3,7 @@ const {
   runWeeklyPenaltyJob,
   sendQuranReminderNotifications,
 } = require('../services/api/quran-api.service');
+const { runScheduledSavingsDues } = require('../services/savings-due.service');
 
 function requireCronAuthorization(req) {
   if (!env.cronSecret || req.get('authorization') !== `Bearer ${env.cronSecret}`) {
@@ -32,7 +33,18 @@ async function weeklyQuranPenalty(req, res, next) {
   }
 }
 
+async function dailySavingsDues(req, res, next) {
+  try {
+    requireCronAuthorization(req);
+    const result = await runScheduledSavingsDues();
+    res.json({ ok: true, schedule: '00:05 Asia/Dhaka', ...result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   dailyQuranReminder,
   weeklyQuranPenalty,
+  dailySavingsDues,
 };

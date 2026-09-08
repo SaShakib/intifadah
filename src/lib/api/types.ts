@@ -112,6 +112,13 @@ export interface ApiCategoryRow {
   updated_at: string;
 }
 
+export interface ApiSavingsSubscriptionRow {
+  category_id: number;
+  is_active: boolean;
+  subscribed_at: string;
+  last_due_on: string | null;
+}
+
 export interface ApiTransactionRow {
   id: string | number;
   tx_type: number;
@@ -308,6 +315,7 @@ export interface ApiQuranPenaltyRow {
   penalty_minor: string | number;
   transaction_id: string | number | null;
   created_at: string;
+  tracker?: 'quran' | 'namaj';
 }
 
 export interface ApiQuranPenaltyReportResponse {

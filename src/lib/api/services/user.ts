@@ -1,6 +1,7 @@
 import { apiRequest, createQueryString } from '../client';
 import type {
   ApiCategoryRow,
+  ApiSavingsSubscriptionRow,
   ApiCommentMessageRow,
   ApiCommentThreadRow,
   ApiLoanRepaymentRow,
@@ -38,6 +39,19 @@ export async function getUserCategories(params: { active?: boolean; categoryType
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiCategoryRow>>(`/user/categories${query}`);
   return data.rows;
+}
+
+export async function getUserSavingsSubscriptions() {
+  const data = await apiRequest<ApiRowsResponse<ApiSavingsSubscriptionRow>>('/user/categories/subscriptions');
+  return data.rows;
+}
+
+export async function updateUserSavingsSubscription(categoryId: string | number, isActive: boolean) {
+  const data = await apiRequest<ApiDataResponse<{ subscription: ApiSavingsSubscriptionRow }>>(`/user/categories/${categoryId}/subscription`, {
+    method: 'PUT',
+    body: JSON.stringify({ isActive }),
+  });
+  return data.data;
 }
 
 export async function getUserTransactions(params: {

@@ -114,6 +114,41 @@ async function sendQuranPenaltyEmail({ to, fullName, fromDate, toDate, missedDay
   });
 }
 
+async function sendTrackingPenaltyEmail({ to, fullName, fromDate, toDate, quran, namaj }) {
+  const quranAmount = Number(quran?.penaltyMinor || 0);
+  const namajAmount = Number(namaj?.penaltyMinor || 0);
+  const total = quranAmount + namajAmount;
+  const memberName = escapeHtml(fullName);
+
+  return sendEmail({
+    to,
+    subject: 'Your Intifadah Quran and Namaj tracking dues',
+    text: `Assalamu alaikum ${fullName}, for ${fromDate} to ${toDate}: Quran missed ${Number(quran?.missedDays || 0)} day(s), due ৳${quranAmount}; Namaj missed ${Number(namaj?.missedDays || 0)} day(s), due ৳${namajAmount}. Total unpaid savings due: ৳${total}.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;">
+        <h2>Quran and Namaj tracking dues</h2>
+        <p>Assalamu alaikum ${memberName},</p>
+        <p>Period: <strong>${escapeHtml(fromDate)} to ${escapeHtml(toDate)}</strong></p>
+        <ul>
+          <li>Quran: ${Number(quran?.missedDays || 0)} missed day(s), <strong>৳${quranAmount}</strong></li>
+          <li>Namaj: ${Number(namaj?.missedDays || 0)} missed day(s), <strong>৳${namajAmount}</strong></li>
+        </ul>
+        <p>Total unpaid savings due: <strong>৳${total}</strong>.</p>
+        <p>Your manager or admin will confirm it when received.</p>
+      </div>
+    `,
+  });
+}
+
+async function sendSavingsDueEmail({ to, fullName, categoryName, amountMinor, dueOn }) {
+  return sendEmail({
+    to,
+    subject: 'Your Intifadah savings due',
+    text: `Assalamu alaikum ${fullName}, your ${categoryName} savings due for ${dueOn} is ৳${Number(amountMinor)}. It will remain unpaid until a manager or admin receives it.`,
+    html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;"><h2>Savings due</h2><p>Assalamu alaikum ${escapeHtml(fullName)},</p><p>Your <strong>${escapeHtml(categoryName)}</strong> savings due is <strong>৳${Number(amountMinor)}</strong>.</p><p>Due date: ${escapeHtml(dueOn)}. A manager or admin will confirm it when received.</p></div>`,
+  });
+}
+
 async function sendQuranPenaltyRemovalEmail({ to, fullName, fromDate, toDate }) {
   return sendEmail({
     to,
@@ -135,5 +170,7 @@ module.exports = {
   sendWelcomeEmail,
   sendPasswordResetOtpEmail,
   sendQuranPenaltyEmail,
+  sendTrackingPenaltyEmail,
+  sendSavingsDueEmail,
   sendQuranPenaltyRemovalEmail,
 };

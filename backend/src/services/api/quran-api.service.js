@@ -1,6 +1,6 @@
 const { repositories } = require('../../repositories');
 const { env } = require('../../config/env');
-const { sendQuranPenaltyEmail, sendQuranPenaltyRemovalEmail } = require('../mail.service');
+const { sendTrackingPenaltyEmail, sendQuranPenaltyRemovalEmail } = require('../mail.service');
 
 const { notificationsRepository, quranRepository } = repositories;
 const QURAN_ADMIN_ROLE_KEYS = ['super_admin', 'admin'];
@@ -167,10 +167,14 @@ async function getAdminWeeklyReport(filters = {}) {
 }
 
 async function getMyPenaltyReport(userId, filters = {}) {
-  const rows = await quranRepository.listPenalties({
-    userId,
-    limit: filters.limit,
-  });
+  const [quranRows, namajRows] = await Promise.all([
+    quranRepository.listPenalties({ userId, limit: filters.limit, tracker: 'quran' }),
+    quranRepository.listPenalties({ userId, limit: filters.limit, tracker: 'namaj' }),
+  ]);
+  const rows = [
+    ...quranRows.map((row) => ({ ...row, tracker: 'quran' })),
+    ...namajRows.map((row) => ({ ...row, tracker: 'namaj' })),
+  ];
   return {
     rows,
     totalPenaltyMinor: rows.reduce((sum, row) => sum + Number(row.penalty_minor || 0), 0),
@@ -241,15 +245,31 @@ async function runWeeklyPenaltyJob(input = {}) {
   // This prevents manual requests from charging a historical period.
   const range = lastCompletedWeekRange();
 
-  const result = await quranRepository.createWeeklyPenaltyRun({
+  const quran = await quranRepository.createWeeklyPenaltyRun({
     ...range,
     penaltyPerMissedDayMinor: Number(input.penaltyPerMissedDayMinor || env.quranPenaltyPerMissedDayMinor),
     reapplyExisting: input.reapply === true,
+    tracker: 'quran',
   });
+  const namaj = await quranRepository.createWeeklyPenaltyRun({
+    ...range,
+    penaltyPerMissedDayMinor: Number(input.namajPenaltyPerMissedDayMinor || env.namajPenaltyPerMissedDayMinor),
+    reapplyExisting: input.reapply === true,
+    tracker: 'namaj',
+  });
+  const result = { quran, namaj, skipped: quran.skipped && namaj.skipped, reapplied: quran.reapplied || namaj.reapplied };
 
   if (!result.skipped) {
-    const changedUserIds = result.reapplied ? result.changedUserIds : result.penalties.map((item) => item.user_id);
-    const changedPenalties = result.penalties.filter((item) => changedUserIds.includes(Number(item.user_id)));
+    const byUser = new Map();
+    for (const [tracker, trackerResult] of Object.entries({ quran, namaj })) {
+      const changedUserIds = trackerResult.reapplied ? trackerResult.changedUserIds : trackerResult.penalties.map((item) => item.user_id);
+      for (const penalty of trackerResult.penalties.filter((item) => changedUserIds.includes(Number(item.user_id)))) {
+        const current = byUser.get(Number(penalty.user_id)) || { userId: Number(penalty.user_id), fullName: penalty.full_name, email: penalty.email };
+        current[tracker] = { missedDays: penalty.missed_days, penaltyMinor: penalty.penalty_minor };
+        byUser.set(current.userId, current);
+      }
+    }
+    const changedPenalties = [...byUser.values()];
     await notificationsRepository.createForRoleKeys({
       roleKeys: QURAN_ADMIN_ROLE_KEYS,
       notifType: 21,
@@ -258,7 +278,7 @@ async function runWeeklyPenaltyJob(input = {}) {
         fromDate: range.fromDate,
         toDate: range.toDate,
         penaltyCount: changedPenalties.length,
-        totalPenaltyMinor: result.penalties.reduce((sum, item) => sum + Number(item.penalty_minor || 0), 0),
+        totalPenaltyMinor: [...quran.penalties, ...namaj.penalties].reduce((sum, item) => sum + Number(item.penalty_minor || 0), 0),
       },
     });
 
@@ -266,23 +286,23 @@ async function runWeeklyPenaltyJob(input = {}) {
       userIds: changedPenalties.map((item) => item.user_id),
       notifType: 22,
       payloadJson: {
-        event: result.reapplied ? 'quran_weekly_penalty_reapplied' : 'quran_weekly_penalty_assigned',
+        event: result.reapplied ? 'tracking_weekly_penalty_reapplied' : 'tracking_weekly_penalty_assigned',
         fromDate: range.fromDate,
         toDate: range.toDate,
-        penaltyPerMissedDayMinor: Number(input.penaltyPerMissedDayMinor || env.quranPenaltyPerMissedDayMinor),
+        url: '/user/quran',
       },
     });
 
     const emailResults = await Promise.allSettled(
       changedPenalties
         .filter((item) => item.email)
-        .map((item) => sendQuranPenaltyEmail({
+        .map((item) => sendTrackingPenaltyEmail({
           to: item.email,
-          fullName: item.full_name,
+          fullName: item.fullName,
           fromDate: range.fromDate,
           toDate: range.toDate,
-          missedDays: item.missed_days,
-          penaltyMinor: item.penalty_minor,
+          quran: item.quran,
+          namaj: item.namaj,
         })),
     );
     result.emailDelivery = {
@@ -291,9 +311,10 @@ async function runWeeklyPenaltyJob(input = {}) {
       failed: emailResults.filter((item) => item.status === 'rejected').length,
     };
 
-    if (result.removedPenalties.length) {
+    const removedPenalties = [...(quran.removedPenalties || []), ...(namaj.removedPenalties || [])];
+    if (removedPenalties.length) {
       await notificationsRepository.createForUsers({
-        userIds: result.removedPenalties.map((item) => item.user_id),
+        userIds: removedPenalties.map((item) => item.user_id),
         notifType: 22,
         payloadJson: {
           event: 'quran_weekly_penalty_reversed',
@@ -305,7 +326,7 @@ async function runWeeklyPenaltyJob(input = {}) {
         },
       });
       const removalEmails = await Promise.allSettled(
-        result.removedPenalties
+        removedPenalties
           .filter((item) => item.email)
           .map((item) => sendQuranPenaltyRemovalEmail({
             to: item.email,
@@ -325,6 +346,7 @@ async function runWeeklyPenaltyJob(input = {}) {
   return {
     ...range,
     ...result,
+    penalties: quran.penalties,
   };
 }
 
@@ -332,7 +354,14 @@ async function getAdminPenaltyReport(filters = {}) {
   const range = filters.fromDate && filters.toDate
     ? { fromDate: filters.fromDate, toDate: filters.toDate }
     : lastCompletedWeekRange();
-  const rows = await quranRepository.listPenalties({ ...filters, ...range });
+  const [quranRows, namajRows] = await Promise.all([
+    quranRepository.listPenalties({ ...filters, ...range, tracker: 'quran' }),
+    quranRepository.listPenalties({ ...filters, ...range, tracker: 'namaj' }),
+  ]);
+  const rows = [
+    ...quranRows.map((row) => ({ ...row, tracker: 'quran' })),
+    ...namajRows.map((row) => ({ ...row, tracker: 'namaj' })),
+  ];
   return {
     ...range,
     rows,

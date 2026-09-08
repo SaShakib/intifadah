@@ -9,6 +9,7 @@ router.get('/health', systemController.health);
 router.get('/db/health', systemController.dbHealth);
 router.get('/internal/cron/quran-daily-reminder', cronController.dailyQuranReminder);
 router.get('/internal/cron/quran-weekly-penalty', cronController.weeklyQuranPenalty);
+router.get('/internal/cron/savings-daily-dues', cronController.dailySavingsDues);
 
 module.exports = {
   systemRouter: router,

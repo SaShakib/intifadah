@@ -15,6 +15,8 @@ router.use((req, res, next) => {
 router.get('/dashboard/summary', requirePermission('dashboard', 'read'), userController.dashboard);
 
 router.get('/categories', requirePermission('categories', 'read'), userController.categories);
+router.get('/categories/subscriptions', requirePermission('categories', 'read'), userController.savingsSubscriptions);
+router.put('/categories/:categoryId/subscription', requirePermission('categories', 'read'), userController.updateSavingsSubscription);
 
 router.get('/transactions', requirePermission('collections', 'read'), userController.transactions);
 router.post('/transactions', requirePermission('collections', 'write'), userController.createUserTransaction);

@@ -184,10 +184,11 @@ export default function AdminQuranPage() {
     ],
   }));
 
-  const penaltiesByUserId = new Map(data.penalties.rows.map((row) => [row.user_id, row]));
-  const penaltyRows = data.penaltyWeekly.rows.map((member) => {
+  const penaltyRowsFor = (tracker: 'quran' | 'namaj') => {
+    const penaltiesByUserId = new Map(data.penalties.rows.filter((row) => (row.tracker ?? 'quran') === tracker).map((row) => [row.user_id, row]));
+    return data.penaltyWeekly.rows.map((member) => {
     const penalty = penaltiesByUserId.get(member.user_id);
-    const doneDays = penaltyDays.filter((date) => member.days?.[date]?.done).length;
+    const doneDays = penaltyDays.filter((date) => tracker === 'quran' ? member.days?.[date]?.done : member.days?.[date]?.namajDone).length;
     const missedDays = penalty?.missed_days ?? Math.max(0, 7 - doneDays);
     const penaltyAmount = toMinorNumber(penalty?.penalty_minor);
 
@@ -206,7 +207,10 @@ export default function AdminQuranPage() {
         penalty?.transaction_id ? `#${penalty.transaction_id}` : '-',
       ],
     };
-  });
+    });
+  };
+  const quranPenaltyRows = penaltyRowsFor('quran');
+  const namajPenaltyRows = penaltyRowsFor('namaj');
 
   if (loading) {
     return <PageStack><ApiLoadingNotice /></PageStack>;
@@ -292,7 +296,19 @@ export default function AdminQuranPage() {
           <SectionHeader title="সদস্যভিত্তিক Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
           <DataTable
             headers={['সদস্য', 'Done', 'Missed', 'Penalty', 'Transaction']}
-            rows={penaltyRows}
+            rows={quranPenaltyRows}
+            searchPlaceholder="সদস্য, ফোন বা তারিখ..."
+            emptyMessage="এই ইন্টারভালে কোনো সদস্য পাওয়া যায়নি"
+          />
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <SectionHeader title="সদস্যভিত্তিক Namaj penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
+          <DataTable
+            headers={['সদস্য', 'Done', 'Missed', 'Penalty', 'Transaction']}
+            rows={namajPenaltyRows}
             searchPlaceholder="সদস্য, ফোন বা তারিখ..."
             emptyMessage="এই ইন্টারভালে কোনো সদস্য পাওয়া যায়নি"
           />

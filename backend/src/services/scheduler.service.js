@@ -4,6 +4,7 @@ const {
   runWeeklyPenaltyJob,
   sendQuranReminderNotifications,
 } = require('./api/quran-api.service');
+const { runScheduledSavingsDues } = require('./savings-due.service');
 
 const jobs = [];
 
@@ -28,6 +29,15 @@ function startSchedulers() {
       console.log(`Quran reminder notifications sent: ${result.notifiedUsers}`);
     } catch (error) {
       console.error('Quran reminder scheduler failed:', error.message);
+    }
+  });
+
+  scheduleJob('5 0 * * *', async () => {
+    try {
+      const result = await runScheduledSavingsDues();
+      console.log(`Scheduled savings dues created: ${result.created}`);
+    } catch (error) {
+      console.error('Savings due scheduler failed:', error.message);
     }
   });
 

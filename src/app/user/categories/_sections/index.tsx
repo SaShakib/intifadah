@@ -1,4 +1,9 @@
+ 'use client';
+
+import { useState } from 'react';
+import { BellOff, BellRing } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
+import { Button } from '@/components/base/Button';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
 import { MetricCard } from '@/components/semibase/MetricCard';
@@ -27,6 +32,8 @@ interface UserCategoriesTopSectionProps {
 
 interface UserCategoriesMiddleSectionProps {
   categories?: typeof USER_CATEGORY_ROWS;
+  subscribedCategoryIds?: string[];
+  onSubscriptionChange?: (categoryId: string, isActive: boolean) => Promise<void>;
 }
 
 export function UserCategoriesTopSection({ metrics = USER_CATEGORY_METRICS }: UserCategoriesTopSectionProps) {
@@ -42,7 +49,8 @@ export function UserCategoriesTopSection({ metrics = USER_CATEGORY_METRICS }: Us
   );
 }
 
-export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS }: UserCategoriesMiddleSectionProps) {
+export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS, subscribedCategoryIds = [], onSubscriptionChange }: UserCategoriesMiddleSectionProps) {
+  const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
   const rows = categories.map((category) => ({
     id: category.id,
     tabValue: category.type,
@@ -54,6 +62,25 @@ export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS }:
       TYPE_LABEL[category.type],
       RECUR_LABEL[category.recurrence],
       category.isVariable ? 'পরিবর্তনশীল' : category.amount ? `৳${category.amount}` : '-',
+      category.type === 'savings' && !category.isVariable && category.amount ? (
+        <Button
+          key={`${category.id}-subscription`}
+          size="sm"
+          variant={subscribedCategoryIds.includes(category.id) ? 'secondary' : 'primary'}
+          disabled={savingCategoryId === category.id}
+          onClick={async () => {
+            setSavingCategoryId(category.id);
+            try {
+              await onSubscriptionChange?.(category.id, !subscribedCategoryIds.includes(category.id));
+            } finally {
+              setSavingCategoryId(null);
+            }
+          }}
+        >
+          {subscribedCategoryIds.includes(category.id) ? <BellOff className="h-3.5 w-3.5" /> : <BellRing className="h-3.5 w-3.5" />}
+          {subscribedCategoryIds.includes(category.id) ? 'বন্ধ করুন' : 'সাবস্ক্রাইব'}
+        </Button>
+      ) : '-',
       <Badge key={category.id} variant={category.isActive ? 'success' : 'muted'}>
         {category.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
       </Badge>,
@@ -65,7 +92,7 @@ export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS }:
       <Card>
         <SectionHeader title="খাত তালিকা" subtitle="ধরণ ও নিয়মসহ বিস্তারিত" />
         <DataTable
-          headers={['খাত', 'ধরণ', 'পুনরাবৃত্তি', 'পরিমাণ', 'স্ট্যাটাস']}
+          headers={['খাত', 'ধরণ', 'পুনরাবৃত্তি', 'পরিমাণ', { header: 'রিমাইন্ডার', hideOnMobile: true }, 'স্ট্যাটাস']}
           rows={rows}
           tabs={[
             { value: 'all', label: 'সব' },

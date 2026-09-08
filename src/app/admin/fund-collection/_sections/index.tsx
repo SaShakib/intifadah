@@ -11,7 +11,7 @@ import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { FUND_COLLECTION_ROWS, FUND_METRICS, FUND_TYPE_SUMMARY } from './constants';
-import { createAdminCollection, getErrorMessage } from '@/lib/api';
+import { createAdminCollection, getErrorMessage, receiveAdminSavingsDue } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { FundMetric } from './types';
 import type { CollectionInput } from '@/lib/api';
@@ -113,9 +113,30 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
       item.actorName ?? '-',
       <span key={`${item.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(item.amount)}</span>,
       item.date,
-      <Badge key={item.id} variant={item.status === 'pending' ? 'warning' : 'success'}>
-        {item.status === 'pending' ? 'অপেক্ষমাণ' : 'সম্পন্ন'}
-      </Badge>,
+      <div key={`${item.id}-status`} className="flex items-center gap-2">
+        <Badge variant={item.status === 'pending' ? 'warning' : 'success'}>
+          {item.status === 'pending' ? 'অপেক্ষমাণ' : 'সম্পন্ন'}
+        </Badge>
+        {item.type === 'savings' && item.status === 'pending' && (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await receiveAdminSavingsDue(item.id);
+                showToast('সঞ্চয়ের বকেয়া গ্রহণ করা হয়েছে');
+                await onMutationSuccess?.();
+              } catch (error) {
+                showToast(getErrorMessage(error));
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >গ্রহণ করুন</Button>
+        )}
+      </div>,
     ],
   }));
 

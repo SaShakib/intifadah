@@ -67,6 +67,7 @@ const env = {
   schedulerEnabled: process.env.SCHEDULER_ENABLED !== 'false',
   quranCronTimezone: process.env.QURAN_CRON_TIMEZONE || 'Asia/Dhaka',
   quranPenaltyPerMissedDayMinor: parseNumber(process.env.QURAN_PENALTY_PER_MISSED_DAY_MINOR, 5),
+  namajPenaltyPerMissedDayMinor: parseNumber(process.env.NAMAJ_PENALTY_PER_MISSED_DAY_MINOR, 5),
 
   superAdminEmails: parseEmailList(process.env.SUPERADMIN_EMAILS),
   adminEmails: parseEmailList(process.env.ADMIN_EMAILS),

@@ -108,6 +108,13 @@ export async function createAdminCollection(input: CollectionInput) {
   return data.row;
 }
 
+export async function receiveAdminSavingsDue(transactionId: string | number) {
+  const data = await apiRequest<ApiRowResponse<ApiTransactionRow>>(`/admin/collections/${transactionId}/receive`, {
+    method: 'PATCH',
+  });
+  return data.row;
+}
+
 export async function getAdminLoans(params: { status?: number | string; fromDate?: string; toDate?: string } = {}) {
   const query = createQueryString(params);
   const data = await apiRequest<ApiRowsResponse<ApiLoanRow>>(`/admin/loans${query}`);

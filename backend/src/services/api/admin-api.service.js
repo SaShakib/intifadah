@@ -288,6 +288,26 @@ async function createCollectionEntry(input, actorUserId) {
   return transactionsRepository.getTransactionById(tx.id);
 }
 
+async function receiveSavingsDue(transactionId, actorUserId) {
+  const transaction = await transactionsRepository.getTransactionById(transactionId);
+  if (!transaction) {
+    const error = new Error('Savings due not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (Number(transaction.tx_type) !== TX_TYPE.SAVINGS || Number(transaction.status) !== TX_STATUS.PENDING) {
+    const error = new Error('Only a pending savings due can be received');
+    error.statusCode = 400;
+    throw error;
+  }
+  await transactionsRepository.updateTransaction(transactionId, {
+    status: TX_STATUS.APPROVED,
+    approvedByUserId: actorUserId,
+    approvedAt: new Date(),
+  });
+  return transactionsRepository.getTransactionById(transactionId);
+}
+
 async function listLoans(filters) {
   return loansRepository.listLoans(filters);
 }
@@ -448,6 +468,7 @@ module.exports = {
   updateCategory,
   listCollections,
   createCollectionEntry,
+  receiveSavingsDue,
   listLoans,
   createLoanRequest,
   approveLoan,

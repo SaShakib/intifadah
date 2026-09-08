@@ -26,6 +26,7 @@ const {
 } = require('../services/api/user-api.service');
 const { authorizeUserChannel } = require('../services/pusher.service');
 const { saveSubscription, removeSubscription, sendTestNotification } = require('../services/web-push.service');
+const { listMySavingsSubscriptions, setMySavingsSubscription } = require('../services/savings-due.service');
 
 function parseBoolean(value) {
   if (value === undefined) return undefined;
@@ -79,6 +80,25 @@ async function categories(req, res, next) {
     });
 
     res.json({ rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function savingsSubscriptions(req, res, next) {
+  try {
+    const rows = await listMySavingsSubscriptions(req.auth.userId);
+    res.json({ rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateSavingsSubscription(req, res, next) {
+  try {
+    const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
+    const data = await setMySavingsSubscription(req.auth.userId, categoryId, req.body?.isActive !== false);
+    res.json({ data });
   } catch (error) {
     next(error);
   }
@@ -361,6 +381,8 @@ async function testPushNotification(req, res, next) {
 module.exports = {
   dashboard,
   categories,
+  savingsSubscriptions,
+  updateSavingsSubscription,
   transactions,
   createUserTransaction,
   loans,

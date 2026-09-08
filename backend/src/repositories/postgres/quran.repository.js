@@ -1,6 +1,35 @@
 const { query, withTransaction } = require('../../db/pool');
 const { TX_STATUS, TX_TYPE, CATEGORY_TYPE } = require('../../config/domain');
 
+const PENALTY_TRACKERS = {
+  quran: {
+    label: 'Quran',
+    categoryName: 'Quran penalty',
+    categoryDescription: 'Auto-created pending savings due for missed Quran tracking days',
+    completionColumn: 'quran_done',
+    runTable: 'quran_penalty_runs',
+    penaltyTable: 'quran_penalties',
+    event: 'quran_weekly_penalty',
+  },
+  namaj: {
+    label: 'Namaj',
+    categoryName: 'Namaj penalty',
+    categoryDescription: 'Auto-created pending savings due for missed Namaj tracking days',
+    completionColumn: 'namaj_done',
+    runTable: 'namaj_penalty_runs',
+    penaltyTable: 'namaj_penalties',
+    event: 'namaj_weekly_penalty',
+  },
+};
+
+function trackerFor(kind) {
+  const tracker = PENALTY_TRACKERS[kind];
+  if (!tracker) {
+    throw new Error(`Unsupported tracker: ${kind}`);
+  }
+  return tracker;
+}
+
 async function createProgress(input) {
   const res = await query(
     `INSERT INTO quran_progress (
@@ -135,12 +164,13 @@ async function getWeeklyReport({ fromDate, toDate }) {
       ) FILTER (WHERE qp.id IS NOT NULL) AS days
      FROM app_users u
      JOIN roles r ON r.id = u.role_id
+     LEFT JOIN roles sr ON sr.id = u.staff_role_id
      LEFT JOIN quran_progress qp
        ON qp.user_id = u.id
       AND qp.progress_date BETWEEN $1 AND $2
      WHERE u.is_active = TRUE
        AND u.user_kind = 1
-       AND r.role_key NOT IN ('super_admin', 'admin', 'manager')
+       AND COALESCE(sr.role_key, r.role_key) NOT IN ('super_admin', 'admin', 'manager')
      GROUP BY u.id, u.full_name, u.mobile
      ORDER BY u.full_name ASC`,
     [fromDate, toDate],
@@ -161,6 +191,7 @@ async function listActiveUsers() {
 }
 
 async function listPenalties(filters = {}) {
+  const tracker = trackerFor(filters.tracker || 'quran');
   const values = [];
   const where = [];
 
@@ -197,8 +228,8 @@ async function listPenalties(filters = {}) {
       qp.penalty_minor,
       qp.transaction_id,
       qp.created_at
-     FROM quran_penalties qp
-     JOIN quran_penalty_runs qpr ON qpr.id = qp.run_id
+     FROM ${tracker.penaltyTable} qp
+     JOIN ${tracker.runTable} qpr ON qpr.id = qp.run_id
      JOIN app_users u ON u.id = qp.user_id
      ${whereSql}
      ORDER BY qpr.to_date DESC, qp.penalty_minor DESC, u.full_name ASC
@@ -224,13 +255,14 @@ function hasSamePenaltyRows(previousPenalties, plannedPenalties) {
   });
 }
 
-async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMinor, reapplyExisting = false }) {
+async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMinor, reapplyExisting = false, tracker: trackerKind = 'quran' }) {
+  const tracker = trackerFor(trackerKind);
   return withTransaction(async (client) => {
     const category = await client.query(
       `WITH existing AS (
         SELECT id
         FROM categories
-        WHERE category_name = 'Quran penalty'
+        WHERE category_name = $2
           AND category_type = $1
         LIMIT 1
       ),
@@ -244,7 +276,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
           description,
           is_active
         )
-        SELECT 'Quran penalty', $1, 0, $2, FALSE, 'Auto-created penalty category for missed Quran tracking days', TRUE
+        SELECT $2, $1, 0, $3, FALSE, $4, TRUE
         WHERE NOT EXISTS (SELECT 1 FROM existing)
         RETURNING id
       )
@@ -252,12 +284,12 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       UNION ALL
       SELECT id FROM existing
       LIMIT 1`,
-      [CATEGORY_TYPE.EXPENSE, penaltyPerMissedDayMinor],
+      [CATEGORY_TYPE.SAVINGS, tracker.categoryName, penaltyPerMissedDayMinor, tracker.categoryDescription],
     );
     const categoryId = category.rows[0].id;
 
     const run = await client.query(
-      `INSERT INTO quran_penalty_runs (
+      `INSERT INTO ${tracker.runTable} (
         from_date,
         to_date,
         penalty_per_missed_day_minor
@@ -272,7 +304,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
     if (!penaltyRun) {
       const existingRun = await client.query(
         `SELECT id, from_date, to_date, penalty_per_missed_day_minor, created_at
-         FROM quran_penalty_runs
+         FROM ${tracker.runTable}
          WHERE from_date = $1 AND to_date = $2
          FOR UPDATE`,
         [fromDate, toDate],
@@ -298,14 +330,15 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         u.email,
         COALESCE(COUNT(DISTINCT qp.progress_date), 0)::int AS done_days
        FROM app_users u
-       JOIN roles r ON r.id = u.role_id
+     JOIN roles r ON r.id = u.role_id
+     LEFT JOIN roles sr ON sr.id = u.staff_role_id
        LEFT JOIN quran_progress qp
          ON qp.user_id = u.id
-        AND qp.quran_done = TRUE
+        AND qp.${tracker.completionColumn} = TRUE
         AND qp.progress_date BETWEEN $1 AND $2
        WHERE u.is_active = TRUE
          AND u.user_kind = 1
-         AND r.role_key NOT IN ('super_admin', 'admin', 'manager')
+         AND COALESCE(sr.role_key, r.role_key) NOT IN ('super_admin', 'admin', 'manager')
        GROUP BY u.id, u.full_name, u.mobile, u.email
        ORDER BY u.full_name ASC`,
       [fromDate, toDate],
@@ -322,10 +355,12 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
     let changedUserIds = plannedPenalties.map((penalty) => Number(penalty.user.id));
     if (reapplied) {
       const existingPenalties = await client.query(
-        `SELECT qp.user_id, qp.missed_days, qp.penalty_minor, qp.transaction_id, u.full_name, u.mobile, u.email, r.role_key
-         FROM quran_penalties qp
+        `SELECT qp.user_id, qp.missed_days, qp.penalty_minor, qp.transaction_id, t.status AS transaction_status, u.full_name, u.mobile, u.email, COALESCE(sr.role_key, r.role_key) AS role_key
+         FROM ${tracker.penaltyTable} qp
          JOIN app_users u ON u.id = qp.user_id
          JOIN roles r ON r.id = u.role_id
+         LEFT JOIN roles sr ON sr.id = u.staff_role_id
+         LEFT JOIN transactions t ON t.id = qp.transaction_id
          WHERE qp.run_id = $1
          ORDER BY qp.user_id`,
         [penaltyRun.id],
@@ -343,6 +378,12 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         };
       }
 
+      if (previousPenalties.some((penalty) => Number(penalty.transaction_status) === TX_STATUS.APPROVED)) {
+        const error = new Error(`${tracker.label} penalty has already been received and cannot be reapplied`);
+        error.statusCode = 400;
+        throw error;
+      }
+
       const plannedByUserId = new Map(plannedPenalties.map((penalty) => [Number(penalty.user.id), penalty]));
       changedUserIds = plannedPenalties
         .filter((penalty) => {
@@ -358,7 +399,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       ));
 
       const deletedPenalties = await client.query(
-        `DELETE FROM quran_penalties WHERE run_id = $1 RETURNING transaction_id`,
+        `DELETE FROM ${tracker.penaltyTable} WHERE run_id = $1 RETURNING transaction_id`,
         [penaltyRun.id],
       );
       const transactionIds = deletedPenalties.rows.map((penalty) => penalty.transaction_id).filter(Boolean);
@@ -384,14 +425,15 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         ) VALUES ($1,$2,$3,$3,$4,$5,CURRENT_DATE,NOW(),$6,$7)
         RETURNING id`,
         [
-          TX_TYPE.EXPENSE,
-          TX_STATUS.APPROVED,
+          TX_TYPE.SAVINGS,
+          TX_STATUS.PENDING,
           user.id,
           categoryId,
           penaltyMinor,
-          `Quran missed ${missedDays} day(s) from ${fromDate} to ${toDate}`,
+          `${tracker.label} missed ${missedDays} day(s) from ${fromDate} to ${toDate}`,
           JSON.stringify({
-            event: 'quran_weekly_penalty',
+            event: tracker.event,
+            tracker: trackerKind,
             fromDate,
             toDate,
             doneDays: Number(user.done_days || 0),
@@ -402,7 +444,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       );
 
       const penalty = await client.query(
-        `INSERT INTO quran_penalties (
+        `INSERT INTO ${tracker.penaltyTable} (
           run_id,
           user_id,
           missed_days,
@@ -441,4 +483,5 @@ module.exports = {
   listActiveUsers,
   listPenalties,
   createWeeklyPenaltyRun,
+  PENALTY_TRACKERS,
 };
