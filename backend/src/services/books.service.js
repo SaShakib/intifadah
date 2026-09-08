@@ -224,11 +224,11 @@ async function searchBookMetadata(queryText) {
       source: 'google_books', id: item.id, title: item.volumeInfo?.title || '', authorName: item.volumeInfo?.authors?.[0] || '',
       coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
     }))).catch(() => []);
-  const googleImages = env.googleBooksApiKey && env.googleSearchEngineId
+  const googleImages = env.googleCustomSearchApiKey && env.googleSearchEngineId
     ? fetchExternal(`https://www.googleapis.com/customsearch/v1?${new URLSearchParams({
       q: `${query} book cover`,
       cx: env.googleSearchEngineId,
-      key: env.googleBooksApiKey,
+      key: env.googleCustomSearchApiKey,
       searchType: 'image',
       num: '8',
     })}`)
