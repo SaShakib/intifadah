@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { LoaderCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 interface AppModalProps {
@@ -11,15 +11,17 @@ interface AppModalProps {
   footer?: ReactNode;
   onClose: () => void;
   className?: string;
+  loading?: boolean;
+  loadingLabel?: string;
 }
 
-export function AppModal({ open, title, children, footer, onClose, className }: AppModalProps) {
+export function AppModal({ open, title, children, footer, onClose, className, loading = false, loadingLabel = 'লোড হচ্ছে...' }: AppModalProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={onClose}>
       <section
-        className={cn('max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl', className)}
+        className={cn('relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl', className)}
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"
@@ -38,6 +40,7 @@ export function AppModal({ open, title, children, footer, onClose, className }: 
         </header>
         <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-6">{children}</div>
         {footer && <footer className="flex flex-wrap justify-end gap-2 border-t border-border px-6 py-4">{footer}</footer>}
+        {loading && <div className="absolute inset-0 z-10 grid place-items-center bg-white/80 backdrop-blur-[1px]"><div className="flex flex-col items-center gap-3 text-sm font-semibold text-fg"><LoaderCircle className="h-7 w-7 animate-spin text-brand" /><span>{loadingLabel}</span></div></div>}
       </section>
     </div>
   );
