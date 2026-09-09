@@ -95,7 +95,10 @@ export function ProgrammableCoverSearch({ query, onSearchStateChange }: { query:
   return (
     <section className="rounded-lg border border-border bg-surface-2 p-3">
       <p className="text-sm font-semibold text-fg">Google-এ কভার খুঁজুন</p>
-      <p className="mt-1 text-xs leading-5 text-muted">ছবির উপর right-click বা long-press করে “Copy image address” নিন, তারপর নিচের কভার URL ঘরে paste করুন।</p>
+      <div className="mt-3 rounded-lg border border-brand/30 bg-brand-light px-3 py-2 text-xs leading-5 text-fg-2">
+        <strong>কম্পিউটারে ছবির উপর right-click করুন, মোবাইলে long-press করুন।</strong><br />
+        তারপর <strong>“Copy Image Address”</strong> চাপুন এবং নিচের কভার URL ঘরে paste করুন।
+      </div>
       {!ready && <p className="mt-3 text-xs text-muted">কভার সার্চ লোড হচ্ছে...</p>}
       {unavailable && <p className="mt-3 text-xs text-danger">কভার সার্চ এখন লোড করা যায়নি। নিচের Google Images লিংক ব্যবহার করুন।</p>}
       <div ref={containerRef} className="mt-3 min-h-10 overflow-x-auto" />
