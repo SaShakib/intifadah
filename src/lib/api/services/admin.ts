@@ -3,6 +3,7 @@ import type {
   ApiAccessModuleRow,
   ApiAccessRoleRow,
   ApiCategoryRow,
+  ApiCategorySubscriberRow,
   ApiCommentMessageRow,
   ApiCommentThreadRow,
   ApiLoanRepaymentRow,
@@ -92,6 +93,19 @@ export async function deleteAdminCategory(categoryId: string | number) {
     method: 'DELETE',
   });
   return data.row;
+}
+
+export async function getAdminCategorySubscribers(categoryId: string | number) {
+  const data = await apiRequest<ApiRowsResponse<ApiCategorySubscriberRow>>(`/admin/categories/${categoryId}/subscribers`);
+  return data.rows;
+}
+
+export async function updateAdminCategorySubscribers(categoryId: string | number, userIds: Array<string | number>, isActive: boolean) {
+  const data = await apiRequest<ApiDataResponse<{ updated: number; created: number }>>(`/admin/categories/${categoryId}/subscribers`, {
+    method: 'PUT',
+    body: JSON.stringify({ userIds, isActive }),
+  });
+  return data.data;
 }
 
 export async function getAdminCollections(params: { limit?: number; offset?: number; status?: number; fromDate?: string; toDate?: string } = {}) {

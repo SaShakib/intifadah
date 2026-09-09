@@ -62,7 +62,7 @@ export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS, s
       TYPE_LABEL[category.type],
       RECUR_LABEL[category.recurrence],
       category.isVariable ? 'পরিবর্তনশীল' : category.amount ? `৳${category.amount}` : '-',
-      category.type === 'savings' && !category.isVariable && category.amount ? (
+      (category.type === 'savings' || category.type === 'donation') && !category.isVariable && category.amount ? (
         <Button
           key={`${category.id}-subscription`}
           size="sm"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Plus, Save, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Save, Trash2, UsersRound } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
@@ -11,7 +11,8 @@ import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { CATEGORY_METRICS, CATEGORY_ROWS, CATEGORY_TYPE_SUMMARY } from './constants';
-import { createAdminCategory, deleteAdminCategory, getErrorMessage, updateAdminCategory } from '@/lib/api';
+import { createAdminCategory, deleteAdminCategory, getAdminCategorySubscribers, getErrorMessage, updateAdminCategory, updateAdminCategorySubscribers, type ApiCategorySubscriberRow } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import type { CategoryMetric } from './types';
 import type { Category, CategoryType, RecurrenceType } from '@/types';
 import type { CategoryInput } from '@/lib/api';
@@ -95,6 +96,7 @@ function categoryToForm(category: Category): CategoryInput {
 }
 
 export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutationSuccess }: CategoriesMiddleSectionProps) {
+  const { roleKey } = useAuth();
   const [modal, setModal] = useState<'new' | 'edit' | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [form, setForm] = useState<CategoryInput>(DEFAULT_CATEGORY_FORM);
@@ -102,6 +104,12 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
   const [activeStatus, setActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [subscriberCategory, setSubscriberCategory] = useState<Category | null>(null);
+  const [subscribers, setSubscribers] = useState<ApiCategorySubscriberRow[]>([]);
+  const [selectedSubscriberIds, setSelectedSubscriberIds] = useState<Set<number>>(new Set());
+  const [subscriberSearch, setSubscriberSearch] = useState('');
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+  const [savingSubscribers, setSavingSubscribers] = useState(false);
   const showToast = (message: string) => {
     setModal(null);
     setToast(message);
@@ -119,6 +127,52 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
     setSelectedCategory(category);
     setForm(categoryToForm(category));
     setModal('edit');
+  };
+  const canManageSubscribers = roleKey === 'super_admin';
+  const canSubscribeMembers = (category: Category) => (
+    canManageSubscribers
+    && (category.type === 'savings' || category.type === 'donation')
+    && !category.isVariable
+    && Boolean(category.amount)
+  );
+  const openSubscribers = async (category: Category) => {
+    setSubscriberCategory(category);
+    setSubscriberSearch('');
+    setSelectedSubscriberIds(new Set());
+    setLoadingSubscribers(true);
+    try {
+      setSubscribers(await getAdminCategorySubscribers(category.id));
+    } catch (error) {
+      setSubscriberCategory(null);
+      setToast(getErrorMessage(error));
+    } finally {
+      setLoadingSubscribers(false);
+    }
+  };
+  const toggleSubscriber = (userId: number) => {
+    setSelectedSubscriberIds((current) => {
+      const next = new Set(current);
+      if (next.has(userId)) next.delete(userId); else next.add(userId);
+      return next;
+    });
+  };
+  const applySubscribers = async (isActive: boolean) => {
+    if (!subscriberCategory || !selectedSubscriberIds.size) {
+      setToast('অন্তত একজন সদস্য নির্বাচন করুন।');
+      return;
+    }
+    setSavingSubscribers(true);
+    try {
+      const result = await updateAdminCategorySubscribers(subscriberCategory.id, [...selectedSubscriberIds], isActive);
+      setSubscribers((current) => current.map((member) => selectedSubscriberIds.has(member.user_id) ? { ...member, is_active: isActive } : member));
+      setSelectedSubscriberIds(new Set());
+      setToast(isActive ? `${result.updated} জন সদস্য সাবস্ক্রাইব হয়েছেন। ${result.created}টি আলাদা বকেয়া তৈরি হয়েছে।` : `${result.updated} জনের সাবস্ক্রিপশন বন্ধ হয়েছে।`);
+      await onMutationSuccess?.();
+    } catch (error) {
+      setToast(getErrorMessage(error));
+    } finally {
+      setSavingSubscribers(false);
+    }
   };
   const saveCategory = async () => {
     setSaving(true);
@@ -207,6 +261,7 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
                 <span className={category.isActive ? 'h-2 w-2 rounded-full bg-success shadow-[0_0_0_3px_var(--success-bg)]' : 'h-2 w-2 rounded-full bg-muted'} />
                 <span className="text-xs font-semibold text-fg-2">{category.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</span>
                 <span className="flex-1" />
+                {canSubscribeMembers(category) && <Button size="sm" variant="secondary" onClick={() => void openSubscribers(category)}><UsersRound className="h-3.5 w-3.5" />সদস্য যোগ</Button>}
                 <Button size="sm" variant="secondary" onClick={() => openEditModal(category)}><Pencil className="h-3.5 w-3.5" />সম্পাদনা</Button>
               </div>
             </article>
@@ -233,6 +288,25 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
           <label className="flex items-center gap-2 pt-6 text-sm font-semibold text-fg-2"><input type="checkbox" checked={Boolean(form.isActive)} onChange={(event) => updateForm('isActive', event.target.checked)} className="h-4 w-4 accent-[var(--brand)]" /> সক্রিয়</label>
           <label className="flex items-center gap-2 text-sm font-semibold text-fg-2"><input type="checkbox" checked={Boolean(form.isAmountVariable)} onChange={(event) => updateForm('isAmountVariable', event.target.checked)} className="h-4 w-4 accent-[var(--brand)]" /> পরিবর্তনশীল পরিমাণ</label>
           <label className="space-y-1 sm:col-span-2"><span className="text-xs font-semibold text-fg-2">বিবরণ</span><textarea value={form.description ?? ''} onChange={(event) => updateForm('description', event.target.value)} className="h-24 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-light" placeholder="খাতের বিবরণ লিখুন..." /></label>
+        </div>
+      </AppModal>
+      <AppModal
+        open={Boolean(subscriberCategory)}
+        title={subscriberCategory ? `${subscriberCategory.name}: সদস্য সাবস্ক্রিপশন` : 'সদস্য সাবস্ক্রিপশন'}
+        onClose={() => setSubscriberCategory(null)}
+        className="max-w-2xl"
+        footer={<><Button variant="secondary" disabled={savingSubscribers} onClick={() => setSubscriberCategory(null)}>মডাল বন্ধ করুন</Button><Button variant="secondary" disabled={savingSubscribers || !selectedSubscriberIds.size} onClick={() => void applySubscribers(false)}>সাবস্ক্রিপশন বন্ধ করুন</Button><Button disabled={savingSubscribers || !selectedSubscriberIds.size} onClick={() => void applySubscribers(true)}>{savingSubscribers ? 'সংরক্ষণ হচ্ছে...' : 'নির্বাচিতদের সাবস্ক্রাইব করুন'}</Button></>}
+      >
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-fg-2">শুধু সক্রিয় ইনতিফাদাহ সদস্যদের নির্বাচন করুন। প্রত্যেকের জন্য আলাদা বকেয়া, ইন-অ্যাপ নোটিফিকেশন এবং ইমেইল তৈরি হবে।</p>
+          <Input value={subscriberSearch} onChange={(event) => setSubscriberSearch(event.target.value)} placeholder="নাম বা মোবাইল দিয়ে সদস্য খুঁজুন" />
+          {loadingSubscribers ? <p className="py-8 text-center text-sm text-muted">সদস্য লোড হচ্ছে...</p> : <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+            {subscribers.filter((member) => `${member.full_name} ${member.mobile}`.toLowerCase().includes(subscriberSearch.toLowerCase())).map((member) => <label key={member.user_id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-white p-3">
+              <input type="checkbox" checked={selectedSubscriberIds.has(member.user_id)} onChange={() => toggleSubscriber(member.user_id)} className="h-4 w-4 accent-[var(--brand)]" />
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-fg">{member.full_name}</span><span className="block text-xs text-muted">{member.mobile}{member.email ? ` · ${member.email}` : ''}</span></span>
+              <Badge variant={member.is_active ? 'success' : 'muted'}>{member.is_active ? 'সাবস্ক্রাইবড' : 'সাবস্ক্রাইবড নয়'}</Badge>
+            </label>)}
+          </div>}
         </div>
       </AppModal>
       <AppToast message={toast} />

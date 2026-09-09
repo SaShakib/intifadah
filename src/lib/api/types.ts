@@ -119,6 +119,16 @@ export interface ApiSavingsSubscriptionRow {
   last_due_on: string | null;
 }
 
+export interface ApiCategorySubscriberRow {
+  user_id: number;
+  full_name: string;
+  mobile: string;
+  email: string | null;
+  is_active: boolean;
+  subscribed_at: string | null;
+  last_due_on: string | null;
+}
+
 export interface ApiTransactionRow {
   id: string | number;
   tx_type: number;

@@ -140,12 +140,13 @@ async function sendTrackingPenaltyEmail({ to, fullName, fromDate, toDate, quran,
   });
 }
 
-async function sendSavingsDueEmail({ to, fullName, categoryName, amountMinor, dueOn }) {
+async function sendSavingsDueEmail({ to, fullName, categoryName, categoryType, amountMinor, dueOn }) {
+  const label = Number(categoryType) === 1 ? 'donation' : 'savings';
   return sendEmail({
     to,
-    subject: 'Your Intifadah savings due',
-    text: `Assalamu alaikum ${fullName}, your ${categoryName} savings due for ${dueOn} is ৳${Number(amountMinor)}. It will remain unpaid until a manager or admin receives it.`,
-    html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;"><h2>Savings due</h2><p>Assalamu alaikum ${escapeHtml(fullName)},</p><p>Your <strong>${escapeHtml(categoryName)}</strong> savings due is <strong>৳${Number(amountMinor)}</strong>.</p><p>Due date: ${escapeHtml(dueOn)}. A manager or admin will confirm it when received.</p></div>`,
+    subject: `Your Intifadah ${label} due`,
+    text: `Assalamu alaikum ${fullName}, your ${categoryName} ${label} due for ${dueOn} is ৳${Number(amountMinor)}. It will remain unpaid until a manager or admin receives it.`,
+    html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;"><h2>${escapeHtml(label)} due</h2><p>Assalamu alaikum ${escapeHtml(fullName)},</p><p>Your <strong>${escapeHtml(categoryName)}</strong> ${escapeHtml(label)} due is <strong>৳${Number(amountMinor)}</strong>.</p><p>Due date: ${escapeHtml(dueOn)}. A manager or admin will confirm it when received.</p></div>`,
   });
 }
 

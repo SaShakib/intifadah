@@ -1,5 +1,6 @@
 const { listModules } = require('../services/permission.service');
 const { listBookApprovals, reviewBookActivation, reviewBookListing } = require('../services/books.service');
+const { listCategorySubscriptions, setCategorySubscriptionsForInternalMembers } = require('../services/savings-due.service');
 const {
   listRoles,
   listRolePermissionMatrix,
@@ -183,6 +184,25 @@ async function categoriesUpdate(req, res, next) {
     const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
     const updated = await updateCategory(categoryId, req.body || {});
     res.json({ row: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function categorySubscribers(req, res, next) {
+  try {
+    const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
+    res.json({ rows: await listCategorySubscriptions(categoryId) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function categorySubscribersUpdate(req, res, next) {
+  try {
+    const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
+    const data = await setCategorySubscriptionsForInternalMembers(categoryId, req.body?.userIds, req.body?.isActive !== false);
+    res.json({ data });
   } catch (error) {
     next(error);
   }
@@ -516,6 +536,8 @@ module.exports = {
   categoriesList,
   categoriesCreate,
   categoriesUpdate,
+  categorySubscribers,
+  categorySubscribersUpdate,
   categoriesDelete,
   collectionsList,
   collectionsCreate,

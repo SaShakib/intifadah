@@ -24,6 +24,7 @@ async function deliverSavingsDues(rows) {
       transactionId: row.transaction_id,
       categoryId: row.category_id,
       categoryName: row.category_name,
+      categoryType: Number(row.category_type),
       amountMinor: Number(row.amount_fixed),
       dueOn: row.due_on,
       url: '/user/transactions',
@@ -35,6 +36,7 @@ async function deliverSavingsDues(rows) {
       to: row.email,
       fullName: row.full_name,
       categoryName: row.category_name,
+      categoryType: Number(row.category_type),
       amountMinor: row.amount_fixed,
       dueOn: row.due_on,
     })));
@@ -57,20 +59,48 @@ async function listMySavingsSubscriptions(userId) {
   return savingsDuesRepository.listSubscriptions(userId);
 }
 
-async function setMySavingsSubscription(userId, categoryId, isActive) {
+async function setCategorySubscription(userId, categoryId, isActive) {
   const subscription = await savingsDuesRepository.setSubscription({ userId, categoryId, isActive });
   if (!subscription) {
-    const error = new Error('Only active fixed-amount savings categories can be subscribed to');
+    const error = new Error('Only active fixed-amount savings or donation categories can be subscribed to');
     error.statusCode = 400;
     throw error;
   }
-  const dueResult = isActive ? await runScheduledSavingsDues() : { created: 0 };
+  const rows = isActive
+    ? await savingsDuesRepository.createDueTransactions({ dueOn: currentDateText(), subscriptionIds: [subscription.id] })
+    : [];
+  const dueResult = { dueOn: currentDateText(), created: rows.length, ...(await deliverSavingsDues(rows)) };
   return { subscription, dueResult };
+}
+
+async function listCategorySubscriptions(categoryId) {
+  return savingsDuesRepository.listCategorySubscribers(categoryId);
+}
+
+async function setCategorySubscriptionsForInternalMembers(categoryId, userIds, isActive) {
+  const uniqueUserIds = [...new Set((Array.isArray(userIds) ? userIds : []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  if (!uniqueUserIds.length) {
+    const error = new Error('Select at least one internal member');
+    error.statusCode = 400;
+    throw error;
+  }
+  const eligibleIds = await savingsDuesRepository.listActiveInternalMemberIds(uniqueUserIds);
+  if (eligibleIds.length !== uniqueUserIds.length) {
+    const error = new Error('Only active internal members can be subscribed by a super admin');
+    error.statusCode = 400;
+    throw error;
+  }
+  const results = [];
+  for (const userId of eligibleIds) results.push(await setCategorySubscription(userId, categoryId, isActive));
+  return { updated: results.length, created: results.reduce((sum, result) => sum + result.dueResult.created, 0), results };
 }
 
 module.exports = {
   currentDateText,
   runScheduledSavingsDues,
   listMySavingsSubscriptions,
-  setMySavingsSubscription,
+  setMySavingsSubscription: setCategorySubscription,
+  setCategorySubscription,
+  listCategorySubscriptions,
+  setCategorySubscriptionsForInternalMembers,
 };

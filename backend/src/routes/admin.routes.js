@@ -23,6 +23,8 @@ router.delete('/members/:userId', requirePermission('members', 'delete'), adminC
 
 router.get('/categories', requirePermission('categories', 'read'), adminController.categoriesList);
 router.post('/categories', requirePermission('categories', 'write'), adminController.categoriesCreate);
+router.get('/categories/:categoryId/subscribers', requireRoles('super_admin'), adminController.categorySubscribers);
+router.put('/categories/:categoryId/subscribers', requireRoles('super_admin'), adminController.categorySubscribersUpdate);
 router.patch('/categories/:categoryId', requirePermission('categories', 'update'), adminController.categoriesUpdate);
 router.delete('/categories/:categoryId', requirePermission('categories', 'delete'), adminController.categoriesDelete);
 

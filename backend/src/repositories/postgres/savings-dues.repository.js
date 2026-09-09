@@ -19,19 +19,44 @@ async function setSubscription({ userId, categoryId, isActive }) {
      FROM categories c
      WHERE c.id = $2
        AND c.is_active = TRUE
-       AND c.category_type = $4
+       AND c.category_type IN ($4, $5)
+       AND c.is_amount_variable = FALSE
+       AND c.amount_fixed > 0
      ON CONFLICT (category_id, user_id)
        DO UPDATE SET is_active = EXCLUDED.is_active
      RETURNING id, user_id, category_id, is_active, subscribed_at, last_due_on`,
-    [userId, categoryId, isActive, CATEGORY_TYPE.SAVINGS],
+    [userId, categoryId, isActive, CATEGORY_TYPE.SAVINGS, CATEGORY_TYPE.DONATION],
   );
   return res.rows[0] || null;
+}
+
+async function listCategorySubscribers(categoryId) {
+  const res = await query(
+    `SELECT u.id AS user_id, u.full_name, u.mobile, u.email,
+       COALESCE(cs.is_active, FALSE) AS is_active, cs.subscribed_at, cs.last_due_on
+     FROM app_users u
+     LEFT JOIN category_subscriptions cs ON cs.user_id = u.id AND cs.category_id = $1
+     WHERE u.user_kind = 1 AND u.is_active = TRUE
+     ORDER BY u.full_name ASC, u.id ASC`,
+    [categoryId],
+  );
+  return res.rows;
+}
+
+async function listActiveInternalMemberIds(userIds) {
+  const res = await query(
+    `SELECT id FROM app_users
+     WHERE id = ANY($1::int[]) AND user_kind = 1 AND is_active = TRUE`,
+    [userIds],
+  );
+  return res.rows.map((row) => Number(row.id));
 }
 
 function isDue(subscription, today) {
   if (!subscription.last_due_on) return true;
   const lastDue = new Date(`${subscription.last_due_on}T00:00:00.000Z`);
   const current = new Date(`${today}T00:00:00.000Z`);
+  if (subscription.due_interval_days) return current - lastDue >= Number(subscription.due_interval_days) * 86_400_000;
   if (subscription.recurrence_type === 1) return lastDue < current;
   if (subscription.recurrence_type === 2) return current - lastDue >= 7 * 86_400_000;
   if (subscription.recurrence_type === 3) return current.getUTCFullYear() !== lastDue.getUTCFullYear() || current.getUTCMonth() !== lastDue.getUTCMonth();
@@ -39,8 +64,17 @@ function isDue(subscription, today) {
   return false;
 }
 
-async function createDueTransactions({ dueOn }) {
+async function createDueTransactions({ dueOn, subscriptionIds } = {}) {
   return withTransaction(async (client) => {
+    const values = [CATEGORY_TYPE.SAVINGS, CATEGORY_TYPE.DONATION];
+    const conditions = [
+      'cs.is_active = TRUE', 'c.is_active = TRUE', 'c.category_type IN ($1, $2)',
+      'c.is_amount_variable = FALSE', 'c.amount_fixed > 0', 'u.is_active = TRUE',
+    ];
+    if (subscriptionIds?.length) {
+      values.push(subscriptionIds);
+      conditions.push(`cs.id = ANY($${values.length}::bigint[])`);
+    }
     const subscriptions = await client.query(
       `SELECT
         cs.id AS subscription_id,
@@ -48,20 +82,17 @@ async function createDueTransactions({ dueOn }) {
         cs.last_due_on,
         c.id AS category_id,
         c.category_name,
+        c.category_type,
         c.recurrence_type,
+        c.due_interval_days,
         c.amount_fixed,
         u.full_name,
         u.email
        FROM category_subscriptions cs
        JOIN categories c ON c.id = cs.category_id
        JOIN app_users u ON u.id = cs.user_id
-       WHERE cs.is_active = TRUE
-         AND c.is_active = TRUE
-         AND c.category_type = $1
-         AND c.is_amount_variable = FALSE
-         AND c.amount_fixed > 0
-         AND u.is_active = TRUE`,
-      [CATEGORY_TYPE.SAVINGS],
+       WHERE ${conditions.join(' AND ')}`,
+      values,
     );
 
     const created = [];
@@ -74,14 +105,14 @@ async function createDueTransactions({ dueOn }) {
         ) VALUES ($1,$2,$3,$3,$4,$5,$6,$7,$8)
         RETURNING id`,
         [
-          TX_TYPE.SAVINGS,
+          Number(subscription.category_type) === CATEGORY_TYPE.DONATION ? TX_TYPE.DONATION : TX_TYPE.SAVINGS,
           TX_STATUS.PENDING,
           subscription.user_id,
           subscription.category_id,
           subscription.amount_fixed,
           dueOn,
-          `${subscription.category_name} savings due for ${dueOn}`,
-          JSON.stringify({ event: 'scheduled_savings_due', subscriptionId: subscription.subscription_id, dueOn }),
+          `${subscription.category_name} due for ${dueOn}`,
+          JSON.stringify({ event: 'scheduled_category_due', subscriptionId: subscription.subscription_id, dueOn }),
         ],
       );
       const due = await client.query(
@@ -105,5 +136,7 @@ async function createDueTransactions({ dueOn }) {
 module.exports = {
   listSubscriptions,
   setSubscription,
+  listCategorySubscribers,
+  listActiveInternalMemberIds,
   createDueTransactions,
 };
