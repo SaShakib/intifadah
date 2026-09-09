@@ -4,11 +4,6 @@ const { env } = require('../config/env');
 
 const { booksRepository, notificationsRepository } = repositories;
 const REQUEST_DAYS = new Set([3, 7, 10, 15, 30]);
-const EXTERNAL_SEARCH_TIMEOUT_MS = 2000;
-
-function fetchExternal(url) {
-  return fetch(url, { signal: AbortSignal.timeout(EXTERNAL_SEARCH_TIMEOUT_MS) });
-}
 
 function badRequest(message) {
   const error = new Error(message);
@@ -206,43 +201,8 @@ function optimizedCoverUrl(url, width = 640) {
   return url.replace('/upload/', `/upload/f_auto,q_auto:good,c_limit,w_${width}/`);
 }
 
-async function searchBookMetadata(queryText) {
-  const query = cleanText(queryText, 'q', 180);
-  const openLibrary = fetchExternal(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8`)
-    .then((response) => response.ok ? response.json() : { docs: [] })
-    .then((data) => (data.docs || []).map((item) => ({
-      source: 'open_library', id: String(item.key || ''), title: item.title, authorName: item.author_name?.[0] || '',
-      coverUrl: item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : null,
-    }))).catch(() => []);
-  const googleUrl = new URL('https://www.googleapis.com/books/v1/volumes');
-  googleUrl.searchParams.set('q', query);
-  googleUrl.searchParams.set('maxResults', '8');
-  if (env.googleBooksApiKey) googleUrl.searchParams.set('key', env.googleBooksApiKey);
-  const googleBooks = fetchExternal(googleUrl)
-    .then((response) => response.ok ? response.json() : { items: [] })
-    .then((data) => (data.items || []).map((item) => ({
-      source: 'google_books', id: item.id, title: item.volumeInfo?.title || '', authorName: item.volumeInfo?.authors?.[0] || '',
-      coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
-    }))).catch(() => []);
-  const googleImages = env.googleCustomSearchApiKey && env.googleSearchEngineId
-    ? fetchExternal(`https://www.googleapis.com/customsearch/v1?${new URLSearchParams({
-      q: `${query} book cover`,
-      cx: env.googleSearchEngineId,
-      key: env.googleCustomSearchApiKey,
-      searchType: 'image',
-      num: '8',
-    })}`)
-      .then((response) => response.ok ? response.json() : { items: [] })
-      .then((data) => (data.items || []).map((item) => ({
-        source: 'google_images', id: item.link, title: item.title || query, authorName: '', coverUrl: item.link || null,
-      }))).catch(() => [])
-    : Promise.resolve([]);
-  const [openLibraryResults, googleResults, googleImageResults] = await Promise.all([openLibrary, googleBooks, googleImages]);
-  return [...googleResults, ...openLibraryResults, ...googleImageResults].filter((item) => item.title);
-}
-
 module.exports = {
   requireActivation, activateBooks, createBookCategory, addBook, requestBook,
-  ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl, searchBookMetadata,
+  ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
   requestExtension, ownerResolveExtension,
 };

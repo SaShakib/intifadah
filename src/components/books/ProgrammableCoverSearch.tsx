@@ -16,7 +16,7 @@ function searchElementApi() {
 const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID || '62084212d3d0c43db';
 const scriptId = 'intifadah-programmable-search-script';
 
-export function ProgrammableCoverSearch({ query }: { query: string }) {
+export function ProgrammableCoverSearch({ query, onSearchStateChange }: { query: string; onSearchStateChange?: (loading: boolean) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const elementName = `book-cover-search-${useId().replaceAll(':', '')}`;
   const [ready, setReady] = useState(false);
@@ -48,6 +48,7 @@ export function ProgrammableCoverSearch({ query }: { query: string }) {
 
   useEffect(() => {
     if (!ready || !containerRef.current) return;
+    onSearchStateChange?.(true);
     let attempts = 0;
     let timer: number | undefined;
     let cancelled = false;
@@ -58,7 +59,10 @@ export function ProgrammableCoverSearch({ query }: { query: string }) {
       if (!element) {
         attempts += 1;
         if (attempts < 20) timer = window.setTimeout(render, 150);
-        else setUnavailable(true);
+        else {
+          setUnavailable(true);
+          onSearchStateChange?.(false);
+        }
         return;
       }
 
@@ -75,7 +79,10 @@ export function ProgrammableCoverSearch({ query }: { query: string }) {
           imageSearchResultSetSize: 8,
         },
       });
-      window.setTimeout(() => element.getElement(elementName)?.execute(`${query || 'book'} book cover`), 0);
+      window.setTimeout(() => {
+        element.getElement(elementName)?.execute(`${query || 'book'} book cover`);
+        onSearchStateChange?.(false);
+      }, 0);
     };
 
     render();
@@ -83,7 +90,7 @@ export function ProgrammableCoverSearch({ query }: { query: string }) {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [elementName, query, ready]);
+  }, [elementName, onSearchStateChange, query, ready]);
 
   return (
     <section className="rounded-lg border border-border bg-surface-2 p-3">

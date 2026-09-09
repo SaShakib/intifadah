@@ -3,14 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { BookOpen, CalendarDays, Check, ExternalLink, ImagePlus, Plus, Search, Send, Users } from 'lucide-react';
+import { BookOpen, CalendarDays, Check, CircleHelp, ExternalLink, ImagePlus, Plus, Search, Send, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { ProgrammableCoverSearch } from '@/components/books/ProgrammableCoverSearch';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { useAuth } from '@/contexts/AuthContext';
-import { activateBooks, confirmBookReceived, createBook, createBookCategory, getBookActivation, getBookCategories, getMyBookRequests, getPublicBooks, ownerBookRequestAction, requestBook, requestBookExtension, resolveBookExtension, searchBookMetadata, uploadBookCover, type BookActivationInput, type BookCategoryRow, type BookMetadataRow, type BookRequestRow, type BookRow } from '@/lib/api';
+import { activateBooks, confirmBookReceived, createBook, createBookCategory, getBookActivation, getBookCategories, getMyBookRequests, getPublicBooks, ownerBookRequestAction, requestBook, requestBookExtension, resolveBookExtension, uploadBookCover, type BookActivationInput, type BookCategoryRow, type BookRequestRow, type BookRow } from '@/lib/api';
 
 const educationLevels = ['Below SSC', 'SSC', 'HSC 1st', 'HSC 2nd', 'Honours 1st year', 'Honours 2nd year', 'Honours 3rd year', 'Honours 4th year', 'Masters'];
 
@@ -40,10 +40,11 @@ export default function BooksPage() {
   const [activationForm, setActivationForm] = useState<BookActivationInput>({ village: '', wardNo: 0, fatherName: '', occupationType: 'student', institutionName: '', educationLevel: '', educationDetail: '', professionDetail: '' });
   const [bookForm, setBookForm] = useState({ title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' });
   const [newCategory, setNewCategory] = useState('');
-  const [metadata, setMetadata] = useState<BookMetadataRow[]>([]);
   const [coverSearchQuery, setCoverSearchQuery] = useState('');
+  const [coverSearchRun, setCoverSearchRun] = useState(0);
   const [bookStep, setBookStep] = useState<1 | 2>(1);
   const [searchingCover, setSearchingCover] = useState(false);
+  const [bookGuideOpen, setBookGuideOpen] = useState(false);
   const [requestDays, setRequestDays] = useState(7);
   const [myRequests, setMyRequests] = useState<BookRequestRow[]>([]);
 
@@ -90,17 +91,17 @@ export default function BooksPage() {
       showToast('Books বিভাগ সক্রিয় হয়েছে।');
     } catch (error) { showToast(error instanceof Error ? error.message : 'তথ্য সংরক্ষণ হয়নি'); } finally { setBusy(false); }
   };
-  const findMetadata = async () => {
-    if (!bookForm.title.trim()) return;
+  const searchCover = () => {
+    if (!bookForm.title.trim()) { showToast('বইয়ের নাম দিন।'); return; }
     setCoverSearchQuery(bookForm.title.trim());
-    setSearchingCover(true);
-    try { setMetadata((await searchBookMetadata(bookForm.title)).rows); } catch { showToast('বইয়ের তথ্য খুঁজে পাওয়া যায়নি'); } finally { setSearchingCover(false); }
+    setCoverSearchRun((run) => run + 1);
   };
+  const handleCoverSearchStateChange = useCallback((loading: boolean) => setSearchingCover(loading), []);
   const nextBookStep = () => {
     if (!bookForm.title.trim()) { showToast('বইয়ের নাম দিন।'); return; }
     setBookStep(2);
   };
-  const closeBookModal = () => { setBookStep(1); setModal(null); };
+  const closeBookModal = () => { setSearchingCover(false); setBookStep(1); setModal(null); };
   const createCategoryInline = async () => {
     if (!newCategory.trim()) return;
     const result = await createBookCategory(newCategory.trim());
@@ -173,12 +174,12 @@ export default function BooksPage() {
       <AppModal open={modal === 'add'} title="বই যোগ করুন" onClose={closeBookModal} className="max-w-3xl" loading={searchingCover} loadingLabel="বই ও কভার খোঁজা হচ্ছে..." footer={<><Button variant="secondary" onClick={closeBookModal}>বাতিল</Button>{bookStep === 2 && <Button variant="secondary" onClick={() => setBookStep(1)}>পেছনে</Button>}{bookStep === 1 ? <Button disabled={searchingCover} onClick={nextBookStep}>পরের ধাপ</Button> : <Button disabled={busy} onClick={() => void submitBook()}><Check className="h-4 w-4" />বই যোগ করুন</Button>}</>}>
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-2 text-center text-xs font-semibold"><div className={bookStep === 1 ? 'rounded-lg bg-brand px-3 py-2 text-white' : 'rounded-lg bg-surface-2 px-3 py-2 text-muted'}>১. বই ও কভার</div><div className={bookStep === 2 ? 'rounded-lg bg-brand px-3 py-2 text-white' : 'rounded-lg bg-surface-2 px-3 py-2 text-muted'}>২. অন্যান্য তথ্য</div></div>
+          <Button type="button" size="sm" variant="secondary" className="w-full" onClick={() => setBookGuideOpen(true)}><CircleHelp className="h-4 w-4" />দেখে নিন কিভাবে বই যোগ করতে হয়</Button>
           {bookStep === 1 ? <>
-            <label className="block text-sm font-semibold text-fg">বইয়ের নাম <span className="text-danger">*</span><div className="mt-1 flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void findMetadata(); } }} placeholder="যেমন: তিন গোয়েন্দা" /><Button type="button" variant="secondary" disabled={searchingCover} onClick={() => void findMetadata()}><Search className="h-4 w-4" />খুঁজুন</Button></div></label>
+            <label className="block text-sm font-semibold text-fg">বইয়ের নাম <span className="text-danger">*</span><div className="mt-1 flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); searchCover(); } }} placeholder="যেমন: তিন গোয়েন্দা" /><Button type="button" variant="secondary" disabled={searchingCover} onClick={searchCover}><Search className="h-4 w-4" />খুঁজুন</Button></div></label>
             <p className="-mt-3 text-xs text-muted">নাম লিখে Enter চাপুন বা খুঁজুন চাপুন।</p>
-            {coverSearchQuery && <ProgrammableCoverSearch query={coverSearchQuery} />}
+            {coverSearchQuery && <ProgrammableCoverSearch key={coverSearchRun} query={coverSearchQuery} onSearchStateChange={handleCoverSearchStateChange} />}
             {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
-            {metadata.length > 0 && <section><p className="mb-2 text-sm font-semibold text-fg">পাওয়া বইয়ের তথ্য</p><div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border p-2">{metadata.map((item) => <button type="button" key={`${item.source}-${item.id}`} onClick={() => setBookForm({ ...bookForm, title: item.title, authorName: item.authorName, coverUrl: item.coverUrl || '', externalSource: item.source, externalVolumeId: item.id })} className="flex w-full items-center gap-2 rounded p-1 text-left hover:bg-surface-2">{item.coverUrl && <Image src={item.coverUrl} alt="" width={28} height={40} className="h-10 w-7 object-cover" unoptimized />}<span className="text-sm"><strong>{item.title}</strong><br />{item.authorName}</span></button>)}</div></section>}
             <label className="block text-sm font-semibold text-fg">কভারের সরাসরি image URL <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="https://.../book-cover.jpg" /></label>
             <p className="-mt-3 rounded-lg border border-brand/20 bg-brand-light px-3 py-2 text-xs leading-5 text-fg-2">আমাদের Google সার্চ ফলাফল বা Google Images থেকে কভারের উপর right-click / long-press করে “Copy image address” নিন, তারপর উপরের ঘরে paste করুন।</p>
             <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm font-semibold"><ImagePlus className="h-4 w-4" />কভার আপলোড করুন <span className="font-normal text-muted">(ঐচ্ছিক)</span><input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); showToast('WebP কভার আপলোড হয়েছে'); } catch (error) { showToast(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setBusy(false); } }} /></label>
@@ -192,6 +193,15 @@ export default function BooksPage() {
             <label className="block text-sm font-semibold text-fg">সংক্ষিপ্ত বিবরণ <span className="font-normal text-muted">(ঐচ্ছিক)</span><textarea value={bookForm.description} onChange={(event) => setBookForm({ ...bookForm, description: event.target.value })} className="mt-1 h-24 w-full rounded-lg border border-border p-3 text-sm" placeholder="বই সম্পর্কে লিখুন" /></label>
             <p className="text-xs text-muted"><span className="text-danger">*</span> চিহ্নিত তথ্য অবশ্যই দিতে হবে।</p>
           </>}
+        </div>
+      </AppModal>
+      <AppModal open={bookGuideOpen} title="কিভাবে বই যোগ করবেন" onClose={() => setBookGuideOpen(false)} className="max-w-3xl" footer={<Button onClick={() => setBookGuideOpen(false)}>বুঝেছি</Button>}>
+        <div className="space-y-5 text-sm leading-6 text-fg-2">
+          <section><h3 className="font-bold text-fg">১. বইয়ের নাম দিয়ে খুঁজুন</h3><p className="mt-1">প্রথম ধাপে বইয়ের নাম লিখে <strong>Enter</strong> চাপুন বা <strong>খুঁজুন</strong> চাপুন। একই জায়গাতেই Google-এর কভার ফলাফল দেখাবে।</p></section>
+          <section><h3 className="font-bold text-fg">২. পছন্দের কভারের address কপি করুন</h3><p className="mt-1">ছবির উপরেই right-click করুন। তারপর <strong>Copy Image Address</strong> নির্বাচন করুন। ফলাফলের নাম বা ওয়েবসাইটের লিংক নয়, অবশ্যই ছবির address কপি করবেন।</p><figure className="mt-3 overflow-hidden rounded-lg border border-border bg-surface-2"><Image src="/book-guide/copy-image-address-desktop.png" alt="Desktop browser menu with Copy Image Address highlighted" width={1072} height={798} className="h-auto w-full" /><figcaption className="px-3 py-2 text-xs text-muted">কম্পিউটারে ছবির উপর right-click করে Copy Image Address নির্বাচন করুন।</figcaption></figure></section>
+          <section><h3 className="font-bold text-fg">৩. মোবাইলে long-press করুন</h3><p className="mt-1">মোবাইলে ছবির উপর চেপে ধরে রাখুন। মেনু থেকে <strong>Copy Image Address</strong> চাপুন।</p><figure className="mt-3 overflow-hidden rounded-lg border border-border bg-surface-2"><Image src="/book-guide/copy-image-address-mobile.png" alt="Mobile browser menu with Copy Image Address highlighted" width={824} height={488} className="h-auto w-full" /><figcaption className="px-3 py-2 text-xs text-muted">মোবাইলে ছবির উপর long-press করে Copy Image Address নির্বাচন করুন।</figcaption></figure></section>
+          <section><h3 className="font-bold text-fg">৪. ফলাফল না পেলে Google Images ব্যবহার করুন</h3><p className="mt-1"><strong>Google Images-এ কভার খুঁজুন</strong> বাটনে চাপুন। নতুন ট্যাবে ছবি খুঁজে পেলে একইভাবে ছবির address কপি করুন।</p></section>
+          <section><h3 className="font-bold text-fg">৫. address paste করে পরের ধাপে যান</h3><p className="mt-1">প্রথম ধাপের <strong>কভারের সরাসরি image URL</strong> ঘরে paste করুন, অথবা নিজের কভার ছবি আপলোড করুন। এরপর <strong>পরের ধাপ</strong> চাপুন। দ্বিতীয় ধাপে বইয়ের মূল্য দিন, তারপর <strong>বই যোগ করুন</strong> চাপুন।</p></section>
         </div>
       </AppModal>
       <AppToast message={toast} />

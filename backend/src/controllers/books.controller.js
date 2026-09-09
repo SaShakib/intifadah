@@ -9,7 +9,6 @@ const {
   requestExtension,
   ownerResolveExtension,
   cloudinarySignature,
-  searchBookMetadata,
 } = require('../services/books.service');
 
 const { booksRepository } = repositories;
@@ -41,10 +40,6 @@ async function detail(req, res, next) {
     if (!row) return res.status(404).json({ message: 'Book not found' });
     return res.json({ row });
   } catch (error) { return next(error); }
-}
-
-async function metadata(req, res, next) {
-  try { res.json({ rows: await searchBookMetadata(req.query.q) }); } catch (error) { next(error); }
 }
 
 async function activation(req, res, next) {
@@ -91,4 +86,4 @@ async function resolveExtension(req, res, next) {
   try { res.json({ data: await ownerResolveExtension(req.auth.userId, id(req.params.extensionId, 'extensionId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
-module.exports = { categories, list, detail, metadata, activation, activate, createCategory, create, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension };
+module.exports = { categories, list, detail, activation, activate, createCategory, create, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension };

@@ -5,7 +5,6 @@ const booksController = require('../controllers/books.controller');
 const router = express.Router();
 
 router.get('/categories', booksController.categories);
-router.get('/search', booksController.metadata);
 router.get('/', booksController.list);
 router.get('/:bookId', booksController.detail);
 

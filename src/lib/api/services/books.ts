@@ -7,7 +7,6 @@ export interface BookRow {
   external_volume_id: string | null; status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
   total_copy_count: number; available_copy_count: number; estimated_available_on: string | null;
 }
-export interface BookMetadataRow { source: string; id: string; title: string; authorName: string; coverUrl: string | null; }
 export interface BookActivationInput {
   village: string; wardNo: number; fatherName: string; occupationType: 'student' | 'working' | 'business';
   institutionName?: string; educationLevel?: string; educationDetail?: string; professionDetail?: string;
@@ -25,7 +24,6 @@ export function getPublicBooks(params: { search?: string; categoryId?: number } 
 }
 export function getPublicBook(bookId: string | number) { return apiRequest<{ row: BookRow }>(`/books/${bookId}`, {}, { withAuth: false }); }
 export function getBookCategories() { return apiRequest<{ rows: BookCategoryRow[] }>('/books/categories', {}, { withAuth: false }); }
-export function searchBookMetadata(q: string) { return apiRequest<{ rows: BookMetadataRow[] }>(`/books/search${createQueryString({ q })}`, {}, { withAuth: false }); }
 export function getBookActivation() { return apiRequest<{ row: BookActivationInput | null }>('/books/me/activation'); }
 export function activateBooks(input: BookActivationInput) { return apiRequest<{ row: BookActivationInput }>('/books/me/activation', { method: 'POST', body: JSON.stringify(input) }); }
 export function createBookCategory(categoryName: string) { return apiRequest<{ row: BookCategoryRow }>('/books/categories', { method: 'POST', body: JSON.stringify({ categoryName }) }); }
