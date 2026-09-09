@@ -3,7 +3,7 @@ const { query, withTransaction } = require('../../db/pool');
 const BOOK_COLUMNS = `
   b.id, b.owner_user_id, b.category_id, b.title, b.author_name, b.book_price_minor,
   b.cover_url, b.cover_public_id, b.external_source, b.external_volume_id, b.status,
-  b.description, b.canonical_key, b.created_at, b.updated_at, o.full_name AS owner_name,
+  b.approval_status, b.description, b.canonical_key, b.created_at, b.updated_at, o.full_name AS owner_name,
   c.category_name`;
 
 const BOOK_AVAILABILITY_COLUMNS = `
@@ -21,7 +21,7 @@ const BOOK_AVAILABILITY_JOIN = `
     LEFT JOIN book_requests active_request
       ON active_request.book_id = grouped.id
       AND active_request.status IN (3, 4, 5)
-    WHERE grouped.canonical_key = b.canonical_key
+    WHERE grouped.canonical_key = b.canonical_key AND grouped.approval_status = 1
   ) availability ON TRUE`;
 
 async function listCategories() {
@@ -42,7 +42,7 @@ async function createCategory({ categoryName, userId }) {
 
 async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0 } = {}) {
   const values = [];
-  const where = [];
+  const where = ['b.approval_status = 1'];
   if (status !== null) {
     values.push(Number(status));
     where.push(`b.status = $${values.length}`);
@@ -79,14 +79,14 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
   return res.rows;
 }
 
-async function getBookById(bookId) {
+async function getBookById(bookId, { includeUnapproved = false } = {}) {
   const res = await query(
     `SELECT ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
      ${BOOK_AVAILABILITY_JOIN}
-     WHERE b.id = $1`,
+     WHERE b.id = $1 ${includeUnapproved ? '' : 'AND b.approval_status = 1'}`,
     [bookId],
   );
   return res.rows[0] || null;
@@ -102,7 +102,7 @@ async function createBook(input) {
     [input.ownerUserId, input.categoryId || null, input.title, input.authorName || null, input.canonicalKey, input.searchText, input.bookPriceMinor,
       input.coverUrl || null, input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
   );
-  return getBookById(res.rows[0].id);
+  return getBookById(res.rows[0].id, { includeUnapproved: true });
 }
 
 async function updateBook(input) {
@@ -118,7 +118,7 @@ async function updateBook(input) {
       input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
   );
   if (!res.rowCount) return null;
-  return getBookById(res.rows[0].id);
+  return getBookById(res.rows[0].id, { includeUnapproved: true });
 }
 
 async function getActivationProfile(userId) {
@@ -136,7 +136,8 @@ async function upsertActivationProfile(input) {
       village = EXCLUDED.village, ward_no = EXCLUDED.ward_no, father_name = EXCLUDED.father_name,
       occupation_type = EXCLUDED.occupation_type, institution_name = EXCLUDED.institution_name,
       education_level = EXCLUDED.education_level, education_detail = EXCLUDED.education_detail,
-      profession_detail = EXCLUDED.profession_detail, updated_at = NOW()
+      profession_detail = EXCLUDED.profession_detail, approval_status = 0, reviewed_by_user_id = NULL,
+      reviewed_at = NULL, review_note = NULL, updated_at = NOW()
     RETURNING *`,
     [input.userId, input.village, input.wardNo, input.fatherName, input.occupationType,
       input.institutionName || null, input.educationLevel || null, input.educationDetail || null, input.professionDetail || null],
@@ -144,15 +145,53 @@ async function upsertActivationProfile(input) {
   return res.rows[0];
 }
 
+async function listPendingApprovals() {
+  const [activations, books] = await Promise.all([
+    query(
+      `SELECT bap.*, u.full_name, u.mobile, u.email, u.address_line
+       FROM book_activation_profiles bap JOIN app_users u ON u.id = bap.user_id
+       WHERE bap.approval_status = 0 ORDER BY bap.updated_at ASC`,
+    ),
+    query(
+      `SELECT ${BOOK_COLUMNS}
+       FROM books b JOIN app_users o ON o.id = b.owner_user_id
+       LEFT JOIN book_categories c ON c.id = b.category_id
+       WHERE b.approval_status = 0 ORDER BY b.created_at ASC`,
+    ),
+  ]);
+  return { activations: activations.rows, books: books.rows };
+}
+
+async function reviewActivation({ userId, approvalStatus, reviewerUserId, reviewNote }) {
+  const res = await query(
+    `UPDATE book_activation_profiles
+     SET approval_status = $2, reviewed_by_user_id = $3, reviewed_at = NOW(), review_note = $4, updated_at = NOW()
+     WHERE user_id = $1 AND approval_status = 0 RETURNING *`,
+    [userId, approvalStatus, reviewerUserId, reviewNote || null],
+  );
+  return res.rows[0] || null;
+}
+
+async function reviewBook({ bookId, approvalStatus, reviewerUserId, reviewNote }) {
+  const res = await query(
+    `UPDATE books
+     SET approval_status = $2, reviewed_by_user_id = $3, reviewed_at = NOW(), review_note = $4, updated_at = NOW()
+     WHERE id = $1 AND approval_status = 0 RETURNING *`,
+    [bookId, approvalStatus, reviewerUserId, reviewNote || null],
+  );
+  return res.rows[0] || null;
+}
+
 async function createRequest({ bookId, requesterUserId, requestedDays, requestGroupId }) {
   return withTransaction(async (client) => {
-    const source = await client.query('SELECT id, canonical_key FROM books WHERE id = $1', [bookId]);
+    const source = await client.query('SELECT id, canonical_key FROM books WHERE id = $1 AND approval_status = 1', [bookId]);
     if (!source.rowCount) return null;
     const candidates = await client.query(
       `SELECT id, owner_user_id
        FROM books
        WHERE canonical_key = $1
          AND status = 0
+         AND approval_status = 1
          AND owner_user_id <> $2
        FOR UPDATE`,
       [source.rows[0].canonical_key, requesterUserId],
@@ -309,5 +348,5 @@ module.exports = {
   listCategories, createCategory, listBooks, getBookById, createBook, updateBook,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
-  createExtension, resolveExtension,
+  createExtension, resolveExtension, listPendingApprovals, reviewActivation, reviewBook,
 };

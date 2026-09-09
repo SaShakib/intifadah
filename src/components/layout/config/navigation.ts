@@ -3,6 +3,7 @@ import type { NavItem } from './types';
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: '/admin/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'ইনতিফাদাহ সদস্য' },
   { href: '/books', label: 'বইঘর', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
+  { href: '/admin/books-approvals', label: 'বইঘর অনুমোদন', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
   { href: '/admin/dashboard', label: 'ড্যাশবোর্ড', icon: 'layout-dashboard', section: 'প্রধান মেনু' },
   { href: '/admin/fund-collection', label: 'ফান্ড / কালেকশন', icon: 'circle-dollar-sign', section: 'প্রধান মেনু' },
   { href: '/admin/loans', label: 'ঋণ বিতরণ', icon: 'hand-coins', section: 'প্রধান মেনু' },

@@ -38,6 +38,11 @@ async function requireActivation(userId) {
     error.statusCode = 403;
     throw error;
   }
+  if (Number(profile.approval_status) !== 1) {
+    const error = new Error('Your Book House activation is waiting for approval');
+    error.statusCode = 403;
+    throw error;
+  }
   return profile;
 }
 
@@ -57,6 +62,12 @@ async function activateBooks(userId, input) {
     educationDetail: occupationType === 'student' ? cleanText(input.educationDetail, 'educationDetail', 80, false) : null,
     professionDetail: occupationType !== 'student' ? cleanText(input.professionDetail, 'professionDetail', 180) : null,
   });
+  await notificationsRepository.createForRoleKeys({
+    roleKeys: ['super_admin', 'admin', 'manager'],
+    notifType: 30,
+    payloadJson: { event: 'book_activation_submitted', userId, url: '/admin/books-approvals' },
+    excludeUserId: userId,
+  });
   return profile;
 }
 
@@ -69,11 +80,31 @@ async function addBook(userId, input) {
   await requireActivation(userId);
   const book = await booksRepository.createBook({ ownerUserId: userId, ...bookInput(input) });
   await notificationsRepository.createForRoleKeys({
-    roleKeys: ['super_admin', 'admin'],
+    roleKeys: ['super_admin', 'admin', 'manager'],
     notifType: 30,
-    payloadJson: { event: 'book_added', bookId: book.id, title: book.title, url: `/books/${book.id}` },
+    payloadJson: { event: 'book_approval_submitted', bookId: book.id, title: book.title, url: '/admin/books-approvals' },
     excludeUserId: userId,
   });
+  return book;
+}
+
+async function listBookApprovals() {
+  return booksRepository.listPendingApprovals();
+}
+
+async function reviewBookActivation(actorUserId, userId, input) {
+  const approvalStatus = input.approved === true ? 1 : 2;
+  const profile = await booksRepository.reviewActivation({ userId, approvalStatus, reviewerUserId: actorUserId, reviewNote: cleanText(input.reviewNote, 'reviewNote', 500, false) });
+  if (!profile) throw badRequest('Activation request is no longer pending');
+  await notificationsRepository.createForUser({ userId, notifType: 30, payloadJson: { event: approvalStatus === 1 ? 'book_activation_approved' : 'book_activation_rejected', url: '/books' } });
+  return profile;
+}
+
+async function reviewBookListing(actorUserId, bookId, input) {
+  const approvalStatus = input.approved === true ? 1 : 2;
+  const book = await booksRepository.reviewBook({ bookId, approvalStatus, reviewerUserId: actorUserId, reviewNote: cleanText(input.reviewNote, 'reviewNote', 500, false) });
+  if (!book) throw badRequest('Book listing is no longer pending');
+  await notificationsRepository.createForUser({ userId: book.owner_user_id, notifType: 30, payloadJson: { event: approvalStatus === 1 ? 'book_listing_approved' : 'book_listing_rejected', bookId, url: '/books' } });
   return book;
 }
 
@@ -218,5 +249,5 @@ function optimizedCoverUrl(url, width = 640) {
 module.exports = {
   requireActivation, activateBooks, createBookCategory, addBook, updateBook, requestBook,
   ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
-  requestExtension, ownerResolveExtension,
+  requestExtension, ownerResolveExtension, listBookApprovals, reviewBookActivation, reviewBookListing,
 };

@@ -4,12 +4,13 @@ export interface BookCategoryRow { id: number; category_name: string; created_at
 export interface BookRow {
   id: string | number; owner_user_id: number; category_id: number | null; title: string; author_name: string | null;
   book_price_minor: string | number; cover_url: string | null; cover_public_id: string | null; external_source: string | null;
-  external_volume_id: string | null; status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
+  external_volume_id: string | null; status: number; approval_status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
   total_copy_count: number; available_copy_count: number; estimated_available_on: string | null;
 }
 export interface BookActivationInput {
   village: string; wardNo: number; fatherName: string; occupationType: 'student' | 'working' | 'business';
   institutionName?: string; educationLevel?: string; educationDetail?: string; professionDetail?: string;
+  approval_status?: number;
 }
 export interface BookRequestRow {
   id: string | number; book_id: string | number; requester_user_id: number; requested_days: number; status: number;

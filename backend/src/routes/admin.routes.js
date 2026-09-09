@@ -8,6 +8,10 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireRoles('super_admin', 'admin', 'manager'));
 
+router.get('/books/approvals', adminController.booksApprovals);
+router.patch('/books/activations/:userId', adminController.booksActivationReview);
+router.patch('/books/:bookId/approval', adminController.booksListingReview);
+
 router.get('/dashboard/summary', requirePermission('dashboard', 'read'), adminController.dashboardSummary);
 
 router.get('/members', requirePermission('members', 'read'), adminController.membersList);

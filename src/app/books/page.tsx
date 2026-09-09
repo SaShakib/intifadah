@@ -78,6 +78,7 @@ export default function BooksPage() {
     if (!isAuthenticated) { router.push('/login?books=1'); return; }
     setSelectedBook(book ?? null);
     if (!activation) { setModal('activate'); return; }
+    if (Number(activation.approval_status) !== 1) { showToast('বইঘর ব্যবহারের আবেদন অনুমোদনের অপেক্ষায় আছে।'); return; }
     if (next === 'add') setBookStep(1);
     setModal(next);
   };
@@ -85,10 +86,9 @@ export default function BooksPage() {
     setBusy(true);
     try {
       await activateBooks(activationForm);
-      setActivation(activationForm);
-      if (!selectedBook) setBookStep(1);
-      setModal(selectedBook ? 'request' : 'add');
-      showToast('Books বিভাগ সক্রিয় হয়েছে।');
+      setActivation({ ...activationForm, approval_status: 0 });
+      setModal(null);
+      showToast('বইঘর ব্যবহারের আবেদন পাঠানো হয়েছে। অনুমোদনের পর বই যোগ বা ধার নিতে পারবেন।');
     } catch (error) { showToast(error instanceof Error ? error.message : 'তথ্য সংরক্ষণ হয়নি'); } finally { setBusy(false); }
   };
   const searchCover = () => {
@@ -116,7 +116,7 @@ export default function BooksPage() {
     try {
       await createBook({ ...bookForm, categoryId: bookForm.categoryId ? Number(bookForm.categoryId) : undefined, bookPriceMinor: Number(bookForm.bookPriceMinor) });
       setModal(null); setBookForm({ title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' }); setCoverSearchQuery('');
-      await load(); showToast('বই যোগ হয়েছে।');
+      await load(); showToast('বইয়ের অনুমোদনের অনুরোধ পাঠানো হয়েছে। অনুমোদনের পর এটি বইঘরে দেখা যাবে।');
     } catch (error) { showToast(error instanceof Error ? error.message : 'বই যোগ করা যায়নি'); } finally { setBusy(false); }
   };
   const submitRequest = async () => {

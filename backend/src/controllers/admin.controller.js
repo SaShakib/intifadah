@@ -1,4 +1,5 @@
 const { listModules } = require('../services/permission.service');
+const { listBookApprovals, reviewBookActivation, reviewBookListing } = require('../services/books.service');
 const {
   listRoles,
   listRolePermissionMatrix,
@@ -78,6 +79,18 @@ async function dashboardSummary(_req, res, next) {
   } catch (error) {
     next(error);
   }
+}
+
+async function booksApprovals(req, res, next) {
+  try { res.json(await listBookApprovals()); } catch (error) { next(error); }
+}
+
+async function booksActivationReview(req, res, next) {
+  try { res.json({ row: await reviewBookActivation(req.auth.userId, parseRequiredId(req.params.userId, 'userId'), req.body || {}) }); } catch (error) { next(error); }
+}
+
+async function booksListingReview(req, res, next) {
+  try { res.json({ row: await reviewBookListing(req.auth.userId, parseRequiredId(req.params.bookId, 'bookId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
 async function memberFinancialSummary(_req, res, next) {
@@ -490,6 +503,9 @@ async function updateUserRole(req, res, next) {
 }
 
 module.exports = {
+  booksApprovals,
+  booksActivationReview,
+  booksListingReview,
   dashboardSummary,
   memberFinancialSummary,
   membersList,
