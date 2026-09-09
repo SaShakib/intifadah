@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, CalendarDays, Check, ExternalLink, ImagePlus, Plus, Search, Send, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
+import { ProgrammableCoverSearch } from '@/components/books/ProgrammableCoverSearch';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +41,7 @@ export default function BooksPage() {
   const [bookForm, setBookForm] = useState({ title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' });
   const [newCategory, setNewCategory] = useState('');
   const [metadata, setMetadata] = useState<BookMetadataRow[]>([]);
+  const [coverSearchQuery, setCoverSearchQuery] = useState('');
   const [requestDays, setRequestDays] = useState(7);
   const [myRequests, setMyRequests] = useState<BookRequestRow[]>([]);
 
@@ -86,6 +88,7 @@ export default function BooksPage() {
   };
   const findMetadata = async () => {
     if (!bookForm.title.trim()) return;
+    setCoverSearchQuery(bookForm.title.trim());
     setBusy(true);
     try { setMetadata((await searchBookMetadata(bookForm.title)).rows); } catch { showToast('বইয়ের তথ্য খুঁজে পাওয়া যায়নি'); } finally { setBusy(false); }
   };
@@ -100,7 +103,7 @@ export default function BooksPage() {
     setBusy(true);
     try {
       await createBook({ ...bookForm, categoryId: bookForm.categoryId ? Number(bookForm.categoryId) : undefined, bookPriceMinor: Number(bookForm.bookPriceMinor) });
-      setModal(null); setBookForm({ title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' });
+      setModal(null); setBookForm({ title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' }); setCoverSearchQuery('');
       await load(); showToast('বই যোগ হয়েছে।');
     } catch (error) { showToast(error instanceof Error ? error.message : 'বই যোগ করা যায়নি'); } finally { setBusy(false); }
   };
@@ -156,7 +159,24 @@ export default function BooksPage() {
 
       <AppModal open={modal === 'request'} title="বই ধার নিন" onClose={() => setModal(null)} footer={<><Button variant="secondary" onClick={() => setModal(null)}>বাতিল</Button><Button disabled={busy || !selectedBook?.available_copy_count} onClick={() => void submitRequest()}><Send className="h-4 w-4" />অনুরোধ পাঠান</Button></>}><p className="font-bold">{selectedBook?.title}</p><p className="mt-2 text-sm text-muted">একই বইয়ের উপলব্ধ সব মালিককে অনুরোধ যাবে। যিনি আগে গ্রহণ করবেন, তাঁর কপিটিই আপনার জন্য সংরক্ষিত হবে।</p>{selectedBook && <p className="mt-2 flex items-center gap-1 text-xs text-brand"><Users className="h-3.5 w-3.5" />{selectedBook.available_copy_count} কপি উপলব্ধ</p>}<select value={requestDays} onChange={(event) => setRequestDays(Number(event.target.value))} className="mt-4 h-10 w-full rounded-lg border border-border px-3 text-sm">{[3, 7, 10, 15, 30].map((days) => <option key={days} value={days}>{days} দিন</option>)}</select></AppModal>
 
-      <AppModal open={modal === 'add'} title="বই যোগ করুন" onClose={() => setModal(null)} footer={<><Button variant="secondary" onClick={() => setModal(null)}>বাতিল</Button><Button disabled={busy} onClick={() => void submitBook()}><Check className="h-4 w-4" />বই যোগ করুন</Button></>}><div className="space-y-3"><div className="flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} placeholder="বইয়ের নাম" /><Button variant="secondary" disabled={busy} onClick={() => void findMetadata()}><Search className="h-4 w-4" />খুঁজুন</Button></div>{bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}{metadata.length > 0 && <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border p-2">{metadata.map((item) => <button type="button" key={`${item.source}-${item.id}`} onClick={() => setBookForm({ ...bookForm, title: item.title, authorName: item.authorName, coverUrl: item.coverUrl || '', externalSource: item.source, externalVolumeId: item.id })} className="flex w-full items-center gap-2 rounded p-1 text-left hover:bg-surface-2">{item.coverUrl && <Image src={item.coverUrl} alt="" width={28} height={40} className="h-10 w-7 object-cover" unoptimized />}<span className="text-sm"><strong>{item.title}</strong><br />{item.authorName}</span></button>)}</div>}<Input value={bookForm.authorName} onChange={(event) => setBookForm({ ...bookForm, authorName: event.target.value })} placeholder="লেখকের নাম" /><Input value={bookForm.searchAliases} onChange={(event) => setBookForm({ ...bookForm, searchAliases: event.target.value })} placeholder="বিকল্প নাম / বানান (কমা দিয়ে)" /><Input type="number" value={bookForm.bookPriceMinor} onChange={(event) => setBookForm({ ...bookForm, bookPriceMinor: event.target.value })} placeholder="বইয়ের মূল্য (হারালে প্রযোজ্য)" /><select value={bookForm.categoryId} onChange={(event) => setBookForm({ ...bookForm, categoryId: event.target.value })} className="h-10 w-full rounded-lg border border-border px-3 text-sm"><option value="">বিভাগ নির্বাচন করুন</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select><div className="flex gap-2"><Input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="নতুন বিভাগ" /><Button variant="secondary" onClick={() => void createCategoryInline()}><Plus className="h-4 w-4" /></Button></div><Input value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="কভারের সরাসরি image URL" /><p className="text-xs text-muted">Google Images থেকে ছবির সরাসরি লিংক কপি করে এখানে দিন, অথবা নিচে কভার আপলোড করুন।</p><label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm"><ImagePlus className="h-4 w-4" />কভার আপলোড<input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); showToast('WebP কভার আপলোড হয়েছে'); } catch (error) { showToast(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setBusy(false); } }} /></label>{bookForm.coverUrl && <Image src={bookForm.coverUrl} alt="কভার" width={80} height={110} className="h-28 w-20 object-cover" unoptimized />}<textarea value={bookForm.description} onChange={(event) => setBookForm({ ...bookForm, description: event.target.value })} className="h-20 w-full rounded-lg border border-border p-3 text-sm" placeholder="সংক্ষিপ্ত বিবরণ" /></div></AppModal>
+      <AppModal open={modal === 'add'} title="বই যোগ করুন" onClose={() => setModal(null)} className="max-w-3xl" footer={<><Button variant="secondary" onClick={() => setModal(null)}>বাতিল</Button><Button disabled={busy} onClick={() => void submitBook()}><Check className="h-4 w-4" />বই যোগ করুন</Button></>}>
+        <div className="space-y-3">
+          <div className="flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} placeholder="বইয়ের নাম" /><Button variant="secondary" disabled={busy} onClick={() => void findMetadata()}><Search className="h-4 w-4" />খুঁজুন</Button></div>
+          {coverSearchQuery && <ProgrammableCoverSearch query={coverSearchQuery} />}
+          {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
+          {metadata.length > 0 && <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border p-2">{metadata.map((item) => <button type="button" key={`${item.source}-${item.id}`} onClick={() => setBookForm({ ...bookForm, title: item.title, authorName: item.authorName, coverUrl: item.coverUrl || '', externalSource: item.source, externalVolumeId: item.id })} className="flex w-full items-center gap-2 rounded p-1 text-left hover:bg-surface-2">{item.coverUrl && <Image src={item.coverUrl} alt="" width={28} height={40} className="h-10 w-7 object-cover" unoptimized />}<span className="text-sm"><strong>{item.title}</strong><br />{item.authorName}</span></button>)}</div>}
+          <Input value={bookForm.authorName} onChange={(event) => setBookForm({ ...bookForm, authorName: event.target.value })} placeholder="লেখকের নাম" />
+          <Input value={bookForm.searchAliases} onChange={(event) => setBookForm({ ...bookForm, searchAliases: event.target.value })} placeholder="বিকল্প নাম / বানান (কমা দিয়ে)" />
+          <Input type="number" value={bookForm.bookPriceMinor} onChange={(event) => setBookForm({ ...bookForm, bookPriceMinor: event.target.value })} placeholder="বইয়ের মূল্য (হারালে প্রযোজ্য)" />
+          <select value={bookForm.categoryId} onChange={(event) => setBookForm({ ...bookForm, categoryId: event.target.value })} className="h-10 w-full rounded-lg border border-border px-3 text-sm"><option value="">বিভাগ নির্বাচন করুন</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select>
+          <div className="flex gap-2"><Input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="নতুন বিভাগ" /><Button variant="secondary" onClick={() => void createCategoryInline()}><Plus className="h-4 w-4" /></Button></div>
+          <Input value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="কভারের সরাসরি image URL" />
+          <p className="text-xs text-muted">Google ফলাফল থেকে ছবির address কপি করে এখানে paste করুন, অথবা নিচে কভার আপলোড করুন।</p>
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm"><ImagePlus className="h-4 w-4" />কভার আপলোড<input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); showToast('WebP কভার আপলোড হয়েছে'); } catch (error) { showToast(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setBusy(false); } }} /></label>
+          {bookForm.coverUrl && <Image src={bookForm.coverUrl} alt="কভার" width={80} height={110} className="h-28 w-20 object-cover" unoptimized />}
+          <textarea value={bookForm.description} onChange={(event) => setBookForm({ ...bookForm, description: event.target.value })} className="h-20 w-full rounded-lg border border-border p-3 text-sm" placeholder="সংক্ষিপ্ত বিবরণ" />
+        </div>
+      </AppModal>
       <AppToast message={toast} />
     </main>
   );

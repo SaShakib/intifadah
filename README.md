@@ -8,6 +8,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=<replace_google_oauth_client_id>
 NEXT_PUBLIC_PUSHER_KEY=<replace_pusher_key>
 NEXT_PUBLIC_PUSHER_CLUSTER=ap1
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=<replace_vapid_public_key>
+NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID=<optional_programmable_search_engine_id>
 ```
 
 Run backend and frontend:
