@@ -3,7 +3,7 @@ const { TX_STATUS, TX_TYPE, CATEGORY_TYPE } = require('../../config/domain');
 
 async function listSubscriptions(userId) {
   const res = await query(
-    `SELECT cs.category_id, cs.is_active, cs.subscribed_at, cs.last_due_on
+    `SELECT cs.category_id, cs.is_active, cs.subscribed_at, cs.last_due_on, cs.amount_override_minor
      FROM category_subscriptions cs
      WHERE cs.user_id = $1
      ORDER BY cs.category_id`,
@@ -12,20 +12,20 @@ async function listSubscriptions(userId) {
   return res.rows;
 }
 
-async function setSubscription({ userId, categoryId, isActive }) {
+async function setSubscription({ userId, categoryId, isActive, amountMinor }) {
   const res = await query(
-    `INSERT INTO category_subscriptions (user_id, category_id, is_active)
-     SELECT $1, c.id, $3
+    `INSERT INTO category_subscriptions (user_id, category_id, is_active, amount_override_minor)
+     SELECT $1, c.id, $3, $4
      FROM categories c
      WHERE c.id = $2
        AND c.is_active = TRUE
-       AND c.category_type IN ($4, $5)
-       AND c.is_amount_variable = FALSE
-       AND c.amount_fixed > 0
+       AND c.category_type IN ($5, $6)
+       AND ($3 = FALSE OR (c.is_amount_variable = FALSE AND c.amount_fixed > 0) OR (c.is_amount_variable = TRUE AND $4 > 0))
      ON CONFLICT (category_id, user_id)
-       DO UPDATE SET is_active = EXCLUDED.is_active
-     RETURNING id, user_id, category_id, is_active, subscribed_at, last_due_on`,
-    [userId, categoryId, isActive, CATEGORY_TYPE.SAVINGS, CATEGORY_TYPE.DONATION],
+       DO UPDATE SET is_active = EXCLUDED.is_active,
+         amount_override_minor = COALESCE(EXCLUDED.amount_override_minor, category_subscriptions.amount_override_minor)
+     RETURNING id, user_id, category_id, is_active, subscribed_at, last_due_on, amount_override_minor`,
+    [userId, categoryId, isActive, amountMinor || null, CATEGORY_TYPE.SAVINGS, CATEGORY_TYPE.DONATION],
   );
   return res.rows[0] || null;
 }
@@ -33,7 +33,7 @@ async function setSubscription({ userId, categoryId, isActive }) {
 async function listCategorySubscribers(categoryId) {
   const res = await query(
     `SELECT u.id AS user_id, u.full_name, u.mobile, u.email,
-       COALESCE(cs.is_active, FALSE) AS is_active, cs.subscribed_at, cs.last_due_on
+       COALESCE(cs.is_active, FALSE) AS is_active, cs.subscribed_at, cs.last_due_on, cs.amount_override_minor
      FROM app_users u
      LEFT JOIN category_subscriptions cs ON cs.user_id = u.id AND cs.category_id = $1
      WHERE u.user_kind = 1 AND u.is_active = TRUE
@@ -69,7 +69,7 @@ async function createDueTransactions({ dueOn, subscriptionIds } = {}) {
     const values = [CATEGORY_TYPE.SAVINGS, CATEGORY_TYPE.DONATION];
     const conditions = [
       'cs.is_active = TRUE', 'c.is_active = TRUE', 'c.category_type IN ($1, $2)',
-      'c.is_amount_variable = FALSE', 'c.amount_fixed > 0', 'u.is_active = TRUE',
+      'COALESCE(cs.amount_override_minor, c.amount_fixed) > 0', 'u.is_active = TRUE',
     ];
     if (subscriptionIds?.length) {
       values.push(subscriptionIds);
@@ -86,6 +86,8 @@ async function createDueTransactions({ dueOn, subscriptionIds } = {}) {
         c.recurrence_type,
         c.due_interval_days,
         c.amount_fixed,
+        cs.amount_override_minor,
+        COALESCE(cs.amount_override_minor, c.amount_fixed) AS amount_minor,
         u.full_name,
         u.email
        FROM category_subscriptions cs
@@ -109,7 +111,7 @@ async function createDueTransactions({ dueOn, subscriptionIds } = {}) {
           TX_STATUS.PENDING,
           subscription.user_id,
           subscription.category_id,
-          subscription.amount_fixed,
+          subscription.amount_minor,
           dueOn,
           `${subscription.category_name} due for ${dueOn}`,
           JSON.stringify({ event: 'scheduled_category_due', subscriptionId: subscription.subscription_id, dueOn }),

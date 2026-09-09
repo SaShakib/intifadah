@@ -25,7 +25,7 @@ async function deliverSavingsDues(rows) {
       categoryId: row.category_id,
       categoryName: row.category_name,
       categoryType: Number(row.category_type),
-      amountMinor: Number(row.amount_fixed),
+      amountMinor: Number(row.amount_minor),
       dueOn: row.due_on,
       url: '/user/transactions',
     },
@@ -37,7 +37,7 @@ async function deliverSavingsDues(rows) {
       fullName: row.full_name,
       categoryName: row.category_name,
       categoryType: Number(row.category_type),
-      amountMinor: row.amount_fixed,
+      amountMinor: row.amount_minor,
       dueOn: row.due_on,
     })));
   return {
@@ -59,10 +59,21 @@ async function listMySavingsSubscriptions(userId) {
   return savingsDuesRepository.listSubscriptions(userId);
 }
 
-async function setCategorySubscription(userId, categoryId, isActive) {
-  const subscription = await savingsDuesRepository.setSubscription({ userId, categoryId, isActive });
+function optionalPositiveAmount(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const amount = Number(value);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    const error = new Error('Subscription amount must be a positive whole number');
+    error.statusCode = 400;
+    throw error;
+  }
+  return amount;
+}
+
+async function setCategorySubscription(userId, categoryId, isActive, amountMinor) {
+  const subscription = await savingsDuesRepository.setSubscription({ userId, categoryId, isActive, amountMinor: optionalPositiveAmount(amountMinor) });
   if (!subscription) {
-    const error = new Error('Only active fixed-amount savings or donation categories can be subscribed to');
+    const error = new Error('Choose an amount for variable categories, or select an active donation or savings category');
     error.statusCode = 400;
     throw error;
   }
@@ -77,7 +88,7 @@ async function listCategorySubscriptions(categoryId) {
   return savingsDuesRepository.listCategorySubscribers(categoryId);
 }
 
-async function setCategorySubscriptionsForInternalMembers(categoryId, userIds, isActive) {
+async function setCategorySubscriptionsForInternalMembers(categoryId, userIds, isActive, amountMinor) {
   const uniqueUserIds = [...new Set((Array.isArray(userIds) ? userIds : []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
   if (!uniqueUserIds.length) {
     const error = new Error('Select at least one internal member');
@@ -91,7 +102,7 @@ async function setCategorySubscriptionsForInternalMembers(categoryId, userIds, i
     throw error;
   }
   const results = [];
-  for (const userId of eligibleIds) results.push(await setCategorySubscription(userId, categoryId, isActive));
+  for (const userId of eligibleIds) results.push(await setCategorySubscription(userId, categoryId, isActive, amountMinor));
   return { updated: results.length, created: results.reduce((sum, result) => sum + result.dueResult.created, 0), results };
 }
 

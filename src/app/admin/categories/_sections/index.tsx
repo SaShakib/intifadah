@@ -110,6 +110,7 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
   const [subscriberSearch, setSubscriberSearch] = useState('');
   const [loadingSubscribers, setLoadingSubscribers] = useState(false);
   const [savingSubscribers, setSavingSubscribers] = useState(false);
+  const [subscriptionAmount, setSubscriptionAmount] = useState('');
   const showToast = (message: string) => {
     setModal(null);
     setToast(message);
@@ -132,12 +133,12 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
   const canSubscribeMembers = (category: Category) => (
     canManageSubscribers
     && (category.type === 'savings' || category.type === 'donation')
-    && !category.isVariable
-    && Boolean(category.amount)
+    && (category.isVariable || Boolean(category.amount))
   );
   const openSubscribers = async (category: Category) => {
     setSubscriberCategory(category);
     setSubscriberSearch('');
+    setSubscriptionAmount('');
     setSelectedSubscriberIds(new Set());
     setLoadingSubscribers(true);
     try {
@@ -163,7 +164,7 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
     }
     setSavingSubscribers(true);
     try {
-      const result = await updateAdminCategorySubscribers(subscriberCategory.id, [...selectedSubscriberIds], isActive);
+      const result = await updateAdminCategorySubscribers(subscriberCategory.id, [...selectedSubscriberIds], isActive, isActive && subscriberCategory.isVariable ? Number(subscriptionAmount) : undefined);
       setSubscribers((current) => current.map((member) => selectedSubscriberIds.has(member.user_id) ? { ...member, is_active: isActive } : member));
       setSelectedSubscriberIds(new Set());
       setToast(isActive ? `${result.updated} জন সদস্য সাবস্ক্রাইব হয়েছেন। ${result.created}টি আলাদা বকেয়া তৈরি হয়েছে।` : `${result.updated} জনের সাবস্ক্রিপশন বন্ধ হয়েছে।`);
@@ -295,10 +296,11 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
         title={subscriberCategory ? `${subscriberCategory.name}: সদস্য সাবস্ক্রিপশন` : 'সদস্য সাবস্ক্রিপশন'}
         onClose={() => setSubscriberCategory(null)}
         className="max-w-2xl"
-        footer={<><Button variant="secondary" disabled={savingSubscribers} onClick={() => setSubscriberCategory(null)}>মডাল বন্ধ করুন</Button><Button variant="secondary" disabled={savingSubscribers || !selectedSubscriberIds.size} onClick={() => void applySubscribers(false)}>সাবস্ক্রিপশন বন্ধ করুন</Button><Button disabled={savingSubscribers || !selectedSubscriberIds.size} onClick={() => void applySubscribers(true)}>{savingSubscribers ? 'সংরক্ষণ হচ্ছে...' : 'নির্বাচিতদের সাবস্ক্রাইব করুন'}</Button></>}
+        footer={<><Button variant="secondary" disabled={savingSubscribers} onClick={() => setSubscriberCategory(null)}>মডাল বন্ধ করুন</Button><Button variant="secondary" disabled={savingSubscribers || !selectedSubscriberIds.size} onClick={() => void applySubscribers(false)}>সাবস্ক্রিপশন বন্ধ করুন</Button><Button disabled={savingSubscribers || !selectedSubscriberIds.size || (subscriberCategory?.isVariable && (!Number(subscriptionAmount) || Number(subscriptionAmount) < 1))} onClick={() => void applySubscribers(true)}>{savingSubscribers ? 'সংরক্ষণ হচ্ছে...' : 'নির্বাচিতদের সাবস্ক্রাইব করুন'}</Button></>}
       >
         <div className="space-y-4">
           <p className="text-sm leading-6 text-fg-2">শুধু সক্রিয় ইনতিফাদাহ সদস্যদের নির্বাচন করুন। প্রত্যেকের জন্য আলাদা বকেয়া, ইন-অ্যাপ নোটিফিকেশন এবং ইমেইল তৈরি হবে।</p>
+          {subscriberCategory?.isVariable && <label className="block text-sm font-semibold text-fg">নির্বাচিত প্রত্যেক সদস্যের পরিমাণ <Input className="mt-1" type="number" min="1" value={subscriptionAmount} onChange={(event) => setSubscriptionAmount(event.target.value)} placeholder="যেমন: ৫০" /></label>}
           <Input value={subscriberSearch} onChange={(event) => setSubscriberSearch(event.target.value)} placeholder="নাম বা মোবাইল দিয়ে সদস্য খুঁজুন" />
           {loadingSubscribers ? <p className="py-8 text-center text-sm text-muted">সদস্য লোড হচ্ছে...</p> : <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
             {subscribers.filter((member) => `${member.full_name} ${member.mobile}`.toLowerCase().includes(subscriberSearch.toLowerCase())).map((member) => <label key={member.user_id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-white p-3">

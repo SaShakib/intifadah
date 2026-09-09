@@ -52,8 +52,8 @@ export default function UserCategoriesPage() {
       <UserCategoriesMiddleSection
         categories={data.categories}
         subscribedCategoryIds={data.subscribedCategoryIds}
-        onSubscriptionChange={async (categoryId, isActive) => {
-          await updateUserSavingsSubscription(categoryId, isActive);
+        onSubscriptionChange={async (categoryId, isActive, amountMinor) => {
+          await updateUserSavingsSubscription(categoryId, isActive, amountMinor);
           await refetch();
         }}
       />

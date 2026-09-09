@@ -46,10 +46,10 @@ export async function getUserSavingsSubscriptions() {
   return data.rows;
 }
 
-export async function updateUserSavingsSubscription(categoryId: string | number, isActive: boolean) {
+export async function updateUserSavingsSubscription(categoryId: string | number, isActive: boolean, amountMinor?: number) {
   const data = await apiRequest<ApiDataResponse<{ subscription: ApiSavingsSubscriptionRow }>>(`/user/categories/${categoryId}/subscription`, {
     method: 'PUT',
-    body: JSON.stringify({ isActive }),
+    body: JSON.stringify({ isActive, amountMinor }),
   });
   return data.data;
 }

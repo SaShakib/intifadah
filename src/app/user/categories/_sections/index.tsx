@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { BellOff, BellRing } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
 import { Button } from '@/components/base/Button';
+import { Input } from '@/components/base/Input';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
+import { AppModal } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { USER_CATEGORY_METRICS, USER_CATEGORY_ROWS } from './constants';
@@ -33,7 +35,7 @@ interface UserCategoriesTopSectionProps {
 interface UserCategoriesMiddleSectionProps {
   categories?: typeof USER_CATEGORY_ROWS;
   subscribedCategoryIds?: string[];
-  onSubscriptionChange?: (categoryId: string, isActive: boolean) => Promise<void>;
+  onSubscriptionChange?: (categoryId: string, isActive: boolean, amountMinor?: number) => Promise<void>;
 }
 
 export function UserCategoriesTopSection({ metrics = USER_CATEGORY_METRICS }: UserCategoriesTopSectionProps) {
@@ -51,6 +53,19 @@ export function UserCategoriesTopSection({ metrics = USER_CATEGORY_METRICS }: Us
 
 export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS, subscribedCategoryIds = [], onSubscriptionChange }: UserCategoriesMiddleSectionProps) {
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
+  const [variableCategory, setVariableCategory] = useState<(typeof USER_CATEGORY_ROWS)[number] | null>(null);
+  const [variableAmount, setVariableAmount] = useState('');
+  const subscribeVariableCategory = async () => {
+    if (!variableCategory || !Number(variableAmount) || Number(variableAmount) < 1) return;
+    setSavingCategoryId(variableCategory.id);
+    try {
+      await onSubscriptionChange?.(variableCategory.id, true, Number(variableAmount));
+      setVariableCategory(null);
+      setVariableAmount('');
+    } finally {
+      setSavingCategoryId(null);
+    }
+  };
   const rows = categories.map((category) => ({
     id: category.id,
     tabValue: category.type,
@@ -62,13 +77,17 @@ export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS, s
       TYPE_LABEL[category.type],
       RECUR_LABEL[category.recurrence],
       category.isVariable ? 'পরিবর্তনশীল' : category.amount ? `৳${category.amount}` : '-',
-      (category.type === 'savings' || category.type === 'donation') && !category.isVariable && category.amount ? (
+      (category.type === 'savings' || category.type === 'donation') && (category.isVariable || category.amount) ? (
         <Button
           key={`${category.id}-subscription`}
           size="sm"
           variant={subscribedCategoryIds.includes(category.id) ? 'secondary' : 'primary'}
           disabled={savingCategoryId === category.id}
           onClick={async () => {
+            if (!subscribedCategoryIds.includes(category.id) && category.isVariable) {
+              setVariableCategory(category);
+              return;
+            }
             setSavingCategoryId(category.id);
             try {
               await onSubscriptionChange?.(category.id, !subscribedCategoryIds.includes(category.id));
@@ -108,6 +127,10 @@ export function UserCategoriesMiddleSection({ categories = USER_CATEGORY_ROWS, s
           searchPlaceholder="খাত, ধরণ বা নিয়ম..."
         />
       </Card>
+      <AppModal open={Boolean(variableCategory)} title="আপনার মাসিক/নিয়মিত পরিমাণ দিন" onClose={() => setVariableCategory(null)} footer={<><Button variant="secondary" onClick={() => setVariableCategory(null)}>বাতিল</Button><Button disabled={!Number(variableAmount) || Number(variableAmount) < 1 || savingCategoryId === variableCategory?.id} onClick={() => void subscribeVariableCategory()}>{savingCategoryId === variableCategory?.id ? 'সংরক্ষণ হচ্ছে...' : 'সাবস্ক্রাইব করুন'}</Button></>}>
+        <p className="text-sm leading-6 text-fg-2"><strong>{variableCategory?.name}</strong> পরিবর্তনশীল পরিমাণের খাত। আপনার জন্য প্রতিবার যে পরিমাণের বকেয়া তৈরি হবে, সেটি লিখুন।</p>
+        <label className="mt-4 block text-sm font-semibold text-fg">পরিমাণ <Input className="mt-1" type="number" min="1" value={variableAmount} onChange={(event) => setVariableAmount(event.target.value)} placeholder="যেমন: ৫০" /></label>
+      </AppModal>
     </section>
   );
 }

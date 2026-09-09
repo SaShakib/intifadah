@@ -201,7 +201,7 @@ async function categorySubscribers(req, res, next) {
 async function categorySubscribersUpdate(req, res, next) {
   try {
     const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
-    const data = await setCategorySubscriptionsForInternalMembers(categoryId, req.body?.userIds, req.body?.isActive !== false);
+    const data = await setCategorySubscriptionsForInternalMembers(categoryId, req.body?.userIds, req.body?.isActive !== false, req.body?.amountMinor);
     res.json({ data });
   } catch (error) {
     next(error);

@@ -97,7 +97,7 @@ async function savingsSubscriptions(req, res, next) {
 async function updateSavingsSubscription(req, res, next) {
   try {
     const categoryId = parseRequiredId(req.params.categoryId, 'categoryId');
-    const data = await setMySavingsSubscription(req.auth.userId, categoryId, req.body?.isActive !== false);
+    const data = await setMySavingsSubscription(req.auth.userId, categoryId, req.body?.isActive !== false, req.body?.amountMinor);
     res.json({ data });
   } catch (error) {
     next(error);

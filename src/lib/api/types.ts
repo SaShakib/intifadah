@@ -117,6 +117,7 @@ export interface ApiSavingsSubscriptionRow {
   is_active: boolean;
   subscribed_at: string;
   last_due_on: string | null;
+  amount_override_minor?: string | number | null;
 }
 
 export interface ApiCategorySubscriberRow {
@@ -127,6 +128,7 @@ export interface ApiCategorySubscriberRow {
   is_active: boolean;
   subscribed_at: string | null;
   last_due_on: string | null;
+  amount_override_minor?: string | number | null;
 }
 
 export interface ApiTransactionRow {

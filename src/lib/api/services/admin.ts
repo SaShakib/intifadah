@@ -100,10 +100,10 @@ export async function getAdminCategorySubscribers(categoryId: string | number) {
   return data.rows;
 }
 
-export async function updateAdminCategorySubscribers(categoryId: string | number, userIds: Array<string | number>, isActive: boolean) {
+export async function updateAdminCategorySubscribers(categoryId: string | number, userIds: Array<string | number>, isActive: boolean, amountMinor?: number) {
   const data = await apiRequest<ApiDataResponse<{ updated: number; created: number }>>(`/admin/categories/${categoryId}/subscribers`, {
     method: 'PUT',
-    body: JSON.stringify({ userIds, isActive }),
+    body: JSON.stringify({ userIds, isActive, amountMinor }),
   });
   return data.data;
 }
