@@ -67,10 +67,20 @@ async function createBookCategory(userId, input) {
 
 async function addBook(userId, input) {
   await requireActivation(userId);
+  const book = await booksRepository.createBook({ ownerUserId: userId, ...bookInput(input) });
+  await notificationsRepository.createForRoleKeys({
+    roleKeys: ['super_admin', 'admin'],
+    notifType: 30,
+    payloadJson: { event: 'book_added', bookId: book.id, title: book.title, url: `/books/${book.id}` },
+    excludeUserId: userId,
+  });
+  return book;
+}
+
+function bookInput(input) {
   const categoryId = input.categoryId ? parsePositive(input.categoryId, 'categoryId') : null;
   const searchAliases = cleanText(input.searchAliases, 'searchAliases', 600, false);
-  const book = await booksRepository.createBook({
-    ownerUserId: userId,
+  return {
     categoryId,
     title: cleanText(input.title, 'title', 240),
     authorName: cleanText(input.authorName, 'authorName', 180, false),
@@ -82,13 +92,17 @@ async function addBook(userId, input) {
     description: cleanText(input.description, 'description', 3000, false),
     canonicalKey: normalizeBookKey(input.title),
     searchText: [input.title, input.authorName, searchAliases].filter(Boolean).join(' ').trim(),
-  });
-  await notificationsRepository.createForRoleKeys({
-    roleKeys: ['super_admin', 'admin'],
-    notifType: 30,
-    payloadJson: { event: 'book_added', bookId: book.id, title: book.title, url: `/books/${book.id}` },
-    excludeUserId: userId,
-  });
+  };
+}
+
+async function updateBook(userId, bookId, input) {
+  await requireActivation(userId);
+  const book = await booksRepository.updateBook({ bookId, ownerUserId: userId, ...bookInput(input) });
+  if (!book) {
+    const error = new Error('Only the book owner can edit this book');
+    error.statusCode = 403;
+    throw error;
+  }
   return book;
 }
 
@@ -202,7 +216,7 @@ function optimizedCoverUrl(url, width = 640) {
 }
 
 module.exports = {
-  requireActivation, activateBooks, createBookCategory, addBook, requestBook,
+  requireActivation, activateBooks, createBookCategory, addBook, updateBook, requestBook,
   ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
   requestExtension, ownerResolveExtension,
 };

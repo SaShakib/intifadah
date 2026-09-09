@@ -105,6 +105,22 @@ async function createBook(input) {
   return getBookById(res.rows[0].id);
 }
 
+async function updateBook(input) {
+  const res = await query(
+    `UPDATE books SET
+      category_id = $3, title = $4, author_name = $5, canonical_key = $6, search_text = $7,
+      book_price_minor = $8, cover_url = $9, cover_public_id = $10, external_source = $11,
+      external_volume_id = $12, description = $13, updated_at = NOW()
+     WHERE id = $1 AND owner_user_id = $2
+     RETURNING id`,
+    [input.bookId, input.ownerUserId, input.categoryId || null, input.title, input.authorName || null,
+      input.canonicalKey, input.searchText, input.bookPriceMinor, input.coverUrl || null,
+      input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
+  );
+  if (!res.rowCount) return null;
+  return getBookById(res.rows[0].id);
+}
+
 async function getActivationProfile(userId) {
   const res = await query('SELECT * FROM book_activation_profiles WHERE user_id = $1', [userId]);
   return res.rows[0] || null;
@@ -290,7 +306,7 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, getBookById, createBook,
+  listCategories, createCategory, listBooks, getBookById, createBook, updateBook,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,

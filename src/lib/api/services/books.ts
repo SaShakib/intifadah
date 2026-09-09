@@ -28,6 +28,7 @@ export function getBookActivation() { return apiRequest<{ row: BookActivationInp
 export function activateBooks(input: BookActivationInput) { return apiRequest<{ row: BookActivationInput }>('/books/me/activation', { method: 'POST', body: JSON.stringify(input) }); }
 export function createBookCategory(categoryName: string) { return apiRequest<{ row: BookCategoryRow }>('/books/categories', { method: 'POST', body: JSON.stringify({ categoryName }) }); }
 export function createBook(input: Record<string, unknown>) { return apiRequest<{ row: BookRow }>('/books', { method: 'POST', body: JSON.stringify(input) }); }
+export function updateBook(bookId: string | number, input: Record<string, unknown>) { return apiRequest<{ row: BookRow }>(`/books/${bookId}`, { method: 'PATCH', body: JSON.stringify(input) }); }
 export function requestBook(bookId: string | number, requestedDays: number) { return apiRequest<{ row: { copiesNotified?: number } }>(`/books/${bookId}/requests`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }
 export function getMyBookRequests() { return apiRequest<{ rows: BookRequestRow[] }>('/books/me/requests'); }
 export function ownerBookRequestAction(requestId: string | number, action: 'accept' | 'reject' | 'given' | 'return_received', ownerNote?: string) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/owner`, { method: 'PATCH', body: JSON.stringify({ action, ownerNote }) }); }
