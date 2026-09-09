@@ -137,6 +137,38 @@ async function updateBook(userId, bookId, input) {
   return book;
 }
 
+async function deleteBook(actor, bookId) {
+  const canDeleteAnyBook = ['super_admin', 'admin'].includes(actor.roleKey);
+  const result = await booksRepository.archiveBook({
+    bookId,
+    actorUserId: actor.userId,
+    canDeleteAnyBook,
+  });
+  if (result.outcome === 'not_found') {
+    const error = new Error('Book not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (result.outcome === 'forbidden') {
+    const error = new Error('Only the book owner, an admin, or a super admin can delete this book');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (result.outcome === 'active_request') {
+    const error = new Error('This book has an active loan or request and cannot be deleted yet');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (result.ownerUserId !== actor.userId) {
+    await notificationsRepository.createForUser({
+      userId: result.ownerUserId,
+      notifType: 30,
+      payloadJson: { event: 'book_deleted_by_staff', bookId, url: '/books' },
+    });
+  }
+  return { deleted: true };
+}
+
 async function requestBook(userId, bookId, input) {
   await requireActivation(userId);
   const requestedDays = parsePositive(input.requestedDays, 'requestedDays');
@@ -247,7 +279,7 @@ function optimizedCoverUrl(url, width = 640) {
 }
 
 module.exports = {
-  requireActivation, activateBooks, createBookCategory, addBook, updateBook, requestBook,
+  requireActivation, activateBooks, createBookCategory, addBook, updateBook, deleteBook, requestBook,
   ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
   requestExtension, ownerResolveExtension, listBookApprovals, reviewBookActivation, reviewBookListing,
 };

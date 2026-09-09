@@ -4,6 +4,7 @@ const {
   createBookCategory,
   addBook,
   updateBook,
+  deleteBook,
   requestBook,
   ownerUpdateRequest,
   receiverConfirmRequest,
@@ -63,6 +64,10 @@ async function update(req, res, next) {
   try { res.json({ row: await updateBook(req.auth.userId, id(req.params.bookId, 'bookId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
+async function remove(req, res, next) {
+  try { res.json({ data: await deleteBook(req.auth, id(req.params.bookId, 'bookId')) }); } catch (error) { next(error); }
+}
+
 async function uploadSignature(_req, res, next) {
   try { res.json({ data: cloudinarySignature() }); } catch (error) { next(error); }
 }
@@ -91,4 +96,4 @@ async function resolveExtension(req, res, next) {
   try { res.json({ data: await ownerResolveExtension(req.auth.userId, id(req.params.extensionId, 'extensionId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
-module.exports = { categories, list, detail, activation, activate, createCategory, create, update, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension };
+module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension };

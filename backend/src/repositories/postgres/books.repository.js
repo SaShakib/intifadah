@@ -21,7 +21,9 @@ const BOOK_AVAILABILITY_JOIN = `
     LEFT JOIN book_requests active_request
       ON active_request.book_id = grouped.id
       AND active_request.status IN (3, 4, 5)
-    WHERE grouped.canonical_key = b.canonical_key AND grouped.approval_status = 1
+    WHERE grouped.canonical_key = b.canonical_key
+      AND grouped.approval_status = 1
+      AND grouped.deleted_at IS NULL
   ) availability ON TRUE`;
 
 async function listCategories() {
@@ -42,7 +44,7 @@ async function createCategory({ categoryName, userId }) {
 
 async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0 } = {}) {
   const values = [];
-  const where = ['b.approval_status = 1'];
+  const where = ['b.approval_status = 1', 'b.deleted_at IS NULL'];
   if (status !== null) {
     values.push(Number(status));
     where.push(`b.status = $${values.length}`);
@@ -86,7 +88,7 @@ async function getBookById(bookId, { includeUnapproved = false } = {}) {
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
      ${BOOK_AVAILABILITY_JOIN}
-     WHERE b.id = $1 ${includeUnapproved ? '' : 'AND b.approval_status = 1'}`,
+    WHERE b.id = $1 AND b.deleted_at IS NULL ${includeUnapproved ? '' : 'AND b.approval_status = 1'}`,
     [bookId],
   );
   return res.rows[0] || null;
@@ -111,7 +113,7 @@ async function updateBook(input) {
       category_id = $3, title = $4, author_name = $5, canonical_key = $6, search_text = $7,
       book_price_minor = $8, cover_url = $9, cover_public_id = $10, external_source = $11,
       external_volume_id = $12, description = $13, updated_at = NOW()
-     WHERE id = $1 AND owner_user_id = $2
+     WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL
      RETURNING id`,
     [input.bookId, input.ownerUserId, input.categoryId || null, input.title, input.authorName || null,
       input.canonicalKey, input.searchText, input.bookPriceMinor, input.coverUrl || null,
@@ -119,6 +121,35 @@ async function updateBook(input) {
   );
   if (!res.rowCount) return null;
   return getBookById(res.rows[0].id, { includeUnapproved: true });
+}
+
+async function archiveBook({ bookId, actorUserId, canDeleteAnyBook }) {
+  return withTransaction(async (client) => {
+    const found = await client.query(
+      `SELECT id, owner_user_id FROM books
+       WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [bookId],
+    );
+    const book = found.rows[0];
+    if (!book) return { outcome: 'not_found' };
+    if (Number(book.owner_user_id) !== Number(actorUserId) && !canDeleteAnyBook) return { outcome: 'forbidden' };
+
+    const activeRequest = await client.query(
+      `SELECT 1 FROM book_requests
+       WHERE book_id = $1 AND status IN (0, 1, 3, 4, 5)
+       LIMIT 1`,
+      [bookId],
+    );
+    if (activeRequest.rowCount) return { outcome: 'active_request' };
+
+    await client.query(
+      `UPDATE books
+       SET deleted_at = NOW(), deleted_by_user_id = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [bookId, actorUserId],
+    );
+    return { outcome: 'deleted', ownerUserId: Number(book.owner_user_id) };
+  });
 }
 
 async function getActivationProfile(userId) {
@@ -345,7 +376,7 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, getBookById, createBook, updateBook,
+  listCategories, createCategory, listBooks, getBookById, createBook, updateBook, archiveBook,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension, listPendingApprovals, reviewActivation, reviewBook,

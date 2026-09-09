@@ -16,6 +16,7 @@ router.post('/categories', booksController.createCategory);
 router.post('/upload-signature', booksController.uploadSignature);
 router.post('/', booksController.create);
 router.patch('/:bookId', booksController.update);
+router.delete('/:bookId', booksController.remove);
 router.post('/:bookId/requests', booksController.request);
 router.patch('/requests/:requestId/owner', booksController.ownerAction);
 router.patch('/requests/:requestId/received', booksController.received);
