@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { BookOpen, Eye, EyeOff, Smartphone, UserPlus } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Eye, EyeOff, Smartphone, UserPlus } from 'lucide-react';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { LOGIN_FEATURES } from './constants';
@@ -75,6 +75,11 @@ export function LoginMiddleSection({
 }: LoginMiddleSectionProps) {
   return (
     <section className="mx-auto w-full max-w-[400px]">
+      <Link href="/books" className="mb-8 flex items-center gap-3 rounded-lg border border-brand/25 bg-brand-light px-4 py-3 text-left transition hover:border-brand/45 hover:bg-brand-light/70">
+        <span className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-brand text-white"><BookOpen className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-fg">বইঘর দেখুন</span><span className="mt-0.5 block text-xs leading-5 text-fg-2">লগইন ছাড়াই বইয়ের তালিকা দেখতে পারবেন</span></span>
+        <ArrowUpRight className="h-4 w-4 flex-none text-brand" />
+      </Link>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-fg">স্বাগতম</h2>
         <p className="mt-1 text-sm text-muted">আপনার অ্যাকাউন্টে লগইন করুন</p>
@@ -147,7 +152,6 @@ export function LoginMiddleSection({
       </form>
 
       <div className="grid gap-2">
-        <Link href="/books"><Button type="button" variant="secondary" fullWidth><BookOpen className="h-4 w-4" />বইঘর দেখুন</Button></Link>
         <Button type="button" variant="secondary" fullWidth onClick={onRegister} disabled={loading}>
           <UserPlus className="h-4 w-4" />নতুন অ্যাকাউন্ট তৈরি করুন
         </Button>
