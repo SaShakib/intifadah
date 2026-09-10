@@ -60,7 +60,7 @@ export default function AdminQuranPage() {
     return { weekly, penaltyWeekly, penalties };
   }, [weekOffset]);
 
-  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { fromDate: '', toDate: '', rows: [] }, penaltyWeekly: { fromDate: '', toDate: '', rows: [] }, penalties: { fromDate: '', toDate: '', rows: [], totalPenaltyMinor: 0, totalMissedDays: 0 } }, [weekOffset], {
+  const { data, loading, error, refetch } = useApiQuery(loadReport, { weekly: { fromDate: '', toDate: '', rows: [] }, penaltyWeekly: { fromDate: '', toDate: '', rows: [] }, penalties: { fromDate: '', toDate: '', rows: [], totalPenaltyMinor: 0, totalMissedDays: 0, totalUnpaidPenaltyMinor: 0, totals: [], rates: { quran: 5, namaj: 5 } } }, [weekOffset], {
     cacheKey: `${queryKeys.admin.quranWeekly({ weekOffset })}:${queryKeys.admin.quranWeekly({ weekOffset: 1 })}:${queryKeys.admin.quranPenalties()}`,
     staleTimeMs: 30_000,
   });
@@ -186,16 +186,21 @@ export default function AdminQuranPage() {
 
   const penaltyRowsFor = (tracker: 'quran' | 'namaj') => {
     const penaltiesByUserId = new Map(data.penalties.rows.filter((row) => (row.tracker ?? 'quran') === tracker).map((row) => [row.user_id, row]));
+    const totalsByUserId = new Map(data.penalties.totals.filter((row) => row.tracker === tracker).map((row) => [row.user_id, row]));
     return data.penaltyWeekly.rows.map((member) => {
     const penalty = penaltiesByUserId.get(member.user_id);
+    const total = totalsByUserId.get(member.user_id);
     const doneDays = penaltyDays.filter((date) => tracker === 'quran' ? member.days?.[date]?.done : member.days?.[date]?.namajDone).length;
     const missedDays = penalty?.missed_days ?? Math.max(0, 7 - doneDays);
-    const penaltyAmount = toMinorNumber(penalty?.penalty_minor);
+    const appliedPenaltyAmount = penalty ? toMinorNumber(penalty.penalty_minor) : null;
+    const calculatedPenaltyAmount = missedDays * data.penalties.rates[tracker];
+    const totalPenaltyAmount = toMinorNumber(total?.total_penalty_minor);
+    const unpaidPenaltyAmount = toMinorNumber(total?.unpaid_penalty_minor);
 
     return {
       id: String(member.user_id),
       searchText: `${member.full_name} ${member.mobile}`,
-      sortValues: [member.full_name, doneDays, missedDays, penaltyAmount],
+      sortValues: [member.full_name, doneDays, missedDays, appliedPenaltyAmount ?? calculatedPenaltyAmount, unpaidPenaltyAmount, totalPenaltyAmount],
       cells: [
         <div key={`${member.user_id}-user`}>
           <p className="font-bold text-fg">{member.full_name}</p>
@@ -203,7 +208,9 @@ export default function AdminQuranPage() {
         </div>,
         `${doneDays}/7`,
         String(missedDays),
-        <span key={`${member.user_id}-amount`} className={penaltyAmount ? 'font-semibold text-danger tabular-nums' : 'font-semibold text-success tabular-nums'}>{formatCurrencyBn(penaltyAmount)}</span>,
+        <div key={`${member.user_id}-amount`}><span className={(appliedPenaltyAmount ?? calculatedPenaltyAmount) ? 'font-semibold text-danger tabular-nums' : 'font-semibold text-success tabular-nums'}>{formatCurrencyBn(appliedPenaltyAmount ?? calculatedPenaltyAmount)}</span><p className="text-[11px] text-muted">{appliedPenaltyAmount === null ? 'হিসাব, এখনও রান হয়নি' : 'আরোপিত'}</p></div>,
+        <span key={`${member.user_id}-unpaid`} className={unpaidPenaltyAmount ? 'font-semibold text-danger tabular-nums' : 'font-semibold text-success tabular-nums'}>{formatCurrencyBn(unpaidPenaltyAmount)}</span>,
+        <span key={`${member.user_id}-total`} className="font-semibold tabular-nums text-fg">{formatCurrencyBn(totalPenaltyAmount)}</span>,
         penalty?.transaction_id ? `#${penalty.transaction_id}` : '-',
       ],
     };
@@ -226,7 +233,7 @@ export default function AdminQuranPage() {
           <MetricCard label="সদস্য" value={String(data.weekly.rows.length)} hint="সক্রিয় ইনতিফাদাহ ব্যবহারকারী" />
           <MetricCard label="অংশগ্রহণ" value={String(completedUsers)} hint="এই সপ্তাহে অন্তত ১ দিন" />
           <MetricCard label="মোট Done" value={String(totalMarks)} hint={`${totalPages} পৃষ্ঠা / ${totalMinutes} মিনিট`} />
-          <MetricCard label="Penalty" value={formatCurrencyBn(data.penalties.totalPenaltyMinor)} hint={`${data.penalties.totalMissedDays} missed days (গত পূর্ণ সপ্তাহ)`} />
+          <MetricCard label="মোট বকেয়া penalty" value={formatCurrencyBn(data.penalties.totalUnpaidPenaltyMinor)} hint={`গত পূর্ণ সপ্তাহে ${formatCurrencyBn(data.penalties.totalPenaltyMinor)} · ${data.penalties.totalMissedDays} missed days`} />
         </div>
       </section>
 
@@ -293,9 +300,9 @@ export default function AdminQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="সদস্যভিত্তিক Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
+          <SectionHeader title="সদস্যভিত্তিক Quran penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর হিসাব। রান না হলে সপ্তাহের পরিমাণ সম্ভাব্য হিসেবে দেখানো হয়।`} />
           <DataTable
-            headers={['সদস্য', 'Done', 'Missed', 'Penalty', 'Transaction']}
+            headers={['সদস্য', 'Done', 'Missed', 'এই সপ্তাহ', 'মোট বকেয়া', 'মোট আরোপিত', 'Transaction']}
             rows={quranPenaltyRows}
             searchPlaceholder="সদস্য, ফোন বা তারিখ..."
             emptyMessage="এই ইন্টারভালে কোনো সদস্য পাওয়া যায়নি"
@@ -305,9 +312,9 @@ export default function AdminQuranPage() {
 
       <section>
         <Card>
-          <SectionHeader title="সদস্যভিত্তিক Namaj penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর মিসড দিনের হিসাব`} />
+          <SectionHeader title="সদস্যভিত্তিক Namaj penalty" subtitle={`${toBanglaDate(data.penalties.fromDate)} - ${toBanglaDate(data.penalties.toDate)} এর হিসাব। রান না হলে সপ্তাহের পরিমাণ সম্ভাব্য হিসেবে দেখানো হয়।`} />
           <DataTable
-            headers={['সদস্য', 'Done', 'Missed', 'Penalty', 'Transaction']}
+            headers={['সদস্য', 'Done', 'Missed', 'এই সপ্তাহ', 'মোট বকেয়া', 'মোট আরোপিত', 'Transaction']}
             rows={namajPenaltyRows}
             searchPlaceholder="সদস্য, ফোন বা তারিখ..."
             emptyMessage="এই ইন্টারভালে কোনো সদস্য পাওয়া যায়নি"

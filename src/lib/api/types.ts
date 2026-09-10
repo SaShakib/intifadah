@@ -330,12 +330,22 @@ export interface ApiQuranPenaltyRow {
   tracker?: 'quran' | 'namaj';
 }
 
+export interface ApiQuranPenaltyTotalRow {
+  tracker: 'quran' | 'namaj';
+  user_id: number;
+  total_penalty_minor: string | number;
+  unpaid_penalty_minor: string | number;
+}
+
 export interface ApiQuranPenaltyReportResponse {
   fromDate: string;
   toDate: string;
   rows: ApiQuranPenaltyRow[];
   totalPenaltyMinor: number;
   totalMissedDays: number;
+  totalUnpaidPenaltyMinor: number;
+  totals: ApiQuranPenaltyTotalRow[];
+  rates: { quran: number; namaj: number };
 }
 
 export interface ApiMyQuranPenaltyResponse {

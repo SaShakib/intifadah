@@ -354,9 +354,10 @@ async function getAdminPenaltyReport(filters = {}) {
   const range = filters.fromDate && filters.toDate
     ? { fromDate: filters.fromDate, toDate: filters.toDate }
     : lastCompletedWeekRange();
-  const [quranRows, namajRows] = await Promise.all([
+  const [quranRows, namajRows, totals] = await Promise.all([
     quranRepository.listPenalties({ ...filters, ...range, tracker: 'quran' }),
     quranRepository.listPenalties({ ...filters, ...range, tracker: 'namaj' }),
+    quranRepository.listPenaltyTotals(),
   ]);
   const rows = [
     ...quranRows.map((row) => ({ ...row, tracker: 'quran' })),
@@ -367,6 +368,12 @@ async function getAdminPenaltyReport(filters = {}) {
     rows,
     totalPenaltyMinor: rows.reduce((sum, row) => sum + Number(row.penalty_minor || 0), 0),
     totalMissedDays: rows.reduce((sum, row) => sum + Number(row.missed_days || 0), 0),
+    totalUnpaidPenaltyMinor: totals.reduce((sum, row) => sum + Number(row.unpaid_penalty_minor || 0), 0),
+    totals,
+    rates: {
+      quran: Number(env.quranPenaltyPerMissedDayMinor),
+      namaj: Number(env.namajPenaltyPerMissedDayMinor),
+    },
   };
 }
 

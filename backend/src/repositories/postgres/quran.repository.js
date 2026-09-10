@@ -246,6 +246,27 @@ async function listPenalties(filters = {}) {
   return res.rows;
 }
 
+async function listPenaltyTotals() {
+  const res = await query(
+    `WITH all_penalties AS (
+       SELECT 'quran'::text AS tracker, qp.user_id, qp.penalty_minor, t.status AS transaction_status
+       FROM quran_penalties qp LEFT JOIN transactions t ON t.id = qp.transaction_id
+       UNION ALL
+       SELECT 'namaj'::text AS tracker, np.user_id, np.penalty_minor, t.status AS transaction_status
+       FROM namaj_penalties np LEFT JOIN transactions t ON t.id = np.transaction_id
+     )
+     SELECT
+       ap.tracker,
+       ap.user_id,
+       COALESCE(SUM(ap.penalty_minor), 0) AS total_penalty_minor,
+       COALESCE(SUM(ap.penalty_minor) FILTER (WHERE ap.transaction_status = $1::smallint), 0) AS unpaid_penalty_minor
+     FROM all_penalties ap
+     GROUP BY ap.tracker, ap.user_id`,
+    [TX_STATUS.PENDING],
+  );
+  return res.rows;
+}
+
 function hasSamePenaltyRows(previousPenalties, plannedPenalties) {
   if (previousPenalties.length !== plannedPenalties.length) {
     return false;
@@ -487,6 +508,7 @@ module.exports = {
   getWeeklyReport,
   listActiveUsers,
   listPenalties,
+  listPenaltyTotals,
   createWeeklyPenaltyRun,
   PENALTY_TRACKERS,
 };
