@@ -142,7 +142,7 @@ async function listProgress(filters = {}) {
   return res.rows;
 }
 
-async function getWeeklyReport({ fromDate, toDate }) {
+async function getWeeklyReport({ fromDate, toDate, includeTrackedNonInternal = false }) {
   const res = await query(
     `SELECT
       u.id AS user_id,
@@ -163,17 +163,22 @@ async function getWeeklyReport({ fromDate, toDate }) {
         )
       ) FILTER (WHERE qp.id IS NOT NULL) AS days
      FROM app_users u
-     JOIN roles r ON r.id = u.role_id
-     LEFT JOIN roles sr ON sr.id = u.staff_role_id
      LEFT JOIN quran_progress qp
        ON qp.user_id = u.id
       AND qp.progress_date BETWEEN $1 AND $2
      WHERE u.is_active = TRUE
-       AND u.user_kind = 1
-       AND COALESCE(sr.role_key, r.role_key) NOT IN ('super_admin', 'admin', 'manager')
+       AND (
+         u.user_kind = 1
+         OR ($3 = TRUE AND EXISTS (
+           SELECT 1 FROM quran_progress tracked
+           WHERE tracked.user_id = u.id
+             AND tracked.progress_date BETWEEN $1 AND $2
+             AND (tracked.quran_done = TRUE OR tracked.namaj_done = TRUE)
+         ))
+       )
      GROUP BY u.id, u.full_name, u.mobile
      ORDER BY u.full_name ASC`,
-    [fromDate, toDate],
+    [fromDate, toDate, includeTrackedNonInternal],
   );
 
   return res.rows;

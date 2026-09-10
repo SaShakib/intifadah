@@ -159,7 +159,7 @@ async function listMyProgress(userId, filters = {}) {
 
 async function getAdminWeeklyReport(filters = {}) {
   const range = weeklyTrackingRange(filters);
-  const rows = await quranRepository.getWeeklyReport(range);
+  const rows = await quranRepository.getWeeklyReport({ ...range, includeTrackedNonInternal: true });
   return {
     ...range,
     rows,
