@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/base/Button';
@@ -53,21 +53,29 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    if (searchParams.get('books') === '1') setRegisterOpen(true);
+  const booksRoute = useMemo(() => {
+    const books = searchParams.get('books');
+    if (books === '1') return '';
+    if (books === 'my' || books === 'requests') return `/${books}`;
+    return null;
   }, [searchParams]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (booksRoute !== null) setRegisterOpen(true);
+  }, [booksRoute]);
 
   useEffect(() => {
     if (!isReady || !isAuthenticated) {
       return;
     }
 
-    router.replace(needsProfileCompletion ? '/onboarding' : roleKey && isAdminRoleKey(roleKey) ? '/admin/dashboard' : '/user/dashboard');
-  }, [isAuthenticated, isReady, needsProfileCompletion, roleKey, router]);
+    router.replace(needsProfileCompletion ? '/onboarding' : booksRoute !== null ? `/books${booksRoute}` : roleKey && isAdminRoleKey(roleKey) ? '/admin/dashboard' : '/user/dashboard');
+  }, [isAuthenticated, isReady, needsProfileCompletion, roleKey, router, booksRoute]);
 
   const routeAfterAuth = () => {
     const nextUser = getAuthSession()?.user;
-    router.push(nextUser?.needsProfileCompletion ? '/onboarding' : searchParams.get('books') === '1' ? '/books' : nextUser?.roleKey && isAdminRoleKey(nextUser.roleKey) ? '/admin/dashboard' : '/user/dashboard');
+    router.push(nextUser?.needsProfileCompletion ? '/onboarding' : booksRoute !== null ? `/books${booksRoute}` : nextUser?.roleKey && isAdminRoleKey(nextUser.roleKey) ? '/admin/dashboard' : '/user/dashboard');
   };
 
   const handleLogin = async () => {
