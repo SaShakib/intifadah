@@ -58,9 +58,9 @@ type QuickAction = {
 type DashboardLayout = 'cards' | 'list';
 
 type HomeCard =
-  | { key: 'korje'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone']; count: number; groupIcon: LucideIcon }
-  | { key: 'songothon'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone']; count: number; groupIcon: LucideIcon }
-  | { key: 'book'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone']; count: number; groupIcon: LucideIcon };
+  | { key: 'korje'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] }
+  | { key: 'songothon'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] }
+  | { key: 'book'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] };
 
 const actionToneClasses: Record<QuickAction['tone'], string> = {
   brand: 'bg-brand-light text-brand',
@@ -97,15 +97,12 @@ function HomeCategoryTile({ card, onSelect, delayMs = 0 }: { card: HomeCard; onS
       type="button"
       onClick={() => onSelect(card.key)}
       style={{ animationDelay: `${delayMs}ms`, animationFillMode: 'backwards' }}
-      className="group flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-3xl border border-border bg-white p-2 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 sm:gap-4"
+      className="group flex min-w-0 animate-[dashboard-service-in_260ms_ease-out] flex-col items-center gap-2.5 py-2 transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2"
     >
-      <span className={`grid h-16 w-16 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-24 sm:w-24 ${actionToneClasses[card.tone]}`}>
-        <card.cardIcon className="h-8 w-8 sm:h-11 sm:w-11" strokeWidth={1.5} />
+      <span className={`grid h-14 w-14 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-16 sm:w-16 ${actionToneClasses[card.tone]}`}>
+        <card.cardIcon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.75} />
       </span>
-      <span className="line-clamp-1 px-1 text-center text-xs font-bold text-fg sm:text-sm">{card.label}</span>
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted sm:text-[11px]">
-        <card.groupIcon className="h-3 w-3" />{card.count}টি সেবা
-      </span>
+      <span className="line-clamp-1 px-1 text-center text-[11px] font-semibold leading-4 text-fg-2 sm:text-xs">{card.label}</span>
     </button>
   );
 }
@@ -230,9 +227,9 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
   ];
 
   const homeCards: HomeCard[] = [
-    { key: 'songothon', label: 'সংগঠন', description: 'দ্বীনি ও সদস্য সেবা', cardIcon: Users, groupIcon: Users, tone: 'success', count: songothonActions.length },
-    { key: 'korje', label: 'কর্যে হাসানা', description: 'আর্থিক সেবা', cardIcon: HandCoins, groupIcon: HandCoins, tone: 'info', count: korrzeHasanaActions.length },
-    { key: 'book', label: 'বইঘর', description: 'বইয়ের সংগ্রহ', cardIcon: BookOpen, groupIcon: BookOpen, tone: 'brand', count: bookActions.length },
+    { key: 'songothon', label: 'সংগঠন', description: 'দ্বীনি ও সদস্য সেবা', cardIcon: Users, tone: 'success' },
+    { key: 'korje', label: 'কর্যে হাসানা', description: 'আর্থিক সেবা', cardIcon: HandCoins, tone: 'info' },
+    { key: 'book', label: 'বইঘর', description: 'বইয়ের সংগ্রহ', cardIcon: BookOpen, tone: 'brand' },
   ];
   const selectedCard = cardView === null ? null : homeCards.find((card) => card.key === cardView);
   const subActions = cardView === 'korje' ? korrzeHasanaActions : cardView === 'songothon' ? songothonActions : cardView === 'book' ? bookActions : [];
