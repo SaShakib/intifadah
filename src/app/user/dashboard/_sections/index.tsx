@@ -26,17 +26,11 @@ import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
-import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { createUserLoan, createUserLoanRepayment, createUserTransaction, getErrorMessage } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
-import type { UserDashboardMetric } from './types';
 import type { Category, Transaction } from '@/types';
-
-interface UserDashboardTopSectionProps {
-  metrics: UserDashboardMetric[];
-}
 
 interface UserDashboardMiddleSectionProps {
   alerts: string[];
@@ -86,15 +80,15 @@ function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; o
   return <button type="button" onClick={() => onAction(action.modal!)} className={className} style={style} aria-label={action.description}>{content}</button>;
 }
 
-export function UserDashboardTopSection({ metrics }: UserDashboardTopSectionProps) {
+export function UserDashboardBanner() {
   return (
-    <section>
-      <SectionHeader title="আর্থিক সারাংশ" subtitle="আপনার অ্যাকাউন্টের দ্রুত অবস্থা" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
-        ))}
+    <section className="relative overflow-hidden rounded-3xl bg-brand p-6 text-white shadow-sm sm:p-8">
+      <div className="relative z-10">
+        <p className="text-2xl font-bold leading-snug sm:text-3xl">সুন্দর সমাজ গড়ার<br />দৃপ্ত শপথ</p>
+        <p className="mt-2 text-sm text-white/85">ইনতিফাদাহ-এর সদস্য হিসেবে কর্যে হাসানা ও কল্যাণমূলক কাজে অংশ নিন</p>
       </div>
+      <span aria-hidden className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
+      <span aria-hidden className="absolute -bottom-16 left-24 h-40 w-40 rounded-full bg-white/10" />
     </section>
   );
 }
