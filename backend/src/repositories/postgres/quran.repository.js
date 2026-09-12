@@ -5,7 +5,7 @@ const PENALTY_TRACKERS = {
   quran: {
     label: 'Quran',
     categoryName: 'Quran penalty',
-    categoryDescription: 'Auto-created pending savings due for missed Quran tracking days',
+    categoryDescription: 'Auto-created pending donation for missed Quran tracking days',
     completionColumn: 'quran_done',
     runTable: 'quran_penalty_runs',
     penaltyTable: 'quran_penalties',
@@ -14,7 +14,7 @@ const PENALTY_TRACKERS = {
   namaj: {
     label: 'Namaj',
     categoryName: 'Namaj penalty',
-    categoryDescription: 'Auto-created pending savings due for missed Namaj tracking days',
+    categoryDescription: 'Auto-created pending donation for missed Namaj tracking days',
     completionColumn: 'namaj_done',
     runTable: 'namaj_penalty_runs',
     penaltyTable: 'namaj_penalties',
@@ -310,7 +310,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
       UNION ALL
       SELECT id FROM existing
       LIMIT 1`,
-      [CATEGORY_TYPE.SAVINGS, tracker.categoryName, penaltyPerMissedDayMinor, tracker.categoryDescription],
+      [CATEGORY_TYPE.DONATION, tracker.categoryName, penaltyPerMissedDayMinor, tracker.categoryDescription],
     );
     const categoryId = category.rows[0].id;
 
@@ -451,7 +451,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         ) VALUES ($1,$2,$3,$3,$4,$5,CURRENT_DATE,NOW(),$6,$7)
         RETURNING id`,
         [
-          TX_TYPE.SAVINGS,
+          TX_TYPE.DONATION,
           TX_STATUS.PENDING,
           user.id,
           categoryId,
