@@ -62,10 +62,10 @@ const actionToneClasses: Record<QuickAction['tone'], string> = {
 function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; onAction: (modal: NonNullable<QuickAction['modal']>) => void; delayMs?: number }) {
   const content = (
     <>
-      <span className={`grid h-12 w-12 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${actionToneClasses[action.tone]}`}>
+      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${actionToneClasses[action.tone]}`}>
         <action.icon className="h-6 w-6" strokeWidth={1.75} />
       </span>
-      <span className="mt-1.5 line-clamp-1 px-1 text-center text-[11px] font-medium leading-4 text-fg-2 sm:text-xs">{action.label}</span>
+      <span className="mt-2 line-clamp-2 min-h-8 px-1 text-center text-[11px] font-semibold leading-4 text-fg sm:text-xs">{action.label}</span>
       <span className="sr-only">{action.description}</span>
     </>
   );
@@ -212,7 +212,7 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
               <h3 className="text-sm font-bold text-fg">{group.title}</h3>
               <div className="h-px flex-1 bg-border" />
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-x-1 gap-y-4 sm:grid-cols-5">
+            <div className="mt-5 grid grid-cols-4 gap-x-1 gap-y-5 sm:grid-cols-5">
               {group.actions.map((action, index) => (
                 <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
               ))}
