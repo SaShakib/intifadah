@@ -8,7 +8,7 @@ const {
   resetPasswordWithOtp,
   changePassword,
   switchAccountMode,
-  sanitizeUser,
+  buildAuthUser,
 } = require('../services/auth.service');
 
 async function register(req, res, next) {
@@ -83,8 +83,13 @@ async function changePasswordForCurrentUser(req, res, next) {
   }
 }
 
-function me(req, res) {
-  res.json({ user: sanitizeUser(req.auth.user, req.auth.accountMode) });
+async function me(req, res, next) {
+  try {
+    const user = await buildAuthUser(req.auth.user, req.auth.accountMode);
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
 }
 
 async function switchMode(req, res, next) {

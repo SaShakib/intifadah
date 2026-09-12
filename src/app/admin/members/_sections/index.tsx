@@ -11,6 +11,7 @@ import { DataTable } from '@/components/semibase/DataTable';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
+import { useAuth } from '@/contexts/AuthContext';
 import { MEMBER_METRICS, MEMBER_TABLE_ROWS, RECENT_MEMBER_ROWS } from './constants';
 import { createAdminMember, deactivateAdminMember, getErrorMessage, updateAdminMember } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
@@ -66,6 +67,7 @@ function roleForKind(userKind: number): BackendRoleKey {
 }
 
 export function MembersMiddleSection({ members = MEMBER_TABLE_ROWS, onMutationSuccess }: MembersMiddleSectionProps) {
+  const { can } = useAuth();
   const [modal, setModal] = useState<'new' | 'edit' | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [saving, setSaving] = useState(false);
@@ -200,7 +202,7 @@ export function MembersMiddleSection({ members = MEMBER_TABLE_ROWS, onMutationSu
         onClose={() => setModal(null)}
         footer={(
           <>
-            {modal === 'edit' && <Button variant="danger" onClick={() => void deactivateMember()} disabled={saving}><Trash2 className="h-4 w-4" />নিষ্ক্রিয়</Button>}
+            {modal === 'edit' && can('members', 'delete') && <Button variant="danger" onClick={() => void deactivateMember()} disabled={saving}><Trash2 className="h-4 w-4" />নিষ্ক্রিয়</Button>}
             <Button variant="secondary" onClick={() => setModal(null)} disabled={saving}>বাতিল</Button>
             <Button onClick={() => void saveMember()} disabled={saving}><Save className="h-4 w-4" />{saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ'}</Button>
           </>

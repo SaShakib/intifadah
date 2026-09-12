@@ -4,6 +4,8 @@ const { env } = require('../config/env');
 const { hashPassword, randomToken, sha256, verifyPassword } = require('../lib/hash');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../lib/jwt');
 const { repositories } = require('../repositories');
+const { maskToActions } = require('../config/permissions');
+const { getRolePermissionMap } = require('./permission.service');
 const { sendPasswordResetOtpEmail, sendTemporaryPasswordEmail, sendWelcomeEmail } = require('./mail.service');
 
 const { authRepository } = repositories;
@@ -106,6 +108,23 @@ function sanitizeUser(user, accountMode = 'personal') {
     joinedOn: user.joined_on,
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
+  };
+}
+
+async function buildAuthUser(user, accountMode = 'personal') {
+  const activeRole = activeRoleForUser(user, accountMode);
+  const permissionMap = await getRolePermissionMap(activeRole.roleId);
+  const permissions = {};
+  for (const [moduleKey, permMask] of permissionMap.entries()) {
+    const actions = maskToActions(Number(permMask));
+    if (actions.length) {
+      permissions[moduleKey] = actions;
+    }
+  }
+
+  return {
+    ...sanitizeUser(user, accountMode),
+    permissions,
   };
 }
 
@@ -256,7 +275,7 @@ async function registerUser(input, req) {
   const tokens = await issueTokenPair(createdUser, getContextFromRequest(req));
 
   return {
-    user: sanitizeUser(createdUser),
+    user: await buildAuthUser(createdUser),
     tokens,
   };
 }
@@ -366,7 +385,7 @@ async function loginWithGoogle(input, req) {
   const tokens = await issueTokenPair(freshUser, getContextFromRequest(req));
 
   return {
-    user: sanitizeUser(freshUser),
+    user: await buildAuthUser(freshUser),
     tokens,
   };
 }
@@ -408,7 +427,7 @@ async function loginUser(input, req) {
   const tokens = await issueTokenPair(freshUser, getContextFromRequest(req));
 
   return {
-    user: sanitizeUser(freshUser),
+    user: await buildAuthUser(freshUser),
     tokens,
   };
 }
@@ -449,7 +468,7 @@ async function refreshSession(input, req) {
   const tokens = await issueTokenPair(user, getContextFromRequest(req), accountMode);
 
   return {
-    user: sanitizeUser(user, accountMode),
+    user: await buildAuthUser(user, accountMode),
     tokens,
   };
 }
@@ -469,7 +488,7 @@ async function switchAccountMode(input, user, req) {
   }
 
   const tokens = await issueTokenPair(user, getContextFromRequest(req), accountMode);
-  return { user: sanitizeUser(user, accountMode), tokens };
+  return { user: await buildAuthUser(user, accountMode), tokens };
 }
 
 async function requestPasswordReset(input, req) {
@@ -587,7 +606,7 @@ async function changePassword(input, user, req) {
   const tokens = await issueTokenPair(freshUser, getContextFromRequest(req));
 
   return {
-    user: sanitizeUser(freshUser),
+    user: await buildAuthUser(freshUser),
     tokens,
   };
 }
@@ -613,6 +632,7 @@ module.exports = {
   changePassword,
   switchAccountMode,
   sanitizeUser,
+  buildAuthUser,
   activeRoleForUser,
   needsProfileCompletion,
 };

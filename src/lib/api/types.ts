@@ -2,6 +2,8 @@ import type { UserRole } from '@/types';
 
 export type BackendRoleKey = 'super_admin' | 'admin' | 'manager' | 'member_internal' | 'general_user' | 'org_user';
 
+export type PermissionAction = 'read' | 'write' | 'update' | 'delete';
+
 export interface ApiAuthUser {
   id: number;
   fullName: string;
@@ -26,6 +28,7 @@ export interface ApiAuthUser {
   joinedOn: string;
   lastLoginAt: string | null;
   createdAt: string;
+  permissions?: Record<string, PermissionAction[]>;
 }
 
 export interface ApiTokenPair {

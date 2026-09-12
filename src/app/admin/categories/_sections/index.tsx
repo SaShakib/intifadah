@@ -96,7 +96,7 @@ function categoryToForm(category: Category): CategoryInput {
 }
 
 export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutationSuccess }: CategoriesMiddleSectionProps) {
-  const { roleKey } = useAuth();
+  const { roleKey, can } = useAuth();
   const [modal, setModal] = useState<'new' | 'edit' | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [form, setForm] = useState<CategoryInput>(DEFAULT_CATEGORY_FORM);
@@ -275,7 +275,7 @@ export function CategoriesMiddleSection({ categories = CATEGORY_ROWS, onMutation
         onClose={() => setModal(null)}
         footer={(
           <>
-            {modal === 'edit' && <Button variant="danger" onClick={() => void removeCategory()} disabled={saving}><Trash2 className="h-4 w-4" />নিষ্ক্রিয়</Button>}
+            {modal === 'edit' && can('categories', 'delete') && <Button variant="danger" onClick={() => void removeCategory()} disabled={saving}><Trash2 className="h-4 w-4" />নিষ্ক্রিয়</Button>}
             <Button variant="secondary" onClick={() => setModal(null)} disabled={saving}>বাতিল</Button>
             <Button onClick={() => void saveCategory()} disabled={saving}><Save className="h-4 w-4" />{saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ'}</Button>
           </>

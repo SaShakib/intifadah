@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Member, UserRole } from '@/types';
+import type { BackendRoleKey, GoogleLoginInput, LoginInput, PermissionAction, RegisterInput } from '@/lib/api';
 import {
   AUTH_SESSION_EVENT,
   clearApiCache,
@@ -17,10 +18,6 @@ import {
   registerApi,
   setAuthSession,
   switchAccountModeApi,
-  type BackendRoleKey,
-  type GoogleLoginInput,
-  type LoginInput,
-  type RegisterInput,
 } from '@/lib/api';
 
 interface AuthContextValue {
@@ -32,6 +29,8 @@ interface AuthContextValue {
   userKind: number | null;
   isAdmin: boolean;
   canManagePermissions: boolean;
+  permissions: Record<string, PermissionAction[]>;
+  can: (moduleKey: string, action: PermissionAction) => boolean;
   needsProfileCompletion: boolean;
   isAuthenticated: boolean;
   isReady: boolean;
@@ -55,6 +54,8 @@ const AuthContext = createContext<AuthContextValue>({
   userKind: null,
   isAdmin: false,
   canManagePermissions: false,
+  permissions: {},
+  can: () => false,
   needsProfileCompletion: false,
   isAuthenticated: false,
   isReady: false,
@@ -203,6 +204,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(() => {
     const roleKey = sessionUser?.roleKey ?? null;
     const role = memberUser?.role ?? null;
+    const permissions = sessionUser?.permissions ?? {};
+
+    const can = (moduleKey: string, action: PermissionAction): boolean => {
+      const actions = permissions[moduleKey];
+      if (actions?.includes(action)) {
+        return true;
+      }
+
+      // Admins always hold every permission; also a safe fallback for old sessions.
+      return roleKey ? isAdminRoleKey(roleKey) : false;
+    };
 
     return {
       user: memberUser,
@@ -213,6 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userKind: sessionUser?.userKind ?? null,
       isAdmin: roleKey ? isAdminRoleKey(roleKey) : false,
       canManagePermissions: canManagePermissions(roleKey),
+      permissions,
+      can,
       needsProfileCompletion: Boolean(sessionUser?.needsProfileCompletion),
       isAuthenticated: Boolean(sessionUser),
       isReady,

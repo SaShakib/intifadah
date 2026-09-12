@@ -1,18 +1,18 @@
 import type { NavItem } from './types';
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { href: '/admin/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'ইনতিফাদাহ সদস্য' },
+  { href: '/admin/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'ইনতিফাদাহ সদস্য', requiredModule: 'quran', requiredAction: 'read' },
   { href: '/books', label: 'বইঘর', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
-  { href: '/admin/dashboard', label: 'ড্যাশবোর্ড', icon: 'layout-dashboard', section: 'প্রধান মেনু' },
-  { href: '/admin/fund-collection', label: 'ফান্ড / কালেকশন', icon: 'circle-dollar-sign', section: 'প্রধান মেনু' },
-  { href: '/admin/loans', label: 'ঋণ বিতরণ', icon: 'hand-coins', section: 'প্রধান মেনু' },
-  { href: '/admin/loan-repayment', label: 'ঋণ ফেরত', icon: 'rotate-ccw', section: 'প্রধান মেনু' },
-  { href: '/admin/categories', label: 'খাত পরিচালনা', icon: 'list-filter', section: 'প্রধান মেনু' },
+  { href: '/admin/dashboard', label: 'ড্যাশবোর্ড', icon: 'layout-dashboard', section: 'প্রধান মেনু', requiredModule: 'dashboard', requiredAction: 'read' },
+  { href: '/admin/fund-collection', label: 'ফান্ড / কালেকশন', icon: 'circle-dollar-sign', section: 'প্রধান মেনু', requiredModule: 'collections', requiredAction: 'read' },
+  { href: '/admin/loans', label: 'ঋণ বিতরণ', icon: 'hand-coins', section: 'প্রধান মেনু', requiredModule: 'loans', requiredAction: 'read' },
+  { href: '/admin/loan-repayment', label: 'ঋণ ফেরত', icon: 'rotate-ccw', section: 'প্রধান মেনু', requiredModule: 'repayments', requiredAction: 'read' },
+  { href: '/admin/categories', label: 'খাত পরিচালনা', icon: 'list-filter', section: 'প্রধান মেনু', requiredModule: 'categories', requiredAction: 'read' },
   { href: '/admin/activities', label: 'কার্জক্রম', icon: 'calendar-heart', section: 'প্রধান মেনু' },
-  { href: '/admin/members', label: 'সদস্য তালিকা', icon: 'users', section: 'প্রধান মেনু' },
-  { href: '/admin/reports', label: 'প্রতিবেদন', icon: 'chart-no-axes-combined', section: 'প্রধান মেনু' },
+  { href: '/admin/members', label: 'সদস্য তালিকা', icon: 'users', section: 'প্রধান মেনু', requiredModule: 'members', requiredAction: 'read' },
+  { href: '/admin/reports', label: 'প্রতিবেদন', icon: 'chart-no-axes-combined', section: 'প্রধান মেনু', requiredModule: 'reports', requiredAction: 'read' },
   { href: '/admin/settings', label: 'সেটিংস', icon: 'settings', section: 'সেটিংস' },
-  { href: '/admin/roles-permissions', label: 'ভূমিকা ও অনুমতি', icon: 'lock-keyhole', section: 'সেটিংস', permissionOnly: true },
+  { href: '/admin/roles-permissions', label: 'ভূমিকা ও অনুমতি', icon: 'lock-keyhole', section: 'সেটিংস', permissionOnly: true, requiredModule: 'roles_permissions', requiredAction: 'read' },
 ];
 
 export const USER_NAV_ITEMS: NavItem[] = [
