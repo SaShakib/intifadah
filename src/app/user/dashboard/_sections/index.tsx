@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowLeftRight,
   BookMarked,
   BookOpen,
   BookOpenCheck,
@@ -15,7 +13,6 @@ import {
   HandCoins,
   HeartHandshake,
   ListFilter,
-  LogOut,
   MessageSquareText,
   MessagesSquare,
   ReceiptText,
@@ -31,7 +28,6 @@ import { Card } from '@/components/semibase/Card';
 import { DataTable } from '@/components/semibase/DataTable';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
-import { useAuth } from '@/contexts/AuthContext';
 import { createUserLoan, createUserLoanRepayment, createUserTransaction, getErrorMessage } from '@/lib/api';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { Category, Transaction } from '@/types';
@@ -53,8 +49,6 @@ type QuickAction = {
   tone: 'brand' | 'success' | 'info' | 'warning' | 'accent';
   href?: string;
   modal?: 'donate' | 'savings' | 'loan' | 'pay';
-  menu?: 'account';
-  featured?: boolean;
 };
 
 const actionToneClasses: Record<QuickAction['tone'], string> = {
@@ -65,22 +59,10 @@ const actionToneClasses: Record<QuickAction['tone'], string> = {
   accent: 'bg-accent-light text-accent',
 };
 
-function ServiceTile({
-  action,
-  onAction,
-  onMenuClick,
-  menuOpen = false,
-  delayMs = 0,
-}: {
-  action: QuickAction;
-  onAction: (modal: NonNullable<QuickAction['modal']>) => void;
-  onMenuClick?: () => void;
-  menuOpen?: boolean;
-  delayMs?: number;
-}) {
+function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; onAction: (modal: NonNullable<QuickAction['modal']>) => void; delayMs?: number }) {
   const content = (
     <>
-      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${action.featured ? 'bg-brand text-white shadow-md shadow-brand/30' : actionToneClasses[action.tone]}`}>
+      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${actionToneClasses[action.tone]}`}>
         <action.icon className="h-6 w-6" strokeWidth={1.75} />
       </span>
       <span className="mt-2 line-clamp-2 min-h-8 px-1 text-center text-[11px] font-semibold leading-4 text-fg sm:text-xs">{action.label}</span>
@@ -91,74 +73,11 @@ function ServiceTile({
   const className = 'group flex min-w-0 flex-col items-center rounded-2xl py-2 animate-[dashboard-service-in_260ms_ease-out] transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2';
   const style = { animationDelay: `${delayMs}ms`, animationFillMode: 'backwards' as const };
 
-  if (action.menu === 'account') {
-    return (
-      <button type="button" onClick={onMenuClick} className={className} style={style} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={action.description}>
-        {content}
-      </button>
-    );
-  }
-
   if (action.href) {
     return <Link href={action.href} className={className} style={style} aria-label={action.description}>{content}</Link>;
   }
 
   return <button type="button" onClick={() => onAction(action.modal!)} className={className} style={style} aria-label={action.description}>{content}</button>;
-}
-
-function AccountMenu({ onClose }: { onClose: () => void }) {
-  const { user, canSwitchAccounts, switchAccountMode, logout } = useAuth();
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
-  const handleSwitch = async () => {
-    setBusy(true);
-    try {
-      await switchAccountMode('staff');
-      router.replace('/admin/dashboard');
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    setBusy(true);
-    try {
-      await logout();
-      router.replace('/login');
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
-      <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-border bg-surface text-fg shadow-xl" role="menu">
-        <div className="border-b border-border px-4 py-3">
-          <p className="truncate text-sm font-bold">{user?.name ?? 'ব্যবহারকারী'}</p>
-          <p className="truncate text-xs text-muted">{user?.phone ?? user?.email ?? 'সদস্য অ্যাকাউন্ট'}</p>
-        </div>
-        <Link href="/user/profile" onClick={onClose} className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium hover:bg-surface-2">
-          <CircleUserRound className="h-4 w-4 text-brand" />
-          প্রোফাইল দেখুন
-        </Link>
-        {canSwitchAccounts && (
-          <button type="button" onClick={() => void handleSwitch()} disabled={busy} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium hover:bg-surface-2">
-            <ArrowLeftRight className="h-4 w-4 text-brand" />
-            {busy ? 'সুইচ হচ্ছে...' : 'ম্যানেজমেন্ট অ্যাকাউন্টে সুইচ'}
-          </button>
-        )}
-        <div className="border-t border-border" />
-        <button type="button" onClick={() => void handleLogout()} disabled={busy} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-danger hover:bg-surface-2">
-          <LogOut className="h-4 w-4" />
-          {busy ? 'লগআউট হচ্ছে...' : 'লগআউট'}
-        </button>
-      </div>
-    </>
-  );
 }
 
 const DEFAULT_ACTION_FORM = {
@@ -173,19 +92,9 @@ const DEFAULT_ACTION_FORM = {
 
 export function UserDashboardMiddleSection({ alerts, categories, onMutationSuccess }: UserDashboardMiddleSectionProps) {
   const [modal, setModal] = useState<'donate' | 'savings' | 'loan' | 'pay' | null>(null);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [form, setForm] = useState(DEFAULT_ACTION_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!accountMenuOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setAccountMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [accountMenuOpen]);
 
   const showToast = (message: string) => {
     setModal(null);
@@ -254,7 +163,7 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
     { label: 'নামাজ ও কুরআন', description: 'নামাজ ও কুরআনের অগ্রগতি দেখুন', icon: BookOpenCheck, tone: 'success', href: '/user/quran' },
     { label: 'খরচের হিসাব', description: 'খরচের হিসাব দেখুন', icon: ReceiptText, tone: 'warning', href: '/user/expenses' },
     { label: 'মন্তব্য', description: 'মন্তব্য ও পরামর্শ দেখুন', icon: MessageSquareText, tone: 'info', href: '/user/comments' },
-    { label: 'প্রোফাইল', description: 'অ্যাকাউন্ট মেনু খুলুন', icon: CircleUserRound, tone: 'accent', menu: 'account', featured: true },
+    { label: 'প্রোফাইল', description: 'আপনার প্রোফাইল দেখুন', icon: CircleUserRound, tone: 'accent', href: '/user/profile' },
   ];
 
   const bookActions: QuickAction[] = [
@@ -291,29 +200,9 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
               <div className="h-px flex-1 bg-border" />
             </div>
             <div className="mt-5 grid grid-cols-5 gap-x-1 gap-y-3">
-              {group.actions.map((action, index) => {
-                const tile = (
-                  <ServiceTile
-                    key={action.label}
-                    action={action}
-                    onAction={openAction}
-                    onMenuClick={() => setAccountMenuOpen((open) => !open)}
-                    menuOpen={accountMenuOpen}
-                    delayMs={index * 35}
-                  />
-                );
-
-                if (action.menu === 'account') {
-                  return (
-                    <div key={action.label} className="relative">
-                      {tile}
-                      {accountMenuOpen && <AccountMenu onClose={() => setAccountMenuOpen(false)} />}
-                    </div>
-                  );
-                }
-
-                return tile;
-              })}
+              {group.actions.map((action, index) => (
+                <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
+              ))}
             </div>
           </div>
         ))}

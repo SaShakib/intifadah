@@ -1,11 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { Menu } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Avatar } from '@/components/base/Avatar';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { UserProfileMenu } from '@/components/layout/UserProfileMenu';
 
 interface UserTopBarProps {
   title: string;
@@ -16,7 +14,6 @@ interface UserTopBarProps {
 }
 
 export function UserTopBar({ title, subtitle, onMenuToggle, notifCount = 2, showProfile = true }: UserTopBarProps) {
-  const { user } = useAuth();
   const today = useMemo(
     () => new Intl.DateTimeFormat('bn-BD', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date()),
     [],
@@ -46,11 +43,7 @@ export function UserTopBar({ title, subtitle, onMenuToggle, notifCount = 2, show
 
         <NotificationBell defaultCount={notifCount} />
 
-        {showProfile && (
-          <Link href="/user/profile" aria-label="প্রোফাইল">
-            <Avatar initials={user?.initials ?? 'র'} className="border-2 border-brand-light bg-brand text-white" />
-          </Link>
-        )}
+        {showProfile && <UserProfileMenu />}
       </div>
     </header>
   );
