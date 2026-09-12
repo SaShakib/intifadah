@@ -21,13 +21,13 @@ export function AppModal({ open, title, children, footer, onClose, className, lo
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={onClose}>
       <section
-        className={cn('relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl', className)}
+        className={cn('relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl', className)}
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center justify-between px-6 pt-5">
+        <header className="flex shrink-0 items-center justify-between px-6 pt-5">
           <h2 id="app-modal-title" className="text-lg font-bold text-fg">{title}</h2>
           <button
             type="button"
@@ -38,8 +38,8 @@ export function AppModal({ open, title, children, footer, onClose, className, lo
             <X className="h-4 w-4" />
           </button>
         </header>
-        <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-6">{children}</div>
-        {footer && <footer className="flex flex-wrap justify-end gap-2 border-t border-border px-6 py-4">{footer}</footer>}
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+        {footer && <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-6 py-4">{footer}</footer>}
         {loading && <div className="absolute inset-0 z-10 grid place-items-center bg-white/80 backdrop-blur-[1px]"><div className="flex flex-col items-center gap-3 text-sm font-semibold text-fg"><LoaderCircle className="h-7 w-7 animate-spin text-brand" /><span>{loadingLabel}</span></div></div>}
       </section>
     </div>
