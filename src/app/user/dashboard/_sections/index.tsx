@@ -15,6 +15,7 @@ import {
   ReceiptText,
   RotateCcw,
   Save,
+  Users,
   WalletCards,
 } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
@@ -61,24 +62,25 @@ const actionToneClasses: Record<QuickAction['tone'], string> = {
   accent: 'bg-accent-light text-accent',
 };
 
-function ServiceTile({ action, onAction }: { action: QuickAction; onAction: (modal: NonNullable<QuickAction['modal']>) => void }) {
+function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; onAction: (modal: NonNullable<QuickAction['modal']>) => void; delayMs?: number }) {
   const content = (
     <>
-      <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${actionToneClasses[action.tone]}`}>
-        <action.icon className="h-6 w-6" strokeWidth={2} />
+      <span className={`grid h-12 w-12 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${actionToneClasses[action.tone]}`}>
+        <action.icon className="h-6 w-6" strokeWidth={1.75} />
       </span>
-      <span className="mt-2 block text-center text-xs font-semibold leading-4 text-fg">{action.label}</span>
+      <span className="mt-1.5 line-clamp-1 px-1 text-center text-[11px] font-medium leading-4 text-fg-2 sm:text-xs">{action.label}</span>
       <span className="sr-only">{action.description}</span>
     </>
   );
 
-  const className = 'flex min-h-[96px] flex-col items-center justify-center rounded-2xl border border-border bg-surface px-2 py-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+  const className = 'group flex min-w-0 flex-col items-center rounded-2xl py-2 animate-[dashboard-service-in_260ms_ease-out] transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2';
+  const style = { animationDelay: `${delayMs}ms`, animationFillMode: 'backwards' as const };
 
   if (action.href) {
-    return <Link href={action.href} className={className} aria-label={action.description}>{content}</Link>;
+    return <Link href={action.href} className={className} style={style} aria-label={action.description}>{content}</Link>;
   }
 
-  return <button type="button" onClick={() => onAction(action.modal!)} className={className} aria-label={action.description}>{content}</button>;
+  return <button type="button" onClick={() => onAction(action.modal!)} className={className} style={style} aria-label={action.description}>{content}</button>;
 }
 
 export function UserDashboardTopSection({ metrics }: UserDashboardTopSectionProps) {
@@ -106,6 +108,7 @@ const DEFAULT_ACTION_FORM = {
 
 export function UserDashboardMiddleSection({ alerts, categories, onMutationSuccess }: UserDashboardMiddleSectionProps) {
   const [modal, setModal] = useState<'donate' | 'savings' | 'loan' | 'pay' | null>(null);
+  const [serviceGroup, setServiceGroup] = useState<'korje' | 'songothon'>('korje');
   const [form, setForm] = useState(DEFAULT_ACTION_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -182,33 +185,40 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
 
   return (
     <section className="space-y-4">
-      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
-        <div className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3">
+      <div className="rounded-3xl border border-border bg-surface p-3 shadow-sm sm:p-4">
+        <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-fg">দ্রুত সেবা</p>
-            <p className="text-xs text-muted">প্রয়োজনীয় সব সেবা এক জায়গায়</p>
+            <p className="text-xs text-muted">যা খুঁজছেন, এক ট্যাপে</p>
           </div>
           <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">ইনতিফাদাহ</span>
         </div>
 
-        <div className="p-3 sm:p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="rounded-lg bg-info-bg px-2.5 py-1 text-xs font-bold text-info">কর্যে হাসানা</span>
-            <span className="text-xs text-muted">আর্থিক সেবা</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
-            {korrzeHasanaActions.map((action) => <ServiceTile key={action.label} action={action} onAction={openAction} />)}
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
+          <button
+            type="button"
+            onClick={() => setServiceGroup('korje')}
+            aria-pressed={serviceGroup === 'korje'}
+            className={`flex items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${serviceGroup === 'korje' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
+          >
+            <HandCoins className="h-4 w-4" />
+            কর্যে হাসানা
+          </button>
+          <button
+            type="button"
+            onClick={() => setServiceGroup('songothon')}
+            aria-pressed={serviceGroup === 'songothon'}
+            className={`flex items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${serviceGroup === 'songothon' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
+          >
+            <Users className="h-4 w-4" />
+            সংগঠন
+          </button>
+        </div>
 
-          <div className="my-4 border-t border-border" />
-
-          <div className="mb-3 flex items-center gap-2">
-            <span className="rounded-lg bg-success-bg px-2.5 py-1 text-xs font-bold text-success">সংগঠন</span>
-            <span className="text-xs text-muted">দ্বীনি ও সদস্য সেবা</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
-            {songothonActions.map((action) => <ServiceTile key={action.label} action={action} onAction={openAction} />)}
-          </div>
+        <div key={serviceGroup} className="mt-3 grid grid-cols-4 gap-x-1 gap-y-4 sm:grid-cols-5">
+          {(serviceGroup === 'korje' ? korrzeHasanaActions : songothonActions).map((action, index) => (
+            <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
+          ))}
         </div>
       </div>
 
