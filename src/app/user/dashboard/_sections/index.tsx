@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowLeft,
+  BookMarked,
   BookOpen,
   BookOpenCheck,
+  BookPlus,
   CalendarHeart,
   CircleUserRound,
   HandCoins,
   HeartHandshake,
   ListFilter,
   MessageSquareText,
+  MessagesSquare,
   ReceiptText,
   RotateCcw,
   Save,
@@ -55,13 +57,6 @@ type QuickAction = {
   modal?: 'donate' | 'savings' | 'loan' | 'pay';
 };
 
-type DashboardLayout = 'cards' | 'list';
-
-type HomeCard =
-  | { key: 'korje'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] }
-  | { key: 'songothon'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] }
-  | { key: 'book'; label: string; description: string; cardIcon: LucideIcon; tone: QuickAction['tone'] };
-
 const actionToneClasses: Record<QuickAction['tone'], string> = {
   brand: 'bg-brand-light text-brand',
   success: 'bg-success-bg text-success',
@@ -91,22 +86,6 @@ function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; o
   return <button type="button" onClick={() => onAction(action.modal!)} className={className} style={style} aria-label={action.description}>{content}</button>;
 }
 
-function HomeCategoryTile({ card, onSelect, delayMs = 0 }: { card: HomeCard; onSelect: (key: HomeCard['key']) => void; delayMs?: number }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(card.key)}
-      style={{ animationDelay: `${delayMs}ms`, animationFillMode: 'backwards' }}
-      className="group flex min-w-0 animate-[dashboard-service-in_260ms_ease-out] flex-col items-center gap-2.5 py-2 transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2"
-    >
-      <span className={`grid h-14 w-14 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-16 sm:w-16 ${actionToneClasses[card.tone]}`}>
-        <card.cardIcon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.75} />
-      </span>
-      <span className="line-clamp-1 px-1 text-center text-[11px] font-semibold leading-4 text-fg-2 sm:text-xs">{card.label}</span>
-    </button>
-  );
-}
-
 export function UserDashboardTopSection({ metrics }: UserDashboardTopSectionProps) {
   return (
     <section>
@@ -132,26 +111,10 @@ const DEFAULT_ACTION_FORM = {
 
 export function UserDashboardMiddleSection({ alerts, categories, onMutationSuccess }: UserDashboardMiddleSectionProps) {
   const [modal, setModal] = useState<'donate' | 'savings' | 'loan' | 'pay' | null>(null);
-  const [layoutMode, setLayoutMode] = useState<DashboardLayout>(() => {
-    if (typeof window === 'undefined') {
-      return 'cards';
-    }
-    return (localStorage.getItem('intifadah-dashboard-layout') as DashboardLayout | null) ?? 'cards';
-  });
-  const [serviceGroup, setServiceGroup] = useState<'korje' | 'songothon' | 'book'>('korje');
-  const [cardView, setCardView] = useState<HomeCard['key'] | null>(null);
   const [form, setForm] = useState(DEFAULT_ACTION_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('intifadah-dashboard-layout', layoutMode);
-  }, [layoutMode]);
-
-  const switchLayout = (mode: DashboardLayout) => {
-    setLayoutMode(mode);
-    setCardView(null);
-  };
   const showToast = (message: string) => {
     setModal(null);
     setToast(message);
@@ -224,15 +187,16 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
 
   const bookActions: QuickAction[] = [
     { label: 'বইঘর', description: 'বইয়ের সংগ্রহ ব্রাউজ করুন ও ধার নিন', icon: BookOpen, tone: 'brand', href: '/books' },
+    { label: 'বই যোগ', description: 'নতুন বই যোগ করুন', icon: BookPlus, tone: 'success', href: '/books/my?add=1' },
+    { label: 'আমার বই', description: 'আপনার যোগ করা বই পরিচালনা করুন', icon: BookMarked, tone: 'info', href: '/books/my' },
+    { label: 'অনুরোধ', description: 'বইয়ের ধার অনুরোধ', icon: MessagesSquare, tone: 'warning', href: '/books/requests' },
   ];
 
-  const homeCards: HomeCard[] = [
-    { key: 'songothon', label: 'সংগঠন', description: 'দ্বীনি ও সদস্য সেবা', cardIcon: Users, tone: 'success' },
-    { key: 'korje', label: 'কর্যে হাসানা', description: 'আর্থিক সেবা', cardIcon: HandCoins, tone: 'info' },
-    { key: 'book', label: 'বইঘর', description: 'বইয়ের সংগ্রহ', cardIcon: BookOpen, tone: 'brand' },
+  const serviceGroups = [
+    { title: 'সংগঠন', icon: Users, tone: 'success' as const, actions: songothonActions },
+    { title: 'বইঘর', icon: BookOpen, tone: 'brand' as const, actions: bookActions },
+    { title: 'কর্যে হাসানা', icon: HandCoins, tone: 'info' as const, actions: korrzeHasanaActions },
   ];
-  const selectedCard = cardView === null ? null : homeCards.find((card) => card.key === cardView);
-  const subActions = cardView === 'korje' ? korrzeHasanaActions : cardView === 'songothon' ? songothonActions : cardView === 'book' ? bookActions : [];
 
   return (
     <section className="space-y-4">
@@ -242,102 +206,25 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
             <p className="text-sm font-bold text-fg">দ্রুত সেবা</p>
             <p className="text-xs text-muted">যা খুঁজছেন, এক ট্যাপে</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="grid grid-cols-2 rounded-full bg-surface-2 p-0.5" role="group" aria-label="ভিউ বাছাই">
-              <button
-                type="button"
-                onClick={() => switchLayout('cards')}
-                aria-pressed={layoutMode === 'cards'}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:text-xs ${layoutMode === 'cards' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
-              >
-                কার্ড
-              </button>
-              <button
-                type="button"
-                onClick={() => switchLayout('list')}
-                aria-pressed={layoutMode === 'list'}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:text-xs ${layoutMode === 'list' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
-              >
-                তালিকা
-              </button>
-            </div>
-            <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">ইনতিফাদাহ</span>
-          </div>
+          <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">ইনতিফাদাহ</span>
         </div>
 
-        {layoutMode === 'cards' ? (
-          cardView === null ? (
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-              {homeCards.map((card, index) => (
-                <HomeCategoryTile key={card.key} card={card} onSelect={setCardView} delayMs={index * 70} />
-              ))}
+        {serviceGroups.map((group) => (
+          <div key={group.title} className="mt-5">
+            <div className="flex items-center gap-2">
+              <span className={`grid h-6 w-6 place-items-center rounded-full ${actionToneClasses[group.tone]}`}>
+                <group.icon className="h-3.5 w-3.5" strokeWidth={2} />
+              </span>
+              <h3 className="text-sm font-bold text-fg">{group.title}</h3>
+              <div className="h-px flex-1 bg-border" />
             </div>
-          ) : (
-            <div key={cardView} className="mt-4">
-              <button
-                type="button"
-                onClick={() => setCardView(null)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold text-brand transition hover:bg-brand-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
-              >
-                <ArrowLeft className="h-4 w-4" />ফিরে যান
-              </button>
-              {selectedCard && (
-                <div className="mt-3 flex items-center gap-3">
-                  <span className={`grid h-12 w-12 place-items-center rounded-full ${actionToneClasses[selectedCard.tone]}`}>
-                    <selectedCard.cardIcon className="h-6 w-6" strokeWidth={1.75} />
-                  </span>
-                  <div>
-                    <p className="font-bold text-fg">{selectedCard.label}</p>
-                    <p className="text-xs text-muted">{selectedCard.description}</p>
-                  </div>
-                </div>
-              )}
-              <div className="mt-4 grid grid-cols-4 gap-x-1 gap-y-4 sm:grid-cols-5">
-                {subActions.map((action, index) => (
-                  <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
-                ))}
-              </div>
-            </div>
-          )
-        ) : (
-          <>
-            <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-surface-2 p-1">
-              <button
-                type="button"
-                onClick={() => setServiceGroup('korje')}
-                aria-pressed={serviceGroup === 'korje'}
-                className={`flex items-center justify-center gap-1 rounded-full px-1 py-2.5 text-[11px] font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:gap-2 sm:px-3 sm:text-sm ${serviceGroup === 'korje' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
-              >
-                <HandCoins className="hidden h-4 w-4 sm:inline-flex" />
-                কর্যে হাসানা
-              </button>
-              <button
-                type="button"
-                onClick={() => setServiceGroup('songothon')}
-                aria-pressed={serviceGroup === 'songothon'}
-                className={`flex items-center justify-center gap-1 rounded-full px-1 py-2.5 text-[11px] font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:gap-2 sm:px-3 sm:text-sm ${serviceGroup === 'songothon' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
-              >
-                <Users className="hidden h-4 w-4 sm:inline-flex" />
-                সংগঠন
-              </button>
-              <button
-                type="button"
-                onClick={() => setServiceGroup('book')}
-                aria-pressed={serviceGroup === 'book'}
-                className={`flex items-center justify-center gap-1 rounded-full px-1 py-2.5 text-[11px] font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:gap-2 sm:px-3 sm:text-sm ${serviceGroup === 'book' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:text-fg'}`}
-              >
-                <BookOpen className="hidden h-4 w-4 sm:inline-flex" />
-                বইঘর
-              </button>
-            </div>
-
-            <div key={serviceGroup} className="mt-3 grid grid-cols-4 gap-x-1 gap-y-4 sm:grid-cols-5">
-              {(serviceGroup === 'korje' ? korrzeHasanaActions : serviceGroup === 'songothon' ? songothonActions : bookActions).map((action, index) => (
+            <div className="mt-3 grid grid-cols-4 gap-x-1 gap-y-4 sm:grid-cols-5">
+              {group.actions.map((action, index) => (
                 <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
               ))}
             </div>
-          </>
-        )}
+          </div>
+        ))}
       </div>
 
       <Card>
