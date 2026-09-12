@@ -3,12 +3,12 @@ import type { NavItem } from './types';
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: '/admin/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'ইনতিফাদাহ সদস্য' },
   { href: '/books', label: 'বইঘর', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
-  { href: '/admin/books-approvals', label: 'বইঘর অনুমোদন', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
   { href: '/admin/dashboard', label: 'ড্যাশবোর্ড', icon: 'layout-dashboard', section: 'প্রধান মেনু' },
   { href: '/admin/fund-collection', label: 'ফান্ড / কালেকশন', icon: 'circle-dollar-sign', section: 'প্রধান মেনু' },
   { href: '/admin/loans', label: 'ঋণ বিতরণ', icon: 'hand-coins', section: 'প্রধান মেনু' },
   { href: '/admin/loan-repayment', label: 'ঋণ ফেরত', icon: 'rotate-ccw', section: 'প্রধান মেনু' },
   { href: '/admin/categories', label: 'খাত পরিচালনা', icon: 'list-filter', section: 'প্রধান মেনু' },
+  { href: '/admin/activities', label: 'কার্জক্রম', icon: 'calendar-heart', section: 'প্রধান মেনু' },
   { href: '/admin/members', label: 'সদস্য তালিকা', icon: 'users', section: 'প্রধান মেনু' },
   { href: '/admin/reports', label: 'প্রতিবেদন', icon: 'chart-no-axes-combined', section: 'প্রধান মেনু' },
   { href: '/admin/settings', label: 'সেটিংস', icon: 'settings', section: 'সেটিংস' },

@@ -66,6 +66,15 @@ async function sendWelcomeEmail({ to, fullName }) {
   });
 }
 
+async function sendBookRequestEmail({ to, fullName, bookTitle, requesterName, requestedDays }) {
+  return sendEmail({
+    to,
+    subject: `New request for your book: ${bookTitle}`,
+    text: `Assalamu alaikum ${fullName}, ${requesterName} has requested to borrow your book “${bookTitle}” for ${requestedDays} days. Open Intifadah Books to accept or decline the request.`,
+    html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;"><h2>New book request</h2><p>Assalamu alaikum ${escapeHtml(fullName)},</p><p><strong>${escapeHtml(requesterName)}</strong> has requested to borrow <strong>“${escapeHtml(bookTitle)}”</strong> for ${Number(requestedDays)} days.</p><p>Open Intifadah Books to accept or decline the request.</p></div>`,
+  });
+}
+
 async function sendPasswordResetOtpEmail({ to, fullName, otp, ttlMinutes }) {
   return sendEmail({
     to,
@@ -169,6 +178,7 @@ module.exports = {
   sendEmail,
   sendTemporaryPasswordEmail,
   sendWelcomeEmail,
+  sendBookRequestEmail,
   sendPasswordResetOtpEmail,
   sendQuranPenaltyEmail,
   sendTrackingPenaltyEmail,

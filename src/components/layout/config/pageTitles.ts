@@ -5,9 +5,9 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/loan-repayment': 'ঋণ ফেরত',
   '/admin/fund-collection': 'ফান্ড / কালেকশন',
   '/admin/categories': 'খাত পরিচালনা',
+  '/admin/activities': 'কার্জক্রম',
   '/admin/reports': 'প্রতিবেদন',
   '/admin/quran': 'Quran ও Namaj রিপোর্ট',
-  '/admin/books-approvals': 'বইঘর অনুমোদন',
   '/admin/settings': 'সেটিংস',
   '/admin/roles-permissions': 'ভূমিকা ও অনুমতি',
 };

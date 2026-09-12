@@ -11,6 +11,7 @@ const {
   commentsRepository,
   reportsRepository,
   authRepository,
+  fundTransfersRepository,
 } = repositories;
 
 const ROLE_BY_KIND = {
@@ -470,6 +471,51 @@ async function createTransfer(input, actorUserId) {
   });
 }
 
+async function listFundTransfers(filters) {
+  return fundTransfersRepository.listFundTransfers(filters);
+}
+
+async function listFundTransferRecipients(actorUserId) {
+  return fundTransfersRepository.listFundTransferRecipients(actorUserId);
+}
+
+async function createFundTransfer(input, actorUserId) {
+  const toUserId = parseRequiredId(input.toUserId, 'toUserId');
+  if (Number(toUserId) === Number(actorUserId)) {
+    const error = new Error('You cannot transfer funds to yourself');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return fundTransfersRepository.createFundTransfer({
+    fromUserId: actorUserId,
+    toUserId,
+    actorUserId,
+    amountMinor: parseMinorAmount(input.amountMinor),
+    transferredOn: input.transferredOn,
+    note: String(input.note || '').trim() || null,
+  });
+}
+
+async function updateFundTransferStatus(transferId, input, actorContext) {
+  const status = Number(input.status);
+  if (![TX_STATUS.APPROVED, TX_STATUS.REJECTED].includes(status)) {
+    const error = new Error('Transfer status must be received or rejected');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await fundTransfersRepository.updateFundTransferStatus({
+    transferId,
+    status,
+    actorUserId: actorContext.actorUserId,
+    receiverNote: String(input.receiverNote || '').trim() || null,
+    allowOverride: actorContext.roleKey === 'super_admin',
+  });
+  const rows = await fundTransfersRepository.listFundTransfers({ transferId, limit: 1 });
+  return rows[0] || null;
+}
+
 async function listCommentThreads(filters) {
   return commentsRepository.listThreads(filters);
 }
@@ -546,6 +592,10 @@ module.exports = {
   listExpenses,
   createExpense,
   createTransfer,
+  listFundTransfers,
+  listFundTransferRecipients,
+  createFundTransfer,
+  updateFundTransferStatus,
   listCommentThreads,
   createCommentThread,
   listThreadMessages,

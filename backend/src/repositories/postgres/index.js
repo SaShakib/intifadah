@@ -11,6 +11,8 @@ const notificationsRepository = require('./notifications.repository');
 const quranRepository = require('./quran.repository');
 const savingsDuesRepository = require('./savings-dues.repository');
 const booksRepository = require('./books.repository');
+const fundTransfersRepository = require('./fund-transfers.repository');
+const activitiesRepository = require('./activities.repository');
 
 module.exports = {
   authRepository,
@@ -26,4 +28,6 @@ module.exports = {
   quranRepository,
   savingsDuesRepository,
   booksRepository,
+  fundTransfersRepository,
+  activitiesRepository,
 };

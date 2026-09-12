@@ -103,8 +103,8 @@ export default function UserDashboardPage() {
     <PageStack>
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
-      <UserDashboardTopSection metrics={data.metrics} />
       <UserDashboardMiddleSection alerts={data.alerts} categories={data.categories} onMutationSuccess={() => void refetch()} />
+      <UserDashboardTopSection metrics={data.metrics} />
       <UserDashboardBottomSection transactions={data.transactions} />
     </PageStack>
   );

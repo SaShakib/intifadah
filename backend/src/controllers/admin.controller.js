@@ -1,5 +1,4 @@
 const { listModules } = require('../services/permission.service');
-const { listBookApprovals, reviewBookActivation, reviewBookListing } = require('../services/books.service');
 const { listCategorySubscriptions, setCategorySubscriptionsForInternalMembers } = require('../services/savings-due.service');
 const {
   listRoles,
@@ -30,6 +29,10 @@ const {
   listExpenses,
   createExpense,
   createTransfer,
+  listFundTransfers,
+  listFundTransferRecipients,
+  createFundTransfer,
+  updateFundTransferStatus,
   listCommentThreads,
   createCommentThread,
   listThreadMessages,
@@ -80,18 +83,6 @@ async function dashboardSummary(_req, res, next) {
   } catch (error) {
     next(error);
   }
-}
-
-async function booksApprovals(req, res, next) {
-  try { res.json(await listBookApprovals()); } catch (error) { next(error); }
-}
-
-async function booksActivationReview(req, res, next) {
-  try { res.json({ row: await reviewBookActivation(req.auth.userId, parseRequiredId(req.params.userId, 'userId'), req.body || {}) }); } catch (error) { next(error); }
-}
-
-async function booksListingReview(req, res, next) {
-  try { res.json({ row: await reviewBookListing(req.auth.userId, parseRequiredId(req.params.bookId, 'bookId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
 async function memberFinancialSummary(_req, res, next) {
@@ -260,6 +251,49 @@ async function collectionsUpdate(req, res, next) {
   try {
     const transactionId = parseRequiredId(req.params.transactionId, 'transactionId');
     const row = await updateCollectionEntry(transactionId, req.body || {}, {
+      actorUserId: req.auth.userId,
+      roleKey: req.auth.roleKey,
+    });
+    res.json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function fundTransfersList(req, res, next) {
+  try {
+    const rows = await listFundTransfers({
+      limit: parseNumber(req.query.limit),
+      status: parseNumber(req.query.status),
+    });
+    res.json({ rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function fundTransferRecipients(req, res, next) {
+  try {
+    const rows = await listFundTransferRecipients(req.auth.userId);
+    res.json({ rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function fundTransfersCreate(req, res, next) {
+  try {
+    const row = await createFundTransfer(req.body || {}, req.auth.userId);
+    res.status(201).json({ row });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function fundTransfersUpdate(req, res, next) {
+  try {
+    const transferId = parseRequiredId(req.params.transferId, 'transferId');
+    const row = await updateFundTransferStatus(transferId, req.body || {}, {
       actorUserId: req.auth.userId,
       roleKey: req.auth.roleKey,
     });
@@ -523,9 +557,6 @@ async function updateUserRole(req, res, next) {
 }
 
 module.exports = {
-  booksApprovals,
-  booksActivationReview,
-  booksListingReview,
   dashboardSummary,
   memberFinancialSummary,
   membersList,
@@ -543,6 +574,10 @@ module.exports = {
   collectionsCreate,
   collectionsReceive,
   collectionsUpdate,
+  fundTransfersList,
+  fundTransferRecipients,
+  fundTransfersCreate,
+  fundTransfersUpdate,
   loansList,
   loansCreate,
   loansApprove,

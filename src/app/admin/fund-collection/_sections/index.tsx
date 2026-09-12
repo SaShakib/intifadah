@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Plus, Save } from 'lucide-react';
+import { ArrowRightLeft, Check, Pencil, Plus, Save, X } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
@@ -11,11 +11,11 @@ import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { MetricCard } from '@/components/semibase/MetricCard';
 import { SectionHeader } from '@/components/semibase/SectionHeader';
 import { FUND_COLLECTION_ROWS, FUND_METRICS, FUND_TYPE_SUMMARY } from './constants';
-import { createAdminCollection, getErrorMessage, receiveAdminSavingsDue, updateAdminCollection } from '@/lib/api';
+import { createAdminCollection, createAdminFundTransfer, getErrorMessage, receiveAdminSavingsDue, updateAdminCollection, updateAdminFundTransferStatus } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import type { FundMetric } from './types';
-import type { CollectionInput } from '@/lib/api';
+import type { ApiFundTransferRecipientRow, ApiFundTransferRow, CollectionInput } from '@/lib/api';
 import type { Category, Member, Transaction } from '@/types';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -46,6 +46,8 @@ interface FundCollectionMiddleSectionProps {
   rows?: typeof FUND_COLLECTION_ROWS;
   members?: Member[];
   categories?: Category[];
+  transfers?: ApiFundTransferRow[];
+  transferRecipients?: ApiFundTransferRecipientRow[];
   onMutationSuccess?: () => void | Promise<void>;
 }
 
@@ -82,13 +84,37 @@ const DEFAULT_COLLECTION_FORM: CollectionInput = {
   note: '',
 };
 
-export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS, members = [], categories = [], onMutationSuccess }: FundCollectionMiddleSectionProps) {
-  const { roleKey } = useAuth();
+const DEFAULT_TRANSFER_FORM = {
+  toUserId: 0,
+  amountMinor: 0,
+  transferredOn: new Date().toISOString().slice(0, 10),
+  note: '',
+  status: 1 as 1 | 2,
+  receiverNote: '',
+};
+
+const TRANSFER_STATUS_LABEL: Record<number, string> = {
+  0: 'গ্রহণের অপেক্ষায়',
+  1: 'গৃহীত',
+  2: 'ফেরত / বাতিল',
+};
+
+const TRANSFER_EVENT_LABEL: Record<number, string> = {
+  1: 'ট্রান্সফার করেছেন',
+  2: 'ফান্ড গ্রহণ করেছেন',
+  3: 'ফান্ড গ্রহণ করেননি',
+};
+
+export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS, members = [], categories = [], transfers = [], transferRecipients = [], onMutationSuccess }: FundCollectionMiddleSectionProps) {
+  const { roleKey, user } = useAuth();
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingItem, setEditingItem] = useState<Transaction | null>(null);
   const [form, setForm] = useState<CollectionInput>(DEFAULT_COLLECTION_FORM);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [transferModal, setTransferModal] = useState<'create' | 'status' | null>(null);
+  const [selectedTransfer, setSelectedTransfer] = useState<ApiFundTransferRow | null>(null);
+  const [transferForm, setTransferForm] = useState(DEFAULT_TRANSFER_FORM);
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(null), 2200);
@@ -115,6 +141,16 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
       note: item.note ?? '',
     });
     setModalMode('edit');
+  };
+  const openTransferCreateModal = () => {
+    setSelectedTransfer(null);
+    setTransferForm(DEFAULT_TRANSFER_FORM);
+    setTransferModal('create');
+  };
+  const openTransferStatusModal = (transfer: ApiFundTransferRow) => {
+    setSelectedTransfer(transfer);
+    setTransferForm({ ...DEFAULT_TRANSFER_FORM, status: 1, receiverNote: transfer.receiver_note ?? '' });
+    setTransferModal('status');
   };
   const saveCollection = async () => {
     setSaving(true);
@@ -144,6 +180,33 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
   };
   const canUpdateStatus = roleKey === 'super_admin' || roleKey === 'admin' || roleKey === 'manager';
   const canEditEverything = roleKey === 'super_admin';
+  const saveFundTransfer = async () => {
+    setSaving(true);
+    try {
+      if (transferModal === 'create') {
+        await createAdminFundTransfer({
+          toUserId: transferForm.toUserId,
+          amountMinor: transferForm.amountMinor,
+          transferredOn: transferForm.transferredOn,
+          note: transferForm.note.trim() || undefined,
+        });
+        showToast('ফান্ড ট্রান্সফার গ্রহণের জন্য পাঠানো হয়েছে');
+      } else if (selectedTransfer) {
+        await updateAdminFundTransferStatus(selectedTransfer.id, {
+          status: transferForm.status,
+          receiverNote: transferForm.receiverNote.trim() || undefined,
+        });
+        showToast(transferForm.status === 1 ? 'ফান্ড গ্রহণ নিশ্চিত করা হয়েছে' : 'ট্রান্সফার বাতিল করা হয়েছে');
+      }
+      setTransferModal(null);
+      setSelectedTransfer(null);
+      await onMutationSuccess?.();
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
   const rows = items.map((item) => ({
     id: item.id,
     tabValue: item.status,
@@ -215,6 +278,45 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
           searchPlaceholder="সদস্য, খাত বা তারিখ..."
         />
       </Card>
+      <Card className="mt-5">
+        <SectionHeader
+          title="ফান্ড ট্রান্সফার ও হস্তান্তর"
+          subtitle="এক ম্যানেজার বা অ্যাডমিন থেকে অন্য দায়িত্বপ্রাপ্ত ব্যক্তির কাছে অর্থ দিন ও গ্রহণ নিশ্চিত করুন"
+          action={<Button onClick={openTransferCreateModal}><ArrowRightLeft className="h-4 w-4" />ফান্ড ট্রান্সফার</Button>}
+        />
+        <DataTable
+          headers={['প্রেরক', 'প্রাপক', 'পরিমাণ', 'তারিখ', 'অ্যাক্টিভিটি', 'স্ট্যাটাস']}
+          rows={transfers.map((transfer) => {
+            const canReceive = transfer.status === 0 && (String(transfer.to_user_id) === String(user?.id) || roleKey === 'super_admin');
+            return {
+              id: `transfer-${transfer.id}`,
+              tabValue: String(transfer.status),
+              searchText: `${transfer.from_user_name} ${transfer.to_user_name} ${transfer.note ?? ''}`,
+              sortValues: [transfer.from_user_name, transfer.to_user_name, Number(transfer.amount_minor), transfer.transferred_on, transfer.status],
+              cells: [
+                transfer.from_user_name,
+                transfer.to_user_name,
+                <span key={`${transfer.id}-amount`} className="font-semibold tabular-nums">{formatCurrencyBn(Number(transfer.amount_minor))}</span>,
+                transfer.transferred_on,
+                <div key={`${transfer.id}-activity`} className="space-y-1 text-xs text-fg-2">
+                  {transfer.activity.map((event, index) => <p key={`${transfer.id}-event-${index}`}><span className="font-semibold text-fg">{event.actorName}</span> {TRANSFER_EVENT_LABEL[event.eventType]}{event.note ? ` — ${event.note}` : ''}</p>)}
+                </div>,
+                <div key={`${transfer.id}-status`} className="flex flex-wrap items-center gap-2">
+                  <Badge variant={transfer.status === 0 ? 'warning' : transfer.status === 2 ? 'danger' : 'success'}>{TRANSFER_STATUS_LABEL[transfer.status]}</Badge>
+                  {canReceive && <Button size="sm" variant="secondary" disabled={saving} onClick={() => openTransferStatusModal(transfer)}>হালনাগাদ</Button>}
+                </div>,
+              ],
+            };
+          })}
+          tabs={[
+            { value: 'all', label: 'সব' },
+            { value: '0', label: 'অপেক্ষমাণ' },
+            { value: '1', label: 'গৃহীত' },
+            { value: '2', label: 'বাতিল' },
+          ]}
+          searchPlaceholder="প্রেরক, প্রাপক বা নোট..."
+        />
+      </Card>
       <AppModal
         open={modalMode !== null}
         title={modalMode === 'create' ? 'নতুন কালেকশন যোগ করুন' : canEditEverything ? 'এন্ট্রি সম্পাদনা করুন' : 'এন্ট্রির স্ট্যাটাস হালনাগাদ করুন'}
@@ -237,6 +339,35 @@ export function FundCollectionMiddleSection({ rows: items = FUND_COLLECTION_ROWS
           <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">স্ট্যাটাস</span><select value={form.status} onChange={(event) => updateForm('status', Number(event.target.value))} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"><option value="1">সম্পন্ন</option><option value="0">অপেক্ষমাণ</option><option value="2">বাতিল</option></select></label>
           {(modalMode === 'create' || canEditEverything) && <label className="space-y-1 sm:col-span-2"><span className="text-xs font-semibold text-fg-2">নোট</span><textarea value={form.note ?? ''} onChange={(event) => updateForm('note', event.target.value)} className="h-20 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-light" placeholder="প্রয়োজনে নোট লিখুন..." /></label>}
         </div>
+      </AppModal>
+      <AppModal
+        open={transferModal !== null}
+        title={transferModal === 'create' ? 'ফান্ড ট্রান্সফার করুন' : 'ফান্ড গ্রহণের অবস্থা হালনাগাদ করুন'}
+        onClose={() => { setTransferModal(null); setSelectedTransfer(null); }}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => { setTransferModal(null); setSelectedTransfer(null); }} disabled={saving}>বাতিল</Button>
+            <Button onClick={() => void saveFundTransfer()} disabled={saving}><Save className="h-4 w-4" />{saving ? 'সংরক্ষণ হচ্ছে...' : transferModal === 'create' ? 'ট্রান্সফার পাঠান' : 'হালনাগাদ করুন'}</Button>
+          </>
+        )}
+      >
+        {transferModal === 'create' ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1 sm:col-span-2"><span className="text-xs font-semibold text-fg-2">যাকে ফান্ড দিচ্ছেন</span><select value={transferForm.toUserId || ''} onChange={(event) => setTransferForm((current) => ({ ...current, toUserId: Number(event.target.value) }))} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"><option value="">ম্যানেজার বা অ্যাডমিন নির্বাচন করুন</option>{transferRecipients.map((recipient) => <option key={recipient.id} value={recipient.id}>{recipient.full_name} — {recipient.role_name} ({recipient.mobile})</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">পরিমাণ</span><Input type="number" min="1" value={transferForm.amountMinor || ''} onChange={(event) => setTransferForm((current) => ({ ...current, amountMinor: Number(event.target.value) }))} placeholder="৳" /></label>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">হস্তান্তরের তারিখ</span><Input type="date" value={transferForm.transferredOn} onChange={(event) => setTransferForm((current) => ({ ...current, transferredOn: event.target.value }))} /></label>
+            <label className="space-y-1 sm:col-span-2"><span className="text-xs font-semibold text-fg-2">নোট</span><textarea value={transferForm.note} onChange={(event) => setTransferForm((current) => ({ ...current, note: event.target.value }))} className="h-20 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-light" placeholder="কোন সদস্যদের কালেকশন বা কেন হস্তান্তর করছেন..." /></label>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-surface-2 p-3 text-sm text-fg-2"><p><strong className="text-fg">{selectedTransfer?.from_user_name}</strong> থেকে <strong className="text-fg">{formatCurrencyBn(Number(selectedTransfer?.amount_minor ?? 0))}</strong> গ্রহণ করবেন।</p><p className="mt-1 text-xs">{selectedTransfer?.note || 'কোনো নোট নেই'}</p></div>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setTransferForm((current) => ({ ...current, status: 1 }))} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold ${transferForm.status === 1 ? 'border-success bg-success-bg text-success' : 'border-border text-fg-2'}`}><Check className="h-4 w-4" />গ্রহণ করেছি</button>
+              <button type="button" onClick={() => setTransferForm((current) => ({ ...current, status: 2 }))} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold ${transferForm.status === 2 ? 'border-danger bg-danger-bg text-danger' : 'border-border text-fg-2'}`}><X className="h-4 w-4" />গ্রহণ করিনি</button>
+            </div>
+            <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">হালনাগাদ নোট</span><textarea value={transferForm.receiverNote} onChange={(event) => setTransferForm((current) => ({ ...current, receiverNote: event.target.value }))} className="h-20 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-light" placeholder="প্রয়োজনে গ্রহণ বা বাতিলের কারণ লিখুন..." /></label>
+          </div>
+        )}
       </AppModal>
       <AppToast message={toast} />
     </section>

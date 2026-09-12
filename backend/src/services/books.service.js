@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { repositories } = require('../repositories');
 const { env } = require('../config/env');
+const { sendBookRequestEmail } = require('./mail.service');
 
 const { booksRepository, notificationsRepository } = repositories;
 const REQUEST_DAYS = new Set([3, 7, 10, 15, 30]);
@@ -38,11 +39,6 @@ async function requireActivation(userId) {
     error.statusCode = 403;
     throw error;
   }
-  if (Number(profile.approval_status) !== 1) {
-    const error = new Error('Your Book House activation is waiting for approval');
-    error.statusCode = 403;
-    throw error;
-  }
   return profile;
 }
 
@@ -62,12 +58,6 @@ async function activateBooks(userId, input) {
     educationDetail: occupationType === 'student' ? cleanText(input.educationDetail, 'educationDetail', 80, false) : null,
     professionDetail: occupationType !== 'student' ? cleanText(input.professionDetail, 'professionDetail', 180) : null,
   });
-  await notificationsRepository.createForRoleKeys({
-    roleKeys: ['super_admin', 'admin', 'manager'],
-    notifType: 30,
-    payloadJson: { event: 'book_activation_submitted', userId, url: '/admin/books-approvals' },
-    excludeUserId: userId,
-  });
   return profile;
 }
 
@@ -79,32 +69,6 @@ async function createBookCategory(userId, input) {
 async function addBook(userId, input) {
   await requireActivation(userId);
   const book = await booksRepository.createBook({ ownerUserId: userId, ...bookInput(input) });
-  await notificationsRepository.createForRoleKeys({
-    roleKeys: ['super_admin', 'admin', 'manager'],
-    notifType: 30,
-    payloadJson: { event: 'book_approval_submitted', bookId: book.id, title: book.title, url: '/admin/books-approvals' },
-    excludeUserId: userId,
-  });
-  return book;
-}
-
-async function listBookApprovals() {
-  return booksRepository.listPendingApprovals();
-}
-
-async function reviewBookActivation(actorUserId, userId, input) {
-  const approvalStatus = input.approved === true ? 1 : 2;
-  const profile = await booksRepository.reviewActivation({ userId, approvalStatus, reviewerUserId: actorUserId, reviewNote: cleanText(input.reviewNote, 'reviewNote', 500, false) });
-  if (!profile) throw badRequest('Activation request is no longer pending');
-  await notificationsRepository.createForUser({ userId, notifType: 30, payloadJson: { event: approvalStatus === 1 ? 'book_activation_approved' : 'book_activation_rejected', url: '/books' } });
-  return profile;
-}
-
-async function reviewBookListing(actorUserId, bookId, input) {
-  const approvalStatus = input.approved === true ? 1 : 2;
-  const book = await booksRepository.reviewBook({ bookId, approvalStatus, reviewerUserId: actorUserId, reviewNote: cleanText(input.reviewNote, 'reviewNote', 500, false) });
-  if (!book) throw badRequest('Book listing is no longer pending');
-  await notificationsRepository.createForUser({ userId: book.owner_user_id, notifType: 30, payloadJson: { event: approvalStatus === 1 ? 'book_listing_approved' : 'book_listing_rejected', bookId, url: '/books' } });
   return book;
 }
 
@@ -169,6 +133,20 @@ async function deleteBook(actor, bookId) {
   return { deleted: true };
 }
 
+async function setBookHold(userId, bookId, input) {
+  await requireActivation(userId);
+  if (typeof input.held !== 'boolean') throw badRequest('held must be true or false');
+  const updated = await booksRepository.setBookAvailability({ bookId, ownerUserId: userId, held: input.held });
+  if (!updated) {
+    const error = new Error(input.held
+      ? 'Only an available book that you own can be put on hold'
+      : 'Only a held book that you own can be made available');
+    error.statusCode = 409;
+    throw error;
+  }
+  return { held: input.held };
+}
+
 async function requestBook(userId, bookId, input) {
   await requireActivation(userId);
   const requestedDays = parsePositive(input.requestedDays, 'requestedDays');
@@ -180,11 +158,24 @@ async function requestBook(userId, bookId, input) {
     requestGroupId: crypto.randomUUID(),
   });
   if (!result) throw badRequest('No available copy of this book was found');
-  await Promise.all(result.ownerUserIds.map((ownerUserId) => notificationsRepository.createForUser({
-    userId: ownerUserId,
+  await Promise.all(result.ownerRecipients.map((owner) => notificationsRepository.createForUser({
+    userId: owner.userId,
     notifType: 30,
-    payloadJson: { event: 'book_request_created', requestId: result.request.id, bookId, url: '/books' },
+    payloadJson: {
+      event: 'book_request_created', requestId: result.request.id, bookId, url: '/books',
+      title: 'আপনার বইয়ের জন্য নতুন অনুরোধ',
+      message: `“${result.bookTitle}” বইটি ${result.requesterName} ধার নিতে চেয়েছেন।`,
+    },
   })));
+  await Promise.allSettled(result.ownerRecipients
+    .filter((owner) => owner.email)
+    .map((owner) => sendBookRequestEmail({
+      to: owner.email,
+      fullName: owner.fullName,
+      bookTitle: result.bookTitle,
+      requesterName: result.requesterName,
+      requestedDays,
+    })));
   return { ...result.request, copiesNotified: result.copyCount };
 }
 
@@ -279,7 +270,7 @@ function optimizedCoverUrl(url, width = 640) {
 }
 
 module.exports = {
-  requireActivation, activateBooks, createBookCategory, addBook, updateBook, deleteBook, requestBook,
+  requireActivation, activateBooks, createBookCategory, addBook, updateBook, deleteBook, setBookHold, requestBook,
   ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
-  requestExtension, ownerResolveExtension, listBookApprovals, reviewBookActivation, reviewBookListing,
+  requestExtension, ownerResolveExtension,
 };

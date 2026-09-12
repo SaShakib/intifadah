@@ -19,9 +19,12 @@ import type {
   ApiQuranPenaltyRunResponse,
   ApiSummaryResponse,
   ApiTransactionRow,
+  ApiFundTransferRecipientRow,
+  ApiFundTransferRow,
   AdminMemberInput,
   CategoryInput,
   CollectionInput,
+  FundTransferInput,
   LoanInput,
   LoanRepaymentInput,
   ApiRowResponse,
@@ -131,6 +134,33 @@ export async function receiveAdminSavingsDue(transactionId: string | number) {
 
 export async function updateAdminCollection(transactionId: string | number, input: Partial<CollectionInput>) {
   const data = await apiRequest<ApiRowResponse<ApiTransactionRow>>(`/admin/collections/${transactionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function getAdminFundTransfers(params: { limit?: number; status?: number } = {}) {
+  const query = createQueryString(params);
+  const data = await apiRequest<ApiRowsResponse<ApiFundTransferRow>>(`/admin/fund-transfers${query}`);
+  return data.rows;
+}
+
+export async function getAdminFundTransferRecipients() {
+  const data = await apiRequest<ApiRowsResponse<ApiFundTransferRecipientRow>>('/admin/fund-transfers/recipients');
+  return data.rows;
+}
+
+export async function createAdminFundTransfer(input: FundTransferInput) {
+  const data = await apiRequest<ApiRowResponse<ApiFundTransferRow>>('/admin/fund-transfers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function updateAdminFundTransferStatus(transferId: string | number, input: { status: 1 | 2; receiverNote?: string }) {
+  const data = await apiRequest<ApiRowResponse<ApiFundTransferRow>>(`/admin/fund-transfers/${transferId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
   });

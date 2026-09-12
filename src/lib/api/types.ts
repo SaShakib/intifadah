@@ -150,6 +150,41 @@ export interface ApiTransactionRow {
   category_name?: string | null;
 }
 
+export interface ApiFundTransferRecipientRow {
+  id: number;
+  full_name: string;
+  mobile: string;
+  role_key: BackendRoleKey;
+  role_name: string;
+}
+
+export interface ApiFundTransferEventRow {
+  eventType: 1 | 2 | 3;
+  note: string | null;
+  createdAt: string;
+  actorName: string;
+}
+
+export interface ApiFundTransferRow {
+  id: string | number;
+  from_user_id: number;
+  to_user_id: number;
+  initiated_by_user_id: number;
+  amount_minor: string | number;
+  status: 0 | 1 | 2;
+  transferred_on: string;
+  note: string | null;
+  received_by_user_id: number | null;
+  received_at: string | null;
+  receiver_note: string | null;
+  created_at: string;
+  from_user_name: string;
+  to_user_name: string;
+  initiated_by_name: string;
+  received_by_name: string | null;
+  activity: ApiFundTransferEventRow[];
+}
+
 export interface ApiLoanRow {
   id: string | number;
   borrower_user_id: number;
@@ -440,6 +475,13 @@ export interface CollectionInput {
   categoryId?: number | null;
   amountMinor: number;
   occurredOn?: string;
+  note?: string;
+}
+
+export interface FundTransferInput {
+  toUserId: number;
+  amountMinor: number;
+  transferredOn?: string;
   note?: string;
 }
 

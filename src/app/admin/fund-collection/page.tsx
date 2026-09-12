@@ -11,7 +11,7 @@ import {
 import { FUND_COLLECTION_ROWS, FUND_METRICS, FUND_TYPE_SUMMARY } from './_sections/constants';
 import { formatCurrencyBn } from '@/lib/utils/format';
 import { queryKeys, useApiQuery } from '@/lib/api';
-import { getAdminCategories, getAdminCollections, getAdminMembers, mapCategoryRow, mapTransactionRow, toBanglaDate, toInitials, toMinorNumber, toUserRole } from '@/lib/api';
+import { getAdminCategories, getAdminCollections, getAdminFundTransferRecipients, getAdminFundTransfers, getAdminMembers, mapCategoryRow, mapTransactionRow, toBanglaDate, toInitials, toMinorNumber, toUserRole } from '@/lib/api';
 
 const initialData = {
   metrics: [] as typeof FUND_METRICS,
@@ -19,16 +19,20 @@ const initialData = {
   summary: [] as typeof FUND_TYPE_SUMMARY,
   members: [],
   categories: [],
+  transfers: [],
+  transferRecipients: [],
 };
 
 const FUND_TYPES = new Set(['collection', 'donation', 'savings']);
 
 export default function FundCollectionPage() {
   const loadCollections = useCallback(async () => {
-    const [rows, memberRows, categoryRows] = await Promise.all([
+    const [rows, memberRows, categoryRows, transfers, transferRecipients] = await Promise.all([
       getAdminCollections({ limit: 300 }),
       getAdminMembers({ limit: 500, active: true }),
       getAdminCategories({ active: true }),
+      getAdminFundTransfers({ limit: 200 }),
+      getAdminFundTransferRecipients(),
     ]);
     const collections = rows
       .map(mapTransactionRow)
@@ -70,6 +74,8 @@ export default function FundCollectionPage() {
       summary,
       members,
       categories,
+      transfers,
+      transferRecipients,
     };
   }, []);
 
@@ -87,7 +93,7 @@ export default function FundCollectionPage() {
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
       <FundCollectionTopSection metrics={data.metrics} />
-      <FundCollectionMiddleSection rows={data.rows} members={data.members} categories={data.categories} onMutationSuccess={() => void refetch()} />
+      <FundCollectionMiddleSection rows={data.rows} members={data.members} categories={data.categories} transfers={data.transfers} transferRecipients={data.transferRecipients} onMutationSuccess={() => void refetch()} />
       <FundCollectionBottomSection summary={data.summary} />
     </PageStack>
   );

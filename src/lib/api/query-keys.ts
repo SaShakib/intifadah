@@ -6,6 +6,7 @@ export const queryKeys = {
     members: (params: Record<string, unknown> = {}) => `admin:members${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     categories: (params: Record<string, unknown> = {}) => `admin:categories${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     collections: (params: Record<string, unknown> = {}) => `admin:collections${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
+    fundTransfers: (params: Record<string, unknown> = {}) => `admin:fund_transfers${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     loans: (params: Record<string, unknown> = {}) => `admin:loans${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     quranWeekly: (params: Record<string, unknown> = {}) => `admin:quran:weekly${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     quranPenalties: (params: Record<string, unknown> = {}) => `admin:quran:penalties${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,

@@ -5,6 +5,8 @@ const booksController = require('../controllers/books.controller');
 const router = express.Router();
 
 router.get('/categories', booksController.categories);
+router.get('/me/books', requireAuth, requireCompletedProfile, booksController.myBooks);
+router.patch('/:bookId/availability', requireAuth, requireCompletedProfile, booksController.availability);
 router.get('/', booksController.list);
 router.get('/:bookId', booksController.detail);
 

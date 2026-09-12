@@ -12,3 +12,4 @@ export * from './services/auth';
 export * from './services/admin';
 export * from './services/user';
 export * from './services/books';
+export * from './services/activities';

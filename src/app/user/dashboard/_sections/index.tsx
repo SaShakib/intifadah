@@ -1,7 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { HandCoins, HeartHandshake, Plus, Save, WalletCards } from 'lucide-react';
+import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
+import {
+  BookOpen,
+  BookOpenCheck,
+  CalendarHeart,
+  CircleUserRound,
+  HandCoins,
+  HeartHandshake,
+  ListFilter,
+  MessageSquareText,
+  ReceiptText,
+  RotateCcw,
+  Save,
+  WalletCards,
+} from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
@@ -27,6 +42,43 @@ interface UserDashboardMiddleSectionProps {
 
 interface UserDashboardBottomSectionProps {
   transactions: Transaction[];
+}
+
+type QuickAction = {
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  tone: 'brand' | 'success' | 'info' | 'warning' | 'accent';
+  href?: string;
+  modal?: 'donate' | 'savings' | 'loan' | 'pay';
+};
+
+const actionToneClasses: Record<QuickAction['tone'], string> = {
+  brand: 'bg-brand-light text-brand',
+  success: 'bg-success-bg text-success',
+  info: 'bg-info-bg text-info',
+  warning: 'bg-warning-bg text-warning',
+  accent: 'bg-accent-light text-accent',
+};
+
+function ServiceTile({ action, onAction }: { action: QuickAction; onAction: (modal: NonNullable<QuickAction['modal']>) => void }) {
+  const content = (
+    <>
+      <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${actionToneClasses[action.tone]}`}>
+        <action.icon className="h-6 w-6" strokeWidth={2} />
+      </span>
+      <span className="mt-2 block text-center text-xs font-semibold leading-4 text-fg">{action.label}</span>
+      <span className="sr-only">{action.description}</span>
+    </>
+  );
+
+  const className = 'flex min-h-[96px] flex-col items-center justify-center rounded-2xl border border-border bg-surface px-2 py-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+
+  if (action.href) {
+    return <Link href={action.href} className={className} aria-label={action.description}>{content}</Link>;
+  }
+
+  return <button type="button" onClick={() => onAction(action.modal!)} className={className} aria-label={action.description}>{content}</button>;
 }
 
 export function UserDashboardTopSection({ metrics }: UserDashboardTopSectionProps) {
@@ -111,25 +163,53 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
     return true;
   });
 
+  const korrzeHasanaActions: QuickAction[] = [
+    { label: 'সঞ্চয় করুন', description: 'সঞ্চয় জমা দিন', icon: WalletCards, tone: 'success', modal: 'savings' },
+    { label: 'দান করুন', description: 'খাত নির্বাচন করে দান করুন', icon: HeartHandshake, tone: 'brand', modal: 'donate' },
+    { label: 'ঋণ চাই', description: 'কর্যে হাসানার জন্য আবেদন করুন', icon: HandCoins, tone: 'info', modal: 'loan' },
+    { label: 'ঋণ পরিশোধ', description: 'ঋণের কিস্তি পরিশোধ করুন', icon: RotateCcw, tone: 'warning', modal: 'pay' },
+    { label: 'খাতসূচি', description: 'আপনার আর্থিক খাত দেখুন', icon: ListFilter, tone: 'accent', href: '/user/categories' },
+  ];
+
+  const songothonActions: QuickAction[] = [
+    { label: 'বইঘর', description: 'বইয়ের সংগ্রহ দেখুন', icon: BookOpen, tone: 'brand', href: '/books' },
+    { label: 'কার্জক্রম', description: 'সংগঠনের কার্যক্রম দেখুন', icon: CalendarHeart, tone: 'info', href: '/activities' },
+    { label: 'নামাজ ও কুরআন', description: 'নামাজ ও কুরআনের অগ্রগতি দেখুন', icon: BookOpenCheck, tone: 'success', href: '/user/quran' },
+    { label: 'খরচের হিসাব', description: 'খরচের হিসাব দেখুন', icon: ReceiptText, tone: 'warning', href: '/user/expenses' },
+    { label: 'মন্তব্য', description: 'মন্তব্য ও পরামর্শ দেখুন', icon: MessageSquareText, tone: 'info', href: '/user/comments' },
+    { label: 'প্রোফাইল', description: 'আপনার প্রোফাইল দেখুন', icon: CircleUserRound, tone: 'accent', href: '/user/profile' },
+  ];
+
   return (
     <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <button type="button" onClick={() => openAction('donate')} className="flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <HeartHandshake className="h-6 w-6 text-brand" />
-          <span><strong className="block text-sm text-fg">দান করুন</strong><span className="text-xs text-muted">খাত নির্বাচন করে দান</span></span>
-        </button>
-        <button type="button" onClick={() => openAction('savings')} className="flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <WalletCards className="h-6 w-6 text-success" />
-          <span><strong className="block text-sm text-fg">সঞ্চয় করুন</strong><span className="text-xs text-muted">মাসিক বা বিশেষ সঞ্চয়</span></span>
-        </button>
-        <button type="button" onClick={() => openAction('loan')} className="flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <HandCoins className="h-6 w-6 text-info" />
-          <span><strong className="block text-sm text-fg">ঋণ চাই</strong><span className="text-xs text-muted">কর্যে হাসানাঃ আবেদন</span></span>
-        </button>
-        <button type="button" onClick={() => openAction('pay')} className="flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <Plus className="h-6 w-6 text-warning" />
-          <span><strong className="block text-sm text-fg">ঋণ পরিশোধ</strong><span className="text-xs text-muted">কিস্তি বা আংশিক ফেরত</span></span>
-        </button>
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+        <div className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3">
+          <div>
+            <p className="text-sm font-bold text-fg">দ্রুত সেবা</p>
+            <p className="text-xs text-muted">প্রয়োজনীয় সব সেবা এক জায়গায়</p>
+          </div>
+          <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">ইনতিফাদাহ</span>
+        </div>
+
+        <div className="p-3 sm:p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="rounded-lg bg-info-bg px-2.5 py-1 text-xs font-bold text-info">কর্যে হাসানা</span>
+            <span className="text-xs text-muted">আর্থিক সেবা</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
+            {korrzeHasanaActions.map((action) => <ServiceTile key={action.label} action={action} onAction={openAction} />)}
+          </div>
+
+          <div className="my-4 border-t border-border" />
+
+          <div className="mb-3 flex items-center gap-2">
+            <span className="rounded-lg bg-success-bg px-2.5 py-1 text-xs font-bold text-success">সংগঠন</span>
+            <span className="text-xs text-muted">দ্বীনি ও সদস্য সেবা</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
+            {songothonActions.map((action) => <ServiceTile key={action.label} action={action} onAction={openAction} />)}
+          </div>
+        </div>
       </div>
 
       <Card>

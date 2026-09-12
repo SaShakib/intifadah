@@ -16,7 +16,7 @@ export interface BookRequestRow {
   id: string | number; book_id: string | number; requester_user_id: number; requested_days: number; status: number;
   request_group_id?: string | null;
   due_on: string | null; title: string; cover_url: string | null; book_price_minor: string | number; owner_user_id: number;
-  owner_name: string; requester_name: string; return_initiated_at?: string | null; return_received_at?: string | null;
+  owner_name: string; owner_mobile?: string | null; owner_email?: string | null; requester_name: string; requester_mobile?: string | null; requester_email?: string | null; return_initiated_at?: string | null; return_received_at?: string | null;
   extensions?: Array<{ id: string | number; requestedDays: number; status: number }>;
 }
 
@@ -33,6 +33,8 @@ export function updateBook(bookId: string | number, input: Record<string, unknow
 export function deleteBook(bookId: string | number) { return apiRequest<{ data: { deleted: boolean } }>(`/books/${bookId}`, { method: 'DELETE' }); }
 export function requestBook(bookId: string | number, requestedDays: number) { return apiRequest<{ row: { copiesNotified?: number } }>(`/books/${bookId}/requests`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }
 export function getMyBookRequests() { return apiRequest<{ rows: BookRequestRow[] }>('/books/me/requests'); }
+export function getMyBooks() { return apiRequest<{ rows: BookRow[] }>('/books/me/books'); }
+export function setBookHold(bookId: string | number, held: boolean) { return apiRequest<{ data: { held: boolean } }>(`/books/${bookId}/availability`, { method: 'PATCH', body: JSON.stringify({ held }) }); }
 export function ownerBookRequestAction(requestId: string | number, action: 'accept' | 'reject' | 'given' | 'return_received', ownerNote?: string) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/owner`, { method: 'PATCH', body: JSON.stringify({ action, ownerNote }) }); }
 export function confirmBookReceived(requestId: string | number, action: 'received' | 'returned') { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/received`, { method: 'PATCH', body: JSON.stringify({ action }) }); }
 export function requestBookExtension(requestId: string | number, requestedDays: number) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/extensions`, { method: 'POST', body: JSON.stringify({ requestedDays }) }); }

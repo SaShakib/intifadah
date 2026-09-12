@@ -8,10 +8,6 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireRoles('super_admin', 'admin', 'manager'));
 
-router.get('/books/approvals', adminController.booksApprovals);
-router.patch('/books/activations/:userId', adminController.booksActivationReview);
-router.patch('/books/:bookId/approval', adminController.booksListingReview);
-
 router.get('/dashboard/summary', requirePermission('dashboard', 'read'), adminController.dashboardSummary);
 
 router.get('/members', requirePermission('members', 'read'), adminController.membersList);
@@ -32,6 +28,10 @@ router.get('/collections', requirePermission('collections', 'read'), adminContro
 router.post('/collections', requirePermission('collections', 'write'), adminController.collectionsCreate);
 router.patch('/collections/:transactionId/receive', requirePermission('collections', 'update'), adminController.collectionsReceive);
 router.patch('/collections/:transactionId', requirePermission('collections', 'update'), adminController.collectionsUpdate);
+router.get('/fund-transfers', requirePermission('collections', 'read'), adminController.fundTransfersList);
+router.get('/fund-transfers/recipients', requirePermission('collections', 'read'), adminController.fundTransferRecipients);
+router.post('/fund-transfers', requirePermission('collections', 'write'), adminController.fundTransfersCreate);
+router.patch('/fund-transfers/:transferId', requirePermission('collections', 'update'), adminController.fundTransfersUpdate);
 
 router.get('/loans', requirePermission('loans', 'read'), adminController.loansList);
 router.post('/loans', requirePermission('loans', 'write'), adminController.loansCreate);

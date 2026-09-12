@@ -22,7 +22,6 @@ const BOOK_AVAILABILITY_JOIN = `
       ON active_request.book_id = grouped.id
       AND active_request.status IN (3, 4, 5)
     WHERE grouped.canonical_key = b.canonical_key
-      AND grouped.approval_status = 1
       AND grouped.deleted_at IS NULL
   ) availability ON TRUE`;
 
@@ -44,7 +43,7 @@ async function createCategory({ categoryName, userId }) {
 
 async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0 } = {}) {
   const values = [];
-  const where = ['b.approval_status = 1', 'b.deleted_at IS NULL'];
+  const where = ['b.deleted_at IS NULL'];
   if (status !== null) {
     values.push(Number(status));
     where.push(`b.status = $${values.length}`);
@@ -81,14 +80,14 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
   return res.rows;
 }
 
-async function getBookById(bookId, { includeUnapproved = false } = {}) {
+async function getBookById(bookId) {
   const res = await query(
     `SELECT ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
      ${BOOK_AVAILABILITY_JOIN}
-    WHERE b.id = $1 AND b.deleted_at IS NULL ${includeUnapproved ? '' : 'AND b.approval_status = 1'}`,
+    WHERE b.id = $1 AND b.deleted_at IS NULL`,
     [bookId],
   );
   return res.rows[0] || null;
@@ -98,13 +97,13 @@ async function createBook(input) {
   const res = await query(
     `INSERT INTO books (
       owner_user_id, category_id, title, author_name, canonical_key, search_text, book_price_minor, cover_url,
-      cover_public_id, external_source, external_volume_id, description
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      cover_public_id, external_source, external_volume_id, description, approval_status
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)
     RETURNING id`,
     [input.ownerUserId, input.categoryId || null, input.title, input.authorName || null, input.canonicalKey, input.searchText, input.bookPriceMinor,
       input.coverUrl || null, input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
   );
-  return getBookById(res.rows[0].id, { includeUnapproved: true });
+  return getBookById(res.rows[0].id);
 }
 
 async function updateBook(input) {
@@ -120,7 +119,7 @@ async function updateBook(input) {
       input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
   );
   if (!res.rowCount) return null;
-  return getBookById(res.rows[0].id, { includeUnapproved: true });
+  return getBookById(res.rows[0].id);
 }
 
 async function archiveBook({ bookId, actorUserId, canDeleteAnyBook }) {
@@ -152,6 +151,20 @@ async function archiveBook({ bookId, actorUserId, canDeleteAnyBook }) {
   });
 }
 
+async function setBookAvailability({ bookId, ownerUserId, held }) {
+  const res = await query(
+    `UPDATE books
+     SET status = $3, updated_at = NOW()
+     WHERE id = $1
+       AND owner_user_id = $2
+       AND deleted_at IS NULL
+       AND status = $4
+     RETURNING id`,
+    [bookId, ownerUserId, held ? 3 : 0, held ? 0 : 3],
+  );
+  return res.rowCount > 0;
+}
+
 async function getActivationProfile(userId) {
   const res = await query('SELECT * FROM book_activation_profiles WHERE user_id = $1', [userId]);
   return res.rows[0] || null;
@@ -161,14 +174,13 @@ async function upsertActivationProfile(input) {
   const res = await query(
     `INSERT INTO book_activation_profiles (
       user_id, village, ward_no, father_name, occupation_type, institution_name,
-      education_level, education_detail, profession_detail
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      education_level, education_detail, profession_detail, approval_status
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,1)
     ON CONFLICT (user_id) DO UPDATE SET
       village = EXCLUDED.village, ward_no = EXCLUDED.ward_no, father_name = EXCLUDED.father_name,
       occupation_type = EXCLUDED.occupation_type, institution_name = EXCLUDED.institution_name,
       education_level = EXCLUDED.education_level, education_detail = EXCLUDED.education_detail,
-      profession_detail = EXCLUDED.profession_detail, approval_status = 0, reviewed_by_user_id = NULL,
-      reviewed_at = NULL, review_note = NULL, updated_at = NOW()
+      profession_detail = EXCLUDED.profession_detail, approval_status = 1, updated_at = NOW()
     RETURNING *`,
     [input.userId, input.village, input.wardNo, input.fatherName, input.occupationType,
       input.institutionName || null, input.educationLevel || null, input.educationDetail || null, input.professionDetail || null],
@@ -176,55 +188,25 @@ async function upsertActivationProfile(input) {
   return res.rows[0];
 }
 
-async function listPendingApprovals() {
-  const [activations, books] = await Promise.all([
-    query(
-      `SELECT bap.*, u.full_name, u.mobile, u.email, u.address_line
-       FROM book_activation_profiles bap JOIN app_users u ON u.id = bap.user_id
-       WHERE bap.approval_status = 0 ORDER BY bap.updated_at ASC`,
-    ),
-    query(
-      `SELECT ${BOOK_COLUMNS}
-       FROM books b JOIN app_users o ON o.id = b.owner_user_id
-       LEFT JOIN book_categories c ON c.id = b.category_id
-       WHERE b.approval_status = 0 ORDER BY b.created_at ASC`,
-    ),
-  ]);
-  return { activations: activations.rows, books: books.rows };
-}
-
-async function reviewActivation({ userId, approvalStatus, reviewerUserId, reviewNote }) {
-  const res = await query(
-    `UPDATE book_activation_profiles
-     SET approval_status = $2, reviewed_by_user_id = $3, reviewed_at = NOW(), review_note = $4, updated_at = NOW()
-     WHERE user_id = $1 AND approval_status = 0 RETURNING *`,
-    [userId, approvalStatus, reviewerUserId, reviewNote || null],
-  );
-  return res.rows[0] || null;
-}
-
-async function reviewBook({ bookId, approvalStatus, reviewerUserId, reviewNote }) {
-  const res = await query(
-    `UPDATE books
-     SET approval_status = $2, reviewed_by_user_id = $3, reviewed_at = NOW(), review_note = $4, updated_at = NOW()
-     WHERE id = $1 AND approval_status = 0 RETURNING *`,
-    [bookId, approvalStatus, reviewerUserId, reviewNote || null],
-  );
-  return res.rows[0] || null;
-}
-
 async function createRequest({ bookId, requesterUserId, requestedDays, requestGroupId }) {
   return withTransaction(async (client) => {
-    const source = await client.query('SELECT id, canonical_key FROM books WHERE id = $1 AND approval_status = 1', [bookId]);
+    const source = await client.query(
+      `SELECT b.id, b.canonical_key, b.title, requester.full_name AS requester_name
+       FROM books b
+       JOIN app_users requester ON requester.id = $2
+       WHERE b.id = $1 AND b.deleted_at IS NULL`,
+      [bookId, requesterUserId],
+    );
     if (!source.rowCount) return null;
     const candidates = await client.query(
-      `SELECT id, owner_user_id
-       FROM books
+      `SELECT b.id, b.owner_user_id, owner.full_name AS owner_name, owner.email AS owner_email
+       FROM books b
+       JOIN app_users owner ON owner.id = b.owner_user_id
        WHERE canonical_key = $1
-         AND status = 0
-         AND approval_status = 1
-         AND owner_user_id <> $2
-       FOR UPDATE`,
+         AND b.status = 0
+         AND b.deleted_at IS NULL
+         AND b.owner_user_id <> $2
+       FOR UPDATE OF b`,
       [source.rows[0].canonical_key, requesterUserId],
     );
     if (!candidates.rowCount) return null;
@@ -241,7 +223,11 @@ async function createRequest({ bookId, requesterUserId, requestedDays, requestGr
 
     return {
       request: requests[0],
-      ownerUserIds: [...new Set(candidates.rows.map((candidate) => Number(candidate.owner_user_id)))],
+      bookTitle: source.rows[0].title,
+      requesterName: source.rows[0].requester_name,
+      ownerRecipients: [...new Map(candidates.rows.map((candidate) => [Number(candidate.owner_user_id), {
+        userId: Number(candidate.owner_user_id), fullName: candidate.owner_name, email: candidate.owner_email,
+      }])).values()],
       copyCount: candidates.rowCount,
     };
   });
@@ -250,7 +236,8 @@ async function createRequest({ bookId, requesterUserId, requestedDays, requestGr
 async function listRequestsForUser(userId) {
   const res = await query(
     `SELECT br.*, b.title, b.cover_url, b.book_price_minor, b.owner_user_id, ex.extensions,
-       owner.full_name AS owner_name, requester.full_name AS requester_name
+       owner.full_name AS owner_name, owner.mobile AS owner_mobile, owner.email AS owner_email,
+       requester.full_name AS requester_name, requester.mobile AS requester_mobile, requester.email AS requester_email
      FROM book_requests br
      JOIN books b ON b.id = br.book_id
      JOIN app_users owner ON owner.id = b.owner_user_id
@@ -376,8 +363,8 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, getBookById, createBook, updateBook, archiveBook,
+  listCategories, createCategory, listBooks, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
-  createExtension, resolveExtension, listPendingApprovals, reviewActivation, reviewBook,
+  createExtension, resolveExtension,
 };
