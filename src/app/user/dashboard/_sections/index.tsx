@@ -9,10 +9,8 @@ import {
   BookOpenCheck,
   BookPlus,
   CalendarHeart,
-  CircleUserRound,
   HandCoins,
   HeartHandshake,
-  ListFilter,
   MessageSquareText,
   MessagesSquare,
   ReceiptText,
@@ -78,19 +76,6 @@ function ServiceTile({ action, onAction, delayMs = 0 }: { action: QuickAction; o
   }
 
   return <button type="button" onClick={() => onAction(action.modal!)} className={className} style={style} aria-label={action.description}>{content}</button>;
-}
-
-export function UserDashboardBanner() {
-  return (
-    <section className="relative overflow-hidden rounded-3xl bg-brand p-6 text-white shadow-sm sm:p-8">
-      <div className="relative z-10">
-        <p className="text-2xl font-bold leading-snug sm:text-3xl">সুন্দর সমাজ গড়ার<br />দৃপ্ত শপথ</p>
-        <p className="mt-2 text-sm text-white/85">ইনতিফাদাহ-এর সদস্য হিসেবে কর্যে হাসানা ও কল্যাণমূলক কাজে অংশ নিন</p>
-      </div>
-      <span aria-hidden className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
-      <span aria-hidden className="absolute -bottom-16 left-24 h-40 w-40 rounded-full bg-white/10" />
-    </section>
-  );
 }
 
 const DEFAULT_ACTION_FORM = {
@@ -168,7 +153,6 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
     { label: 'দান করুন', description: 'খাত নির্বাচন করে দান করুন', icon: HeartHandshake, tone: 'brand', modal: 'donate' },
     { label: 'ঋণ চাই', description: 'কর্যে হাসানার জন্য আবেদন করুন', icon: HandCoins, tone: 'info', modal: 'loan' },
     { label: 'ঋণ পরিশোধ', description: 'ঋণের কিস্তি পরিশোধ করুন', icon: RotateCcw, tone: 'warning', modal: 'pay' },
-    { label: 'খাতসূচি', description: 'আপনার আর্থিক খাত দেখুন', icon: ListFilter, tone: 'accent', href: '/user/categories' },
   ];
 
   const songothonActions: QuickAction[] = [
@@ -176,7 +160,6 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
     { label: 'নামাজ ও কুরআন', description: 'নামাজ ও কুরআনের অগ্রগতি দেখুন', icon: BookOpenCheck, tone: 'success', href: '/user/quran' },
     { label: 'খরচের হিসাব', description: 'খরচের হিসাব দেখুন', icon: ReceiptText, tone: 'warning', href: '/user/expenses' },
     { label: 'মন্তব্য', description: 'মন্তব্য ও পরামর্শ দেখুন', icon: MessageSquareText, tone: 'info', href: '/user/comments' },
-    { label: 'প্রোফাইল', description: 'আপনার প্রোফাইল দেখুন', icon: CircleUserRound, tone: 'accent', href: '/user/profile' },
   ];
 
   const bookActions: QuickAction[] = [
@@ -212,7 +195,7 @@ export function UserDashboardMiddleSection({ alerts, categories, onMutationSucce
               <h3 className="text-sm font-bold text-fg">{group.title}</h3>
               <div className="h-px flex-1 bg-border" />
             </div>
-            <div className="mt-5 grid grid-cols-4 gap-x-1 gap-y-5 sm:grid-cols-5">
+            <div className="mt-5 grid grid-cols-4 gap-x-1 gap-y-3">
               {group.actions.map((action, index) => (
                 <ServiceTile key={action.label} action={action} onAction={openAction} delayMs={index * 35} />
               ))}

@@ -1,5 +1,5 @@
 import { PageStack } from '@/components/custom/PageStack';
-import { ProfileBottomSection, ProfileMiddleSection, ProfileTopSection } from './_sections';
+import { ProfileAccountSection, ProfileBottomSection, ProfileMiddleSection, ProfileTopSection } from './_sections';
 
 export default function ProfilePage() {
   return (
@@ -7,6 +7,7 @@ export default function ProfilePage() {
       <ProfileTopSection />
       <ProfileMiddleSection />
       <ProfileBottomSection />
+      <ProfileAccountSection />
     </PageStack>
   );
 }

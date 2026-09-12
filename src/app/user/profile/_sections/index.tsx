@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { THEMES } from '@/lib/themes';
@@ -138,6 +140,52 @@ export function ProfileMiddleSection() {
               <span className={`h-3 w-3 rounded-full ${THEME_DOT_CLASS[themeOption.id] ?? 'bg-brand'}`} />
             </button>
           ))}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+export function ProfileAccountSection() {
+  const { canSwitchAccounts, switchAccountMode, logout } = useAuth();
+  const router = useRouter();
+  const [busy, setBusy] = useState<'switch' | 'logout' | null>(null);
+
+  const handleSwitchToStaff = async () => {
+    setBusy('switch');
+    try {
+      await switchAccountMode('staff');
+      router.replace('/admin/dashboard');
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    setBusy('logout');
+    try {
+      await logout();
+      router.replace('/login');
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section>
+      <Card>
+        <SectionHeader title="অ্যাকাউন্ট" subtitle="অ্যাকাউন্ট সুইচ ও লগআউট" />
+        <div className="grid gap-3 md:grid-cols-2">
+          {canSwitchAccounts && (
+            <Button variant="secondary" fullWidth onClick={() => void handleSwitchToStaff()} disabled={busy !== null}>
+              <ArrowLeftRight className="h-4 w-4" />{busy === 'switch' ? 'সুইচ হচ্ছে...' : 'ম্যানেজমেন্ট অ্যাকাউন্টে সুইচ'}
+            </Button>
+          )}
+          <Button variant="danger" fullWidth onClick={() => void handleLogout()} disabled={busy !== null}>
+            <LogOut className="h-4 w-4" />{busy === 'logout' ? 'লগআউট হচ্ছে...' : 'লগআউট'}
+          </Button>
         </div>
       </Card>
     </section>

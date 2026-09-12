@@ -13,7 +13,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
 };
 
 export const USER_PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-  '/user/dashboard': { title: 'আমার ড্যাশবোর্ড', subtitle: 'আপনার আর্থিক সারাংশ' },
+  '/user/dashboard': { title: 'ইনতিফাদাহ ড্যাশবোর্ড', subtitle: 'সুন্দর সমাজ গড়ার দৃপ্ত শপথ' },
   '/user/donations': { title: 'দান করুন', subtitle: 'আপনার দানের হিসাব' },
   '/user/savings': { title: 'সঞ্চয়', subtitle: 'আপনার সঞ্চয়ের বিবরণ' },
   '/user/loan': { title: 'ঋণ', subtitle: 'ঋণ ও কিস্তির তথ্য' },

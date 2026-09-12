@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 import { PageStack } from '@/components/custom/PageStack';
 import { ApiErrorNotice, ApiLoadingNotice } from '@/components/custom/ApiNotice';
 import {
-  UserDashboardBanner,
   UserDashboardBottomSection,
   UserDashboardMiddleSection,
 } from './_sections';
@@ -84,7 +83,6 @@ export default function UserDashboardPage() {
     <PageStack>
       {error && <ApiErrorNotice message={error} onRetry={() => void refetch()} />}
 
-      <UserDashboardBanner />
       <UserDashboardMiddleSection alerts={data.alerts} categories={data.categories} onMutationSuccess={() => void refetch()} />
       <UserDashboardBottomSection transactions={data.transactions} />
     </PageStack>
