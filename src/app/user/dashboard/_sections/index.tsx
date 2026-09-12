@@ -97,14 +97,13 @@ function HomeCategoryTile({ card, onSelect, delayMs = 0 }: { card: HomeCard; onS
       type="button"
       onClick={() => onSelect(card.key)}
       style={{ animationDelay: `${delayMs}ms`, animationFillMode: 'backwards' }}
-      className="group flex animate-[dashboard-service-in_260ms_ease-out] flex-col items-center rounded-3xl border border-border bg-white px-2 py-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-brand/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 sm:px-3 sm:py-6"
+      className="group flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-3xl border border-border bg-white p-2 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 sm:gap-4"
     >
-      <span className={`grid h-14 w-14 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-20 sm:w-20 ${actionToneClasses[card.tone]}`}>
-        <card.cardIcon className="h-7 w-7 sm:h-9 sm:w-9" strokeWidth={1.5} />
+      <span className={`grid h-16 w-16 place-items-center rounded-full transition duration-200 group-hover:scale-105 sm:h-24 sm:w-24 ${actionToneClasses[card.tone]}`}>
+        <card.cardIcon className="h-8 w-8 sm:h-11 sm:w-11" strokeWidth={1.5} />
       </span>
-      <span className="mt-3 text-sm font-bold text-fg sm:text-base">{card.label}</span>
-      <span className="mt-1 line-clamp-1 px-1 text-center text-[11px] text-muted sm:text-xs">{card.description}</span>
-      <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[10px] font-semibold text-fg-2 sm:text-[11px]">
+      <span className="line-clamp-1 px-1 text-center text-xs font-bold text-fg sm:text-sm">{card.label}</span>
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted sm:text-[11px]">
         <card.groupIcon className="h-3 w-3" />{card.count}টি সেবা
       </span>
     </button>
