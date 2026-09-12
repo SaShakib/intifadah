@@ -1,4 +1,4 @@
-const { activityImageSignature, listPublicActivities, listAdminActivities, createActivity, updateActivity } = require('../services/activities.service');
+const { activityImageSignature, listPublicActivities, listAdminActivities, createActivity, updateActivity, deleteActivity } = require('../services/activities.service');
 
 function id(value) {
   const parsed = Number(value);
@@ -22,8 +22,11 @@ async function create(req, res, next) {
 async function update(req, res, next) {
   try { res.json({ row: await updateActivity(id(req.params.activityId), req.body || {}) }); } catch (error) { next(error); }
 }
+async function remove(req, res, next) {
+  try { res.json({ data: await deleteActivity(id(req.params.activityId)) }); } catch (error) { next(error); }
+}
 async function uploadSignature(_req, res, next) {
   try { res.json({ data: activityImageSignature() }); } catch (error) { next(error); }
 }
 
-module.exports = { publicList, adminList, create, update, uploadSignature };
+module.exports = { publicList, adminList, create, update, remove, uploadSignature };

@@ -37,6 +37,10 @@ export function updateActivity(activityId: string | number, input: ActivityInput
   return apiRequest<{ row: ActivityRow }>(`/activities/${activityId}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
+export function deleteActivity(activityId: string | number) {
+  return apiRequest<{ data: { deleted: boolean } }>(`/activities/${activityId}`, { method: 'DELETE' });
+}
+
 async function compressActivityImage(file: File) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));

@@ -10,6 +10,12 @@ function badRequest(message) {
   return error;
 }
 
+function notFound(message = 'Activity not found') {
+  const error = new Error(message);
+  error.statusCode = 404;
+  return error;
+}
+
 function cleanText(value, field, limit) {
   const text = String(value || '').trim();
   if (!text) throw badRequest(`${field} is required`);
@@ -55,6 +61,15 @@ function activityImageSignature() {
 async function listPublicActivities() { return activitiesRepository.listActivities({ publicOnly: true }); }
 async function listAdminActivities() { return activitiesRepository.listActivities(); }
 async function createActivity(input, userId) { return activitiesRepository.createActivity({ ...normalizeActivity(input), createdByUserId: userId }); }
-async function updateActivity(activityId, input) { return activitiesRepository.updateActivity(activityId, normalizeActivity(input)); }
+async function updateActivity(activityId, input) {
+  const result = await activitiesRepository.updateActivity(activityId, normalizeActivity(input));
+  if (!result) throw notFound();
+  return result;
+}
+async function deleteActivity(activityId) {
+  const deleted = await activitiesRepository.deleteActivity(activityId);
+  if (!deleted) throw notFound();
+  return { deleted };
+}
 
-module.exports = { activityImageSignature, listPublicActivities, listAdminActivities, createActivity, updateActivity };
+module.exports = { activityImageSignature, listPublicActivities, listAdminActivities, createActivity, updateActivity, deleteActivity };

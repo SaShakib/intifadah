@@ -53,7 +53,7 @@ async function getActivityById(activityId) {
 }
 
 async function updateActivity(activityId, { title, description, imageUrl, imagePublicId, isPublished }) {
-  await query(
+  const res = await query(
     `UPDATE organization_activities
      SET title = $2,
          description = $3,
@@ -64,7 +64,12 @@ async function updateActivity(activityId, { title, description, imageUrl, imageP
      WHERE id = $1`,
     [activityId, title, description, imageUrl || null, imagePublicId || null, isPublished !== false],
   );
-  return getActivityById(activityId);
+  return res.rowCount > 0 ? getActivityById(activityId) : null;
 }
 
-module.exports = { listActivities, createActivity, getActivityById, updateActivity };
+async function deleteActivity(activityId) {
+  const res = await query('DELETE FROM organization_activities WHERE id = $1 RETURNING id', [activityId]);
+  return res.rowCount > 0;
+}
+
+module.exports = { listActivities, createActivity, getActivityById, updateActivity, deleteActivity };

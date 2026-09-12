@@ -10,5 +10,6 @@ router.get('/manage', activitiesController.adminList);
 router.post('/upload-signature', activitiesController.uploadSignature);
 router.post('/', activitiesController.create);
 router.patch('/:activityId', activitiesController.update);
+router.delete('/:activityId', activitiesController.remove);
 
 module.exports = { activitiesRouter: router };

@@ -11,7 +11,7 @@ import { Card } from '@/components/semibase/Card';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
-import { createActivity, getAdminActivities, toBanglaDate, updateActivity, uploadActivityImage, type ActivityRow } from '@/lib/api';
+import { createActivity, deleteActivity, getAdminActivities, toBanglaDate, updateActivity, uploadActivityImage, type ActivityRow } from '@/lib/api';
 
 const EMPTY_FORM = { title: '', description: '', imageUrl: '', imagePublicId: '' };
 
@@ -21,6 +21,7 @@ export default function AdminActivitiesPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | number | null>(null);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
@@ -109,6 +110,21 @@ export default function AdminActivitiesPage() {
     }
   };
 
+  const remove = async () => {
+    if (confirmDeleteId === null) return;
+    setBusy(true);
+    try {
+      await deleteActivity(confirmDeleteId);
+      setConfirmDeleteId(null);
+      await load();
+      showToast('কার্জক্রমটি মুছে ফেলা হয়েছে');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'মুছে ফেলা যায়নি');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleImageUpload = async (file: File | undefined) => {
     if (!file) return;
     setUploading(true);
@@ -158,12 +174,27 @@ export default function AdminActivitiesPage() {
                   <Button size="sm" variant="secondary" disabled={busy} onClick={() => void togglePublished(activity)}>
                     {activity.is_published ? <><EyeOff className="h-3.5 w-3.5" />অপ্রকাশিত করুন</> : <><Eye className="h-3.5 w-3.5" />প্রকাশ করুন</>}
                   </Button>
+                  <Button size="sm" variant="danger" disabled={busy} onClick={() => setConfirmDeleteId(activity.id)}><Trash2 className="h-3.5 w-3.5" />মুছুন</Button>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <AppModal
+        open={confirmDeleteId !== null}
+        title="কার্জক্রম মুছবেন?"
+        onClose={() => setConfirmDeleteId(null)}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setConfirmDeleteId(null)} disabled={busy}>বাতিল</Button>
+            <Button variant="danger" disabled={busy} onClick={() => void remove()}>{busy ? 'মুছে ফেলা হচ্ছে...' : 'মুছে ফেলুন'}</Button>
+          </>
+        )}
+      >
+        <p className="text-sm leading-6 text-fg-2">এই কার্জক্রমটি স্থায়ীভাবে মুছে যাবে এবং সকল ব্যবহারকারীর কাছ থেকে পাওয়া যাবে না। আপনি কি নিশ্চিত?</p>
+      </AppModal>
 
       <AppModal
         open={modalOpen}
