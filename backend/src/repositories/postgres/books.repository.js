@@ -41,7 +41,7 @@ async function createCategory({ categoryName, userId }) {
   return res.rows[0];
 }
 
-async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0 } = {}) {
+async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0, includeTotal = false } = {}) {
   const values = [];
   const where = ['b.deleted_at IS NULL'];
   if (status !== null) {
@@ -77,7 +77,17 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
      LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values,
   );
-  return res.rows;
+  if (!includeTotal) {
+    return res.rows;
+  }
+
+  const countRes = await query(
+    `SELECT COUNT(DISTINCT b.canonical_key)::int AS total
+     FROM books b
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}`,
+    values.slice(0, -2),
+  );
+  return { rows: res.rows, total: countRes.rows[0]?.total ?? 0 };
 }
 
 async function getBookById(bookId) {

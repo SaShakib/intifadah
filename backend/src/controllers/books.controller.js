@@ -32,8 +32,8 @@ async function categories(_req, res, next) {
 
 async function list(req, res, next) {
   try {
-    const rows = await booksRepository.listBooks({ search: req.query.search, categoryId: req.query.categoryId, limit: req.query.limit, offset: req.query.offset });
-    res.json({ rows });
+    const result = await booksRepository.listBooks({ search: req.query.search, categoryId: req.query.categoryId, limit: req.query.limit, offset: req.query.offset, includeTotal: true });
+    res.json(result);
   } catch (error) { next(error); }
 }
 

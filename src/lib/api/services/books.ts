@@ -20,8 +20,10 @@ export interface BookRequestRow {
   extensions?: Array<{ id: string | number; requestedDays: number; status: number }>;
 }
 
-export function getPublicBooks(params: { search?: string; categoryId?: number } = {}) {
-  return apiRequest<{ rows: BookRow[] }>(`/books${createQueryString(params)}`, {}, { withAuth: false });
+export interface BookListResult { rows: BookRow[]; total: number; }
+
+export function getPublicBooks(params: { search?: string; categoryId?: number; limit?: number; offset?: number } = {}) {
+  return apiRequest<BookListResult>(`/books${createQueryString(params)}`, {}, { withAuth: false });
 }
 export function getPublicBook(bookId: string | number) { return apiRequest<{ row: BookRow }>(`/books/${bookId}`, {}, { withAuth: false }); }
 export function getBookCategories() { return apiRequest<{ rows: BookCategoryRow[] }>('/books/categories', {}, { withAuth: false }); }

@@ -18,10 +18,13 @@ import { bookDate } from '@/components/books/bookUtils';
 export default function BooksPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
+  const PAGE_SIZE = 40;
   const [books, setBooks] = useState<BookRow[]>([]);
   const [categories, setCategories] = useState<BookCategoryRow[]>([]);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [activation, setActivation] = useState<BookActivationInput | null | undefined>(undefined);
   const [modal, setModal] = useState<'activate' | 'add' | 'request' | null>(null);
   const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
@@ -32,12 +35,13 @@ export default function BooksPage() {
   const [myBooks, setMyBooks] = useState<BookRow[]>([]);
 
   const load = useCallback(async () => {
-    const [bookResult, categoryResult] = await Promise.all([getPublicBooks({ search, categoryId }), getBookCategories()]);
+    const [bookResult, categoryResult] = await Promise.all([getPublicBooks({ search, categoryId, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }), getBookCategories()]);
     setBooks(bookResult.rows);
+    setTotalCount(bookResult.total ?? bookResult.rows.length);
     setCategories(categoryResult.rows);
-  }, [categoryId, search]);
+  }, [categoryId, page, search]);
   useEffect(() => {
-    const timer = window.setTimeout(() => { void load(); }, 0);
+    const timer = window.setTimeout(() => { void load(); }, 300);
     return () => window.clearTimeout(timer);
   }, [load]);
   useEffect(() => {
@@ -94,7 +98,7 @@ export default function BooksPage() {
     <main className="min-h-screen bg-surface-2 pb-12">
       <BooksHeader active="store" myBookCount={myBooks.length} requestCount={visibleRequests.length} onAddBook={() => requireActivated('add')} />
 
-      <section className="border-b border-border bg-white"><div className="mx-auto max-w-6xl px-4 py-8"><h1 className="text-3xl font-bold text-fg">বইঘর</h1><p className="mt-2 text-sm text-muted">সবার জন্য বই দেখুন, সক্রিয় হওয়ার পর বই যোগ করুন বা ধার নিন। বই হারালে তালিকাভুক্ত মূল্য পরিশোধ করতে হবে।</p><div className="mt-5 flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="বই বা লেখক খুঁজুন" /></div><select value={categoryId ?? ''} onChange={(event) => setCategoryId(event.target.value ? Number(event.target.value) : undefined)} className="h-10 rounded-lg border border-border bg-white px-3 text-sm"><option value="">সব বিভাগ</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></div></div></section>
+      <section className="border-b border-border bg-white"><div className="mx-auto max-w-6xl px-4 py-8"><h1 className="text-3xl font-bold text-fg">বইঘর</h1><p className="mt-2 text-sm text-muted">সবার জন্য বই দেখুন, সক্রিয় হওয়ার পর বই যোগ করুন বা ধার নিন। বই হারালে তালিকাভুক্ত মূল্য পরিশোধ করতে হবে।</p><div className="mt-5"><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input className="pl-9" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="বই বা লেখক খুঁজুন" /></div><div className="mt-3 flex flex-wrap gap-2">{[{ id: undefined, label: 'সব বিভাগ' }, ...categories.map((category) => ({ id: category.id, label: category.category_name }))].map((item) => <button key={item.id ?? 'all'} type="button" onClick={() => { setCategoryId(item.id); setPage(1); }} className={categoryId === item.id ? 'rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand/30' : 'rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-fg-2 hover:border-brand/40 hover:text-brand'}>{item.label}</button>)}</div></div></div></section>
 
       <section className="mx-auto grid max-w-6xl gap-4 px-4 py-7 sm:grid-cols-2 lg:grid-cols-4">{books.map((book) => {
         const availableCopies = Number(book.available_copy_count ?? (book.status === 0 ? 1 : 0));
@@ -103,6 +107,7 @@ export default function BooksPage() {
         const isOwner = isAuthenticated && Number(book.owner_user_id) === Number(user?.id);
         return <article key={book.id} className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"><div className="relative aspect-[3/4] bg-surface-2">{book.cover_url ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-muted"><BookOpen className="h-10 w-10" /></div>}</div><div className="p-4"><p className="text-xs font-semibold text-brand">{book.category_name ?? 'বিভাগহীন'}</p><Link href={`/books/${book.id}`} className="mt-1 block font-bold text-fg hover:text-brand">{book.title}</Link><p className="mt-1 text-sm text-muted">{book.author_name || 'লেখক অজানা'}</p><p className="mt-3 text-xs text-muted">মালিক: {book.owner_name}</p><div className="mt-3 space-y-1 text-xs text-muted">{isOwner ? <p className="flex items-center gap-1 font-semibold text-brand"><BookMarked className="h-3.5 w-3.5" />এটি আপনার বই</p> : <p className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{totalCopies > 1 ? `${availableCopies}/${totalCopies} কপি এখন উপলব্ধ` : availableCopies ? 'কপি উপলব্ধ' : Number(book.status) === 3 ? 'মালিক সাময়িকভাবে বইটি বন্ধ রেখেছেন' : 'কপি এখন ধার দেওয়া আছে'}</p>}{estimatedFree && <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />সম্ভাব্য ফ্রি: {estimatedFree}</p>}</div><div className="mt-3 flex gap-2"><Link href={`/books/${book.id}`} className="flex-1"><Button size="sm" fullWidth variant="secondary">বিস্তারিত</Button></Link>{isOwner ? <Link href="/books/my"><Button size="sm" variant="secondary"><Pencil className="h-3.5 w-3.5" />ব্যবস্থাপনা</Button></Link> : <Button size="sm" disabled={!availableCopies} onClick={() => requireActivated('request', book)}><Send className="h-3.5 w-3.5" />{availableCopies ? 'ধার নিন' : 'ব্যস্ত'}</Button>}</div></div></article>;
       })}</section>
+      {totalCount > PAGE_SIZE && <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2"><p className="text-xs text-muted">দেখানো হচ্ছে {Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}–{Math.min(page * PAGE_SIZE, totalCount)} / {totalCount}টি বই</p><div className="flex gap-2"><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => { setPage((current) => Math.max(1, current - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>আগের</Button><Button size="sm" variant="secondary" disabled={page * PAGE_SIZE >= totalCount} onClick={() => { setPage((current) => current + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>পরের</Button></div></div>}
       {!books.length && <p className="py-12 text-center text-sm text-muted">কোনো বই পাওয়া যায়নি।</p>}
 
       <BookActivationModal open={modal === 'activate'} onClose={() => setModal(null)} onActivated={(result) => setActivation(result)} onMessage={showToast} />
