@@ -13,6 +13,7 @@ export function UserProfileMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -36,13 +37,16 @@ export function UserProfileMenu() {
 
   const handleSwitch = async () => {
     setBusy(true);
+    setSwitchError(null);
     try {
       await switchAccountMode(isStaff ? 'personal' : 'staff');
       router.replace(isStaff ? '/user/dashboard' : '/admin/dashboard');
       router.refresh();
+      setOpen(false);
+    } catch (error) {
+      setSwitchError(error instanceof Error ? error.message : 'সুইচ করা যায়নি। আবার চেষ্টা করুন।');
     } finally {
       setBusy(false);
-      setOpen(false);
     }
   };
 
@@ -82,10 +86,13 @@ export function UserProfileMenu() {
             প্রোফাইল দেখুন
           </Link>
           {canSwitchAccounts && (
-            <button type="button" onClick={() => void handleSwitch()} disabled={busy} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium hover:bg-surface-2">
-              <ArrowLeftRight className="h-4 w-4 text-brand" />
-              {busy ? 'সুইচ হচ্ছে...' : (isStaff ? 'ব্যক্তিগত অ্যাকাউন্টে সুইচ' : 'ম্যানেজমেন্ট অ্যাকাউন্টে সুইচ')}
-            </button>
+            <>
+              <button type="button" onClick={() => void handleSwitch()} disabled={busy} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium hover:bg-surface-2">
+                <ArrowLeftRight className="h-4 w-4 text-brand" />
+                {busy ? 'সুইচ হচ্ছে...' : (isStaff ? 'ব্যক্তিগত অ্যাকাউন্টে সুইচ' : 'ম্যানেজমেন্ট অ্যাকাউন্টে সুইচ')}
+              </button>
+              {switchError && <p className="px-4 py-2 text-xs leading-5 text-danger">{switchError}</p>}
+            </>
           )}
           <div className="border-t border-border" />
           <button type="button" onClick={() => void handleLogout()} disabled={busy} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-danger hover:bg-surface-2">

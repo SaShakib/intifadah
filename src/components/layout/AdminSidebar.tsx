@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +32,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   ));
   const sections = [...new Set(navItems.map((item) => item.section))];
 
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
   const handleLogout = async () => {
     onClose();
     await logout();
@@ -40,9 +43,14 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const handleSwitchToPersonal = async () => {
     onClose();
-    await switchAccountMode('personal');
-    router.replace('/user/dashboard');
-    router.refresh();
+    setSwitchError(null);
+    try {
+      await switchAccountMode('personal');
+      router.replace('/user/dashboard');
+      router.refresh();
+    } catch (error) {
+      setSwitchError(error instanceof Error ? error.message : 'সুইচ করা যায়নি।');
+    }
   };
 
   return (
@@ -111,13 +119,16 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
         <div className="border-t border-white/10 p-3">
           {canSwitchAccounts && (
-            <button
-              onClick={() => void handleSwitchToPersonal()}
-              className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              ব্যক্তিগত অ্যাকাউন্ট
-            </button>
+            <>
+              <button
+                onClick={() => void handleSwitchToPersonal()}
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                ব্যক্তিগত অ্যাকাউন্ট
+              </button>
+              {switchError && <p className="mb-2 px-2 text-xs leading-5 text-red-300">{switchError}</p>}
+            </>
           )}
           <button
             onClick={() => void handleLogout()}
