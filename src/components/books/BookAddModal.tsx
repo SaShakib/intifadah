@@ -75,6 +75,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
           {bookStep === 1 ? <>
             <label className="block text-sm font-semibold text-fg">বইয়ের নাম <span className="text-danger">*</span><div className="mt-1 flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); searchCover(); } }} placeholder="যেমন: তিন গোয়েন্দা" /><Button type="button" variant="secondary" disabled={searchingCover} onClick={searchCover}><Search className="h-4 w-4" />খুঁজুন</Button></div></label>
             <p className="-mt-3 text-xs text-muted">Google থেকে কভারের ছবি ডাউনলোড করতে চাইলে নাম লিখে Enter চাপুন বা খুঁজুন চাপুন।</p>
+            <p className="-mt-3 text-xs leading-5 text-muted">সব কভার এখানে নাও আসতে পারে। সেক্ষেত্রে সরাসরি Google-এ সার্চ করে ছবিটি ডাউনলোড করুন।</p>
             {coverSearchQuery && <ProgrammableCoverSearch key={coverSearchRun} query={coverSearchQuery} onSearchStateChange={handleCoverSearchStateChange} />}
             {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
             <label className="flex items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm font-semibold text-fg">
