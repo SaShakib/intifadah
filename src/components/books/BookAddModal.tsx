@@ -9,6 +9,7 @@ import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { createBook, createBookCategory, getBookCategories, uploadBookCover, type BookCategoryRow } from '@/lib/api';
 import { googleImagesUrl } from '@/components/books/bookUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyForm = { title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' };
 
@@ -20,6 +21,7 @@ interface BookAddModalProps {
 }
 
 export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModalProps) {
+  const { isAdmin } = useAuth();
   const [bookForm, setBookForm] = useState(emptyForm);
   const [newCategory, setNewCategory] = useState('');
   const [categories, setCategories] = useState<BookCategoryRow[]>([]);
@@ -78,6 +80,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
             <p className="-mt-3 text-xs leading-5 text-muted">সব কভার এখানে নাও আসতে পারে। সেক্ষেত্রে সরাসরি Google-এ সার্চ করে ছবিটি ডাউনলোড করুন।</p>
             {coverSearchQuery && <ProgrammableCoverSearch key={coverSearchRun} query={coverSearchQuery} onSearchStateChange={handleCoverSearchStateChange} />}
             {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
+            {isAdmin && <label className="block text-sm font-semibold text-fg">কভারের সরাসরি image URL <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="https://.../book-cover.jpg" /></label>}
             <label className="flex items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm font-semibold text-fg">
               <ImagePlus className="h-4 w-4" />কভার আপলোড করুন
               <input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); onMessage('WebP কভার আপলোড হয়েছে'); } catch (error) { onMessage(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setBusy(false); } }} />

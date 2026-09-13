@@ -8,6 +8,7 @@ import { Input } from '@/components/base/Input';
 import { AppModal } from '@/components/semibase/AppModal';
 import { getBookCategories, updateBook, uploadBookCover, type BookCategoryRow, type BookRow } from '@/lib/api';
 import { ProgrammableCoverSearch } from './ProgrammableCoverSearch';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BookEditModalProps {
   book: BookRow;
@@ -18,6 +19,7 @@ interface BookEditModalProps {
 }
 
 export function BookEditModal({ book, open, onClose, onUpdated, onMessage }: BookEditModalProps) {
+  const { isAdmin } = useAuth();
   const [form, setForm] = useState(() => ({
     title: book.title,
     authorName: book.author_name || '',
@@ -64,6 +66,7 @@ export function BookEditModal({ book, open, onClose, onUpdated, onMessage }: Boo
     <div className="space-y-4">
       <label className="block text-sm font-semibold text-fg">বইয়ের নাম <span className="text-danger">*</span><div className="mt-1 flex gap-2"><Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); searchCover(); } }} /><Button type="button" variant="secondary" onClick={searchCover}><Search className="h-4 w-4" />খুঁজুন</Button></div></label>
 {coverSearchQuery && <ProgrammableCoverSearch key={coverSearchRun} query={coverSearchQuery} onSearchStateChange={handleCoverSearchStateChange} />}
+      {isAdmin && <label className="block text-sm font-semibold text-fg">কভারের সরাসরি image URL <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={form.coverUrl} onChange={(event) => setForm({ ...form, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="https://.../book-cover.jpg" /></label>}
       <label className="flex items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm font-semibold text-fg">
         <ImagePlus className="h-4 w-4" />নতুন কভার আপলোড করুন
         <input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setSaving(true); try { const upload = await uploadBookCover(file); setForm({ ...form, ...upload, externalSource: '', externalVolumeId: '' }); onMessage('WebP কভার আপলোড হয়েছে'); } catch (error) { onMessage(error instanceof Error ? error.message : 'কভার আপলোড হয়নি'); } finally { setSaving(false); } }} />
