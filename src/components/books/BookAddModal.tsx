@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
-import { Check, CircleHelp, ExternalLink, ImagePlus, Plus, Search } from 'lucide-react';
+import { Check, CircleHelp, ExternalLink, ImagePlus, Loader2, Plus, Search } from 'lucide-react';
 import { AppModal } from '@/components/semibase/AppModal';
 import { ProgrammableCoverSearch } from '@/components/books/ProgrammableCoverSearch';
 import { Button } from '@/components/base/Button';
@@ -31,6 +31,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
   const [searchingCover, setSearchingCover] = useState(false);
   const [bookGuideOpen, setBookGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -82,8 +83,8 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
             {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
             {isAdmin && <label className="block text-sm font-semibold text-fg">কভারের সরাসরি image URL <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="https://.../book-cover.jpg" /></label>}
             <label className="flex items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm font-semibold text-fg">
-              <ImagePlus className="h-4 w-4" />কভার আপলোড করুন
-              <input className="hidden" type="file" accept="image/*" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); onMessage('WebP কভার আপলোড হয়েছে'); } catch (error) { onMessage(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setBusy(false); } }} />
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin text-brand" /> : <ImagePlus className="h-4 w-4" />}{uploading ? 'কভার আপলোড হচ্ছে...' : 'কভার আপলোড করুন'}
+              <input className="hidden" type="file" accept="image/*" disabled={uploading} onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setUploading(true); try { const upload = await uploadBookCover(file); setBookForm({ ...bookForm, ...upload, externalSource: '' }); onMessage('WebP কভার আপলোড হয়েছে'); } catch (error) { onMessage(error instanceof Error ? error.message : 'আপলোড হয়নি'); } finally { setUploading(false); } }} />
             </label>
             {bookForm.coverUrl && <Image src={bookForm.coverUrl} alt="নির্বাচিত কভার" width={96} height={132} className="h-36 w-24 rounded border border-border object-cover" unoptimized />}
             <label className="block text-sm font-semibold text-fg">বইয়ের মূল্য <span className="text-danger">*</span><Input className="mt-1" type="number" min="1" value={bookForm.bookPriceMinor} onChange={(event) => setBookForm({ ...bookForm, bookPriceMinor: event.target.value })} placeholder="হারালে যে মূল্য পরিশোধ করতে হবে" /></label>
