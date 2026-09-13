@@ -1,10 +1,12 @@
 const express = require('express');
-const { requireAuth, requireCompletedProfile } = require('../middleware/auth');
+const { requireAuth, requireCompletedProfile, requireRoles } = require('../middleware/auth');
 const booksController = require('../controllers/books.controller');
 
 const router = express.Router();
 
 router.get('/categories', booksController.categories);
+router.get('/admin/requests', requireAuth, requireRoles('super_admin'), booksController.adminRequests);
+router.patch('/admin/requests/:requestId', requireAuth, requireRoles('super_admin'), booksController.adminRequestUpdate);
 router.get('/me/books', requireAuth, requireCompletedProfile, booksController.myBooks);
 router.patch('/:bookId/availability', requireAuth, requireCompletedProfile, booksController.availability);
 router.get('/', booksController.list);

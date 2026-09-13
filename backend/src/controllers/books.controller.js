@@ -11,6 +11,8 @@ const {
   receiverConfirmRequest,
   requestExtension,
   ownerResolveExtension,
+  adminListRequests,
+  adminUpdateRequest,
   cloudinarySignature,
 } = require('../services/books.service');
 
@@ -105,4 +107,12 @@ async function resolveExtension(req, res, next) {
   try { res.json({ data: await ownerResolveExtension(req.auth.userId, id(req.params.extensionId, 'extensionId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
-module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension };
+async function adminRequests(req, res, next) {
+  try { res.json(await adminListRequests(req.auth.userId, req.query || {})); } catch (error) { next(error); }
+}
+
+async function adminRequestUpdate(req, res, next) {
+  try { res.json({ data: await adminUpdateRequest(req.auth.userId, id(req.params.requestId, 'requestId'), req.body || {}) }); } catch (error) { next(error); }
+}
+
+module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension, adminRequests, adminRequestUpdate };

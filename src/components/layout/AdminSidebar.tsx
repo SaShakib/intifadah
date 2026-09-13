@@ -23,6 +23,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const { user, roleKey, canManagePermissions, can, canSwitchAccounts, logout, switchAccountMode } = useAuth();
   const navItems = ADMIN_NAV_ITEMS.filter((item) => {
     if (item.permissionOnly && !canManagePermissions) return false;
+    if (item.superAdminOnly && roleKey !== 'super_admin') return false;
     if (item.requiredModule && !can(item.requiredModule, item.requiredAction ?? 'read')) return false;
     return true;
   }).map((item) => (

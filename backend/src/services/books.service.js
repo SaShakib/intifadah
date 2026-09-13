@@ -242,6 +242,37 @@ async function ownerResolveExtension(userId, extensionId, input) {
   return result;
 }
 
+async function adminListRequests(_userId, query) {
+  const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100);
+  const offset = Math.max(Number(query.offset) || 0, 0);
+  const status = query.status !== undefined && query.status !== '' ? Number(query.status) : undefined;
+  if (status !== undefined && (!Number.isInteger(status) || status < 0 || status > 7)) throw badRequest('status is invalid');
+  return booksRepository.listAllBookRequests({ search: query.search, status, limit, offset });
+}
+
+async function adminUpdateRequest(userId, requestId, input) {
+  const status = Number(input.status);
+  if (!Number.isInteger(status) || status < 1 || status > 7) throw badRequest('status is invalid');
+  const result = await booksRepository.adminUpdateRequest({
+    requestId, actorUserId: userId, status, note: cleanText(input.note, 'note', 500, false),
+  });
+  if (!result || result.conflict) {
+    const error = new Error('Book request not found or the chosen status is not allowed for it');
+    error.statusCode = 400;
+    throw error;
+  }
+  const eventLabel = { 1: 'accepted', 2: 'rejected', 3: 'given', 4: 'received', 5: 'returned', 6: 'return_confirmed', 7: 'cancelled' }[status];
+  const recipientIds = [...new Set([result.ownerUserId, result.requesterUserId]).filter((id) => id && Number(id) !== Number(userId))];
+  await Promise.all(recipientIds.map((recipientId) =>
+    notificationsRepository.createForUser({
+      userId: recipientId,
+      notifType: 31,
+      payloadJson: { event: `book_request_admin_${eventLabel}`, requestId, bookTitle: result.bookTitle, url: '/books' },
+    }),
+  ));
+  return result;
+}
+
 function cloudinarySignature() {
   if (!env.cloudinaryCloudName || !env.cloudinaryApiKey || !env.cloudinaryApiSecret) {
     const error = new Error('Cloudinary is not configured');
@@ -273,4 +304,5 @@ module.exports = {
   requireActivation, activateBooks, createBookCategory, addBook, updateBook, deleteBook, setBookHold, requestBook,
   ownerUpdateRequest, receiverConfirmRequest, cloudinarySignature, optimizedCoverUrl,
   requestExtension, ownerResolveExtension,
+  adminListRequests, adminUpdateRequest,
 };

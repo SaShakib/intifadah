@@ -6,6 +6,7 @@ export interface NavItem {
   icon: string;
   section: string;
   permissionOnly?: boolean;
+  superAdminOnly?: boolean;
   requiredModule?: string;
   requiredAction?: PermissionAction;
 }

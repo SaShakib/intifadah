@@ -228,6 +228,10 @@ async function createRequest({ bookId, requesterUserId, requestedDays, requestGr
          VALUES ($1,$2,$3,$4) RETURNING *`,
         [candidate.id, requesterUserId, requestedDays, requestGroupId],
       );
+      await client.query(
+        `INSERT INTO book_request_events (request_id, action, actor_user_id) VALUES ($1, 'requested', $2)`,
+        [created.rows[0].id, requesterUserId],
+      );
       requests.push(created.rows[0]);
     }
 
@@ -308,6 +312,10 @@ async function updateRequestByOwner({ requestId, ownerUserId, action, ownerNote 
     );
     const bookStatus = action === 'given' ? 2 : action === 'return_received' ? 0 : null;
     if (bookStatus !== null) await client.query('UPDATE books SET status = $2, updated_at = NOW() WHERE id = $1', [request.book_id, bookStatus]);
+    await client.query(
+      `INSERT INTO book_request_events (request_id, action, actor_user_id, note) VALUES ($1, $2, $3, $4)`,
+      [requestId, action, ownerUserId, ownerNote || null],
+    );
     return { request: updated.rows[0], requesterUserId: request.requester_user_id };
   });
 }
@@ -316,19 +324,27 @@ async function confirmReceived({ requestId, requesterUserId, action }) {
   const received = action === 'received';
   const returned = action === 'returned';
   if (!received && !returned) return null;
-  const res = await query(
-    `UPDATE book_requests br SET
-       status = $3,
-       received_at = CASE WHEN $3 = 4 THEN NOW() ELSE received_at END,
-       return_initiated_at = CASE WHEN $3 = 5 THEN NOW() ELSE return_initiated_at END,
-       returned_at = CASE WHEN $3 = 5 THEN NOW() ELSE returned_at END,
-       updated_at = NOW()
-     FROM books b
-     WHERE br.id = $1 AND br.book_id = b.id AND br.requester_user_id = $2 AND br.status = $4
-     RETURNING br.*, b.owner_user_id`,
-    [requestId, requesterUserId, received ? 4 : 5, received ? 3 : 4],
-  );
-  return res.rows[0] || null;
+  return withTransaction(async (client) => {
+    const res = await client.query(
+      `UPDATE book_requests br SET
+         status = $3,
+         received_at = CASE WHEN $3 = 4 THEN NOW() ELSE received_at END,
+         return_initiated_at = CASE WHEN $3 = 5 THEN NOW() ELSE return_initiated_at END,
+         returned_at = CASE WHEN $3 = 5 THEN NOW() ELSE returned_at END,
+         updated_at = NOW()
+       FROM books b
+       WHERE br.id = $1 AND br.book_id = b.id AND br.requester_user_id = $2 AND br.status = $4
+       RETURNING br.*, b.owner_user_id`,
+      [requestId, requesterUserId, received ? 4 : 5, received ? 3 : 4],
+    );
+    const row = res.rows[0];
+    if (!row) return null;
+    await client.query(
+      `INSERT INTO book_request_events (request_id, action, actor_user_id) VALUES ($1, $2, $3)`,
+      [requestId, received ? 'received' : 'returned', requesterUserId],
+    );
+    return row;
+  });
 }
 
 async function createExtension({ requestId, requesterUserId, requestedDays }) {
@@ -343,6 +359,10 @@ async function createExtension({ requestId, requesterUserId, requestedDays }) {
   const owner = await query(
     `SELECT b.owner_user_id FROM book_requests br JOIN books b ON b.id = br.book_id WHERE br.id = $1`,
     [requestId],
+  );
+  await query(
+    `INSERT INTO book_request_events (request_id, action, actor_user_id) VALUES ($1, 'extension_requested', $2)`,
+    [requestId, requesterUserId],
   );
   return { ...res.rows[0], ownerUserId: owner.rows[0]?.owner_user_id };
 }
@@ -368,7 +388,134 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
         [extension.request_id, extension.requested_days],
       );
     }
+    await client.query(
+      `INSERT INTO book_request_events (request_id, action, actor_user_id, note) VALUES ($1, $2, $3, $4)`,
+      [extension.request_id, accepted ? 'extension_accepted' : 'extension_rejected', ownerUserId, ownerNote || null],
+    );
     return { requesterUserId: extension.requester_user_id, requestId: extension.request_id };
+  });
+}
+
+async function listAllBookRequests({ search, status, limit = 20, offset = 0 } = {}) {
+  const conditions = [];
+  const params = [];
+  if (status !== undefined && status !== null && status !== '') {
+    params.push(Number(status));
+    conditions.push(`br.status = $${params.length}`);
+  }
+  if (search && search.trim()) {
+    params.push(`%${search.trim()}%`);
+    conditions.push(`(b.title ILIKE $${params.length} OR b.author_name ILIKE $${params.length} OR owner.full_name ILIKE $${params.length} OR owner.mobile ILIKE $${params.length} OR requester.full_name ILIKE $${params.length} OR requester.mobile ILIKE $${params.length})`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const joinAndSelect = `
+    FROM book_requests br
+    JOIN books b ON b.id = br.book_id
+    JOIN app_users owner ON owner.id = b.owner_user_id
+    JOIN app_users requester ON requester.id = br.requester_user_id
+    LEFT JOIN book_activation_profiles owner_profile ON owner_profile.user_id = owner.id
+    LEFT JOIN book_activation_profiles requester_profile ON requester_profile.user_id = requester.id
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(jsonb_agg(jsonb_build_object('id', bre.id, 'requestedDays', bre.requested_days, 'status', bre.status) ORDER BY bre.requested_at DESC), '[]'::jsonb) AS extensions
+      FROM book_request_extensions bre WHERE bre.request_id = br.id
+    ) ex ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(jsonb_agg(jsonb_build_object('action', e.action, 'note', e.note, 'actorName', actor.full_name, 'at', e.created_at) ORDER BY e.created_at DESC), '[]'::jsonb) AS events
+      FROM book_request_events e LEFT JOIN app_users actor ON actor.id = e.actor_user_id WHERE e.request_id = br.id
+    ) ev ON TRUE
+    ${where}`;
+
+  const totalRes = await query(`SELECT COUNT(*)::int AS total ${joinAndSelect}`, params);
+  params.push(limit, offset);
+  const res = await query(
+    `SELECT br.*, b.title, b.cover_url, b.book_price_minor, b.canonical_key, b.owner_user_id, ex.extensions, ev.events,
+       owner.full_name AS owner_name, owner.mobile AS owner_mobile, owner.email AS owner_email,
+       owner_profile.village AS owner_village, owner_profile.ward_no AS owner_ward_no,
+       requester.full_name AS requester_name, requester.mobile AS requester_mobile, requester.email AS requester_email,
+       requester_profile.village AS requester_village, requester_profile.ward_no AS requester_ward_no,
+       requester_profile.father_name AS requester_father_name
+     ${joinAndSelect}
+     ORDER BY br.updated_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params,
+  );
+  return { rows: res.rows, total: totalRes.rows[0].total };
+}
+
+async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
+  return withTransaction(async (client) => {
+    const result = await client.query(
+      `SELECT br.*, b.owner_user_id, b.id AS book_id, b.status AS book_status
+       FROM book_requests br JOIN books b ON b.id = br.book_id
+       WHERE br.id = $1 FOR UPDATE OF br, b`, [requestId],
+    );
+    const request = result.rows[0];
+    if (!request) return { conflict: true };
+
+    const current = Number(request.status);
+    const target = Number(status);
+    const allowedTargets = {
+      1: [0],             // accept reserved
+      2: [0, 1],          // reject
+      3: [0, 1],          // given
+      4: [3],             // received
+      5: [4],             // returned (initiated)
+      6: [4, 5],          // return confirmed
+      7: [0, 1, 3, 4, 5], // cancelled
+    };
+    const transitions = allowedTargets[target];
+    if (!transitions || !transitions.includes(current)) return { conflict: true };
+
+    if (target === 1) {
+      const reserved = await client.query('UPDATE books SET status = 1, updated_at = NOW() WHERE id = $1 AND status = 0 RETURNING id', [request.book_id]);
+      if (!reserved.rowCount) return { conflict: true };
+      if (request.request_group_id) {
+        await client.query(
+          `UPDATE book_requests
+           SET status = 2, owner_note = COALESCE(owner_note, 'Another copy was accepted'), updated_at = NOW()
+           WHERE request_group_id = $1 AND id <> $2 AND status = 0`,
+          [request.request_group_id, requestId],
+        );
+      }
+      await client.query(
+        `UPDATE book_requests
+         SET status = 2, owner_note = COALESCE(owner_note, 'This copy is no longer available'), updated_at = NOW()
+         WHERE book_id = $1 AND id <> $2 AND status = 0`,
+        [request.book_id, requestId],
+      );
+    }
+
+    const timestampColumns = { 1: 'accepted_at', 3: 'given_at', 4: 'received_at', 5: 'returned_at', 6: 'return_received_at' };
+    const setStatements = ['status = $2', 'owner_note = COALESCE($3, owner_note)', 'updated_at = NOW()'];
+    const values = [requestId, target, note || null, actorUserId];
+    if (timestampColumns[target]) setStatements.push(`${timestampColumns[target]} = NOW()`);
+    if (target === 6) setStatements.push('return_received_by_user_id = $4');
+
+    await client.query(
+      `UPDATE book_requests br SET ${setStatements.join(', ')} WHERE br.id = $1`,
+      values,
+    );
+
+    if (target === 3) {
+      await client.query('UPDATE books SET status = 2, updated_at = NOW() WHERE id = $1', [request.book_id]);
+    } else if (target === 6) {
+      await client.query('UPDATE books SET status = 0, updated_at = NOW() WHERE id = $1', [request.book_id]);
+    } else if (target === 7 && current === 1) {
+      await client.query('UPDATE books SET status = 0, updated_at = NOW() WHERE id = $1', [request.book_id]);
+    }
+
+    const actionLabel = { 1: 'accepted', 2: 'rejected', 3: 'given', 4: 'received', 5: 'returned', 6: 'return_received', 7: 'cancelled' }[target];
+    await client.query(
+      `INSERT INTO book_request_events (request_id, action, actor_user_id, note) VALUES ($1, $2, $3, $4)`,
+      [requestId, actionLabel, actorUserId, note || null],
+    );
+    return {
+      conflict: false,
+      bookTitle: request.title,
+      requesterUserId: request.requester_user_id,
+      ownerUserId: request.owner_user_id,
+      status: target,
+    };
   });
 }
 
@@ -377,4 +524,5 @@ module.exports = {
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,
+  listAllBookRequests, adminUpdateRequest,
 };

@@ -4,6 +4,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: '/admin/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'ইনতিফাদাহ সদস্য', requiredModule: 'quran', requiredAction: 'read' },
   { href: '/books', label: 'বইঘর', icon: 'book-open', section: 'ইনতিফাদাহ সদস্য' },
   { href: '/admin/dashboard', label: 'ড্যাশবোর্ড', icon: 'layout-dashboard', section: 'প্রধান মেনু', requiredModule: 'dashboard', requiredAction: 'read' },
+  { href: '/admin/books-requests', label: 'বইয়ের অনুরোধ', icon: 'file-check-2', section: 'প্রধান মেনু', superAdminOnly: true },
   { href: '/admin/fund-collection', label: 'ফান্ড / কালেকশন', icon: 'circle-dollar-sign', section: 'প্রধান মেনু', requiredModule: 'collections', requiredAction: 'read' },
   { href: '/admin/loans', label: 'ঋণ বিতরণ', icon: 'hand-coins', section: 'প্রধান মেনু', requiredModule: 'loans', requiredAction: 'read' },
   { href: '/admin/loan-repayment', label: 'ঋণ ফেরত', icon: 'rotate-ccw', section: 'প্রধান মেনু', requiredModule: 'repayments', requiredAction: 'read' },
