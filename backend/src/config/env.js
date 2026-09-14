@@ -74,6 +74,7 @@ const env = {
 
   superAdminEmails: parseEmailList(process.env.SUPERADMIN_EMAILS),
   adminEmails: parseEmailList(process.env.ADMIN_EMAILS),
+  bookSuperAdminForwardTo: process.env.BOOK_SUPERADMIN_FORWARD_TO || 'sashakib0401@gmail.com',
   dataProvider: (process.env.DATA_PROVIDER || 'postgres').toLowerCase(),
 };
 

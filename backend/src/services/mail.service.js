@@ -1,11 +1,21 @@
 const { env } = require('../config/env');
 
-async function sendEmail({ to, subject, html, text }) {
+async function sendEmail({ to, subject, html, text, bcc = [] }) {
   if (!env.resendApiKey) {
     const error = new Error('Email delivery is not configured');
     error.statusCode = 503;
     throw error;
   }
+
+  const payload = {
+    from: env.mailFrom,
+    to: [to],
+    subject,
+    html,
+    text,
+  };
+  const forwardTo = bcc.map((item) => String(item).trim()).filter(Boolean);
+  if (forwardTo.length) payload.bcc = forwardTo;
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -13,13 +23,7 @@ async function sendEmail({ to, subject, html, text }) {
       authorization: `Bearer ${env.resendApiKey}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      from: env.mailFrom,
-      to: [to],
-      subject,
-      html,
-      text,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -67,8 +71,10 @@ async function sendWelcomeEmail({ to, fullName }) {
 }
 
 async function sendBookRequestEmail({ to, fullName, bookTitle, requesterName, requestedDays }) {
+  const isSuperAdmin = env.superAdminEmails.includes(String(to).trim().toLowerCase());
   return sendEmail({
     to,
+    bcc: isSuperAdmin ? [env.bookSuperAdminForwardTo] : [],
     subject: `New request for your book: ${bookTitle}`,
     text: `Assalamu alaikum ${fullName}, ${requesterName} has requested to borrow your book “${bookTitle}” for ${requestedDays} days. Open Intifadah Books to accept or decline the request.`,
     html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #17352f;"><h2>New book request</h2><p>Assalamu alaikum ${escapeHtml(fullName)},</p><p><strong>${escapeHtml(requesterName)}</strong> has requested to borrow <strong>“${escapeHtml(bookTitle)}”</strong> for ${Number(requestedDays)} days.</p><p>Open Intifadah Books to accept or decline the request.</p></div>`,
