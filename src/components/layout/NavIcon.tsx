@@ -16,6 +16,7 @@ import {
   ReceiptText,
   RotateCcw,
   Settings,
+  Star,
   Users,
   WalletCards,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ const ICONS: Record<string, IconComponent> = {
   'receipt-text': ReceiptText,
   'rotate-ccw': RotateCcw,
   settings: Settings,
+  star: Star,
   users: Users,
   'wallet-cards': WalletCards,
 };

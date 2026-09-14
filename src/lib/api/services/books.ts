@@ -46,7 +46,7 @@ export interface AdminBookRequestListResult { rows: AdminBookRequestRow[]; total
 
 export interface BookListResult { rows: BookRow[]; total: number; }
 export interface BookStoreSection { categoryId: number; categoryName: string; slug: string | null; books: BookRow[]; }
-export interface BookStoreGroupedResult { sections: BookStoreSection[]; uncategorized: BookRow[]; }
+export interface BookStoreGroupedResult { featured: BookRow[]; sections: BookStoreSection[]; uncategorized: BookRow[]; }
 
 export function getPublicBooks(params: { search?: string; category?: string; limit?: number; offset?: number } = {}) {
   return apiRequest<BookListResult>(`/books${createQueryString(params)}`, {}, { withAuth: false });
@@ -69,6 +69,12 @@ export function getAdminBookRequests(params: { search?: string; status?: number 
 }
 export function adminBookRequestUpdate(requestId: string | number, input: { status: number; note?: string }) {
   return apiRequest<{ data: AdminBookRequestRow }>(`/books/admin/requests/${requestId}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+export function getAdminFeaturedBooks() {
+  return apiRequest<{ rows: BookRow[] }>('/books/admin/featured');
+}
+export function saveAdminFeaturedBooks(bookIds: number[]) {
+  return apiRequest<{ rows: BookRow[] }>('/books/admin/featured', { method: 'PUT', body: JSON.stringify({ bookIds }) });
 }
 export function getMyBooks() { return apiRequest<{ rows: BookRow[] }>('/books/me/books'); }
 export function setBookHold(bookId: string | number, held: boolean) { return apiRequest<{ data: { held: boolean } }>(`/books/${bookId}/availability`, { method: 'PATCH', body: JSON.stringify({ held }) }); }

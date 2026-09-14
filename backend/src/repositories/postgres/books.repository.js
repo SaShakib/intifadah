@@ -237,6 +237,41 @@ async function listBooksGroupedByCategory({ sectionSize = 8 } = {}) {
   return { sections: orderedSections, uncategorized: uncatRes.rows };
 }
 
+async function listFeaturedBooks() {
+  const res = await query(
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+     FROM books b
+     JOIN book_featured f ON f.book_id = b.id
+     JOIN app_users o ON o.id = b.owner_user_id
+     LEFT JOIN book_categories c ON c.id = b.category_id
+     ${BOOK_AVAILABILITY_JOIN}
+     WHERE b.deleted_at IS NULL
+     ORDER BY b.title_script, b.canonical_key COLLATE "C", f.position ASC, CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC`,
+  );
+  return res.rows;
+}
+
+async function replaceFeaturedBooks({ bookIds, actorUserId }) {
+  const ids = [...new Set((bookIds || []).map(Number).filter((value) => Number.isInteger(value) && value > 0))].slice(0, 50);
+  await withTransaction(async (client) => {
+    await client.query('DELETE FROM book_featured');
+    if (!ids.length) return;
+    const valid = await client.query(
+      `SELECT id FROM books WHERE id = ANY($1) AND deleted_at IS NULL ORDER BY array_position($1, id::bigint)`,
+      [ids],
+    );
+    let position = 0;
+    for (const row of valid.rows) {
+      position += 1;
+      await client.query(
+        'INSERT INTO book_featured (book_id, position, created_by_user_id) VALUES ($1,$2,$3) ON CONFLICT (book_id) DO UPDATE SET position = EXCLUDED.position',
+        [row.id, position, actorUserId],
+      );
+    }
+  });
+  return listFeaturedBooks();
+}
+
 async function archiveBook({ bookId, actorUserId, canDeleteAnyBook }) {
   return withTransaction(async (client) => {
     const found = await client.query(
@@ -625,7 +660,7 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, listBooksGroupedByCategory, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
+  listCategories, createCategory, listBooks, listBooksGroupedByCategory, listFeaturedBooks, replaceFeaturedBooks, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,

@@ -1,6 +1,7 @@
 export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'ড্যাশবোর্ড',
   '/admin/books-requests': 'বইয়ের অনুরোধ',
+  '/admin/books-featured': 'শীর্ষ রেটেড বই',
   '/admin/members': 'সদস্য তালিকা',
   '/admin/loans': 'ঋণ বিতরণ',
   '/admin/loan-repayment': 'ঋণ ফেরত',

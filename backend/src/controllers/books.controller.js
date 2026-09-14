@@ -35,8 +35,8 @@ async function categories(_req, res, next) {
 async function list(req, res, next) {
   try {
     if (req.query.grouped && req.query.grouped !== '0' && !req.query.search && !req.query.category && !req.query.categoryId) {
-      const row = await booksRepository.listBooksGroupedByCategory({});
-      return res.json(row);
+      const [row, featured] = await Promise.all([booksRepository.listBooksGroupedByCategory({}), booksRepository.listFeaturedBooks()]);
+      return res.json({ ...row, featured });
     }
     const categorySlugs = req.query.category
       ? String(req.query.category).split(',').map((slug) => slug.trim()).filter(Boolean)
@@ -129,4 +129,12 @@ async function adminRequestUpdate(req, res, next) {
   try { res.json({ data: await adminUpdateRequest(req.auth.userId, id(req.params.requestId, 'requestId'), req.body || {}) }); } catch (error) { next(error); }
 }
 
-module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension, adminRequests, adminRequestUpdate };
+async function adminFeaturedList(_req, res, next) {
+  try { res.json({ rows: await booksRepository.listFeaturedBooks() }); } catch (error) { next(error); }
+}
+
+async function adminFeaturedReplace(req, res, next) {
+  try { res.json({ rows: await booksRepository.replaceFeaturedBooks({ bookIds: req.body?.bookIds, actorUserId: req.auth.userId }) }); } catch (error) { next(error); }
+}
+
+module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension, adminRequests, adminRequestUpdate, adminFeaturedList, adminFeaturedReplace };

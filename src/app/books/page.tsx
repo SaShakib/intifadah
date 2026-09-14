@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, FolderOpen, Pencil, Search, Send, Users } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, FolderOpen, Pencil, Search, Send, Star, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { BooksHeader } from '@/components/books/BooksHeader';
@@ -26,6 +26,7 @@ function BooksPageContent() {
   const pageParam = Math.max(1, Number(searchParams.get('page')) || 1);
 
   const [books, setBooks] = useState<BookRow[]>([]);
+  const [featured, setFeatured] = useState<BookRow[]>([]);
   const [sections, setSections] = useState<BookStoreSection[]>([]);
   const [uncategorized, setUncategorized] = useState<BookRow[]>([]);
   const [categories, setCategories] = useState<BookCategoryRow[]>([]);
@@ -55,6 +56,7 @@ function BooksPageContent() {
   const load = useCallback(async () => {
     if (!categoryParam && !searchParam) {
       const [groupedResult, categoryResult] = await Promise.all([getPublicBooksGrouped(), getBookCategories()]);
+      setFeatured(groupedResult.featured ?? []);
       setSections(groupedResult.sections);
       setUncategorized(groupedResult.uncategorized);
       setCategories(categoryResult.rows);
@@ -68,6 +70,7 @@ function BooksPageContent() {
       setBooks(bookResult.rows);
       setTotalCount(bookResult.total ?? bookResult.rows.length);
       setCategories(categoryResult.rows);
+      setFeatured([]);
       setSections([]);
       setUncategorized([]);
     }
@@ -153,6 +156,15 @@ function BooksPageContent() {
 
       {grouped ? (
         <>
+          {featured.length > 0 && (
+            <section className="mx-auto max-w-6xl px-4 pt-7">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-lg font-bold text-fg"><Star className="h-5 w-5 text-amber-400 fill-amber-400" />শীর্ষ রেটেড বই<span className="text-xs font-normal text-muted">({featured.length}টি)</span></h2>
+                <ShareButton url="/books" title="ইনতিফাদাহ বইঘর" text="শীর্ষ রেটেড বই দেখুন" />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{featured.map(renderBook)}</div>
+            </section>
+          )}
           {sections.map((section) => (
             <section key={section.categoryId} className="mx-auto max-w-6xl px-4 pt-7">
               <div className="flex items-center justify-between gap-3">
@@ -177,7 +189,7 @@ function BooksPageContent() {
       )}
       {!grouped && totalCount > PAGE_SIZE && <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2"><p className="text-xs text-muted">দেখানো হচ্ছে {Math.min((pageParam - 1) * PAGE_SIZE + 1, totalCount)}–{Math.min(pageParam * PAGE_SIZE, totalCount)} / {totalCount}টি বই</p><div className="flex gap-2"><Button size="sm" variant="secondary" disabled={pageParam <= 1} onClick={() => { updateParams({ page: String(pageParam - 1) }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>আগের</Button><Button size="sm" variant="secondary" disabled={pageParam * PAGE_SIZE >= totalCount} onClick={() => { updateParams({ page: String(pageParam + 1) }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>পরের</Button></div></div>}
       {!grouped && !books.length && <p className="py-12 text-center text-sm text-muted">কোনো বই পাওয়া যায়নি।</p>}
-      {grouped && !sections.length && !uncategorized.length && <p className="py-12 text-center text-sm text-muted">কোনো বই পাওয়া যায়নি।</p>}
+      {grouped && !featured.length && !sections.length && !uncategorized.length && <p className="py-12 text-center text-sm text-muted">কোনো বই পাওয়া যায়নি।</p>}
 
       <BookActivationModal open={modal === 'activate'} onClose={() => setModal(null)} onActivated={(result) => setActivation(result)} onMessage={showToast} />
       <BookAddModal open={modal === 'add'} onClose={() => setModal(null)} onMessage={showToast} onAdded={() => { void load(); void loadMyBooks(); }} />
