@@ -73,6 +73,7 @@ function clearPermissionCache(roleId) {
 }
 
 module.exports = {
+  getRolePermissionMap,
   hasPermission,
   hasAnyPermission,
   listModules,
