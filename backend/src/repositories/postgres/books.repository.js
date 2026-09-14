@@ -67,7 +67,7 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
   }
   values.push(Math.min(Number(limit) || 40, 100), Math.max(Number(offset) || 0, 0));
   const res = await query(
-    `SELECT DISTINCT ON (b.canonical_key, b.title_script) ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
