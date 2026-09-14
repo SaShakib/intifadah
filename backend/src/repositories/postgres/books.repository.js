@@ -3,7 +3,7 @@ const { query, withTransaction } = require('../../db/pool');
 const BOOK_COLUMNS = `
   b.id, b.owner_user_id, b.category_id, b.title, b.author_name, b.book_price_minor,
   b.cover_url, b.cover_public_id, b.external_source, b.external_volume_id, b.status,
-  b.approval_status, b.description, b.canonical_key, b.created_at, b.updated_at, o.full_name AS owner_name,
+  b.approval_status, b.description, b.canonical_key, b.title_script, b.created_at, b.updated_at, o.full_name AS owner_name,
   c.category_name`;
 
 const BOOK_AVAILABILITY_COLUMNS = `
@@ -67,13 +67,13 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
   }
   values.push(Math.min(Number(limit) || 40, 100), Math.max(Number(offset) || 0, 0));
   const res = await query(
-    `SELECT DISTINCT ON (b.canonical_key) ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT DISTINCT ON (b.canonical_key, b.title_script) ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
      ${BOOK_AVAILABILITY_JOIN}
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-     ORDER BY b.canonical_key, CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC
+     ORDER BY b.title_script, b.canonical_key COLLATE "C", CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC
      LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values,
   );
