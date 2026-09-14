@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/categories', booksController.categories);
 router.get('/admin/featured', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedList);
 router.put('/admin/featured', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedReplace);
+router.patch('/admin/featured/:bookId', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedToggle);
 router.get('/admin/requests', requireAuth, requireRoles('super_admin'), booksController.adminRequests);
 router.patch('/admin/requests/:requestId', requireAuth, requireRoles('super_admin'), booksController.adminRequestUpdate);
 router.get('/me/books', requireAuth, requireCompletedProfile, booksController.myBooks);

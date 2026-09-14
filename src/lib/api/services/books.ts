@@ -10,6 +10,7 @@ export interface BookRow {
   external_volume_id: string | null; status: number; approval_status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
   total_copy_count: number; available_copy_count: number; estimated_available_on: string | null;
   categories?: BookCategoryRef[];
+  featured?: boolean;
 }
 export interface BookActivationInput {
   village: string; wardNo: number; fatherName: string; occupationType: 'student' | 'working' | 'business';
@@ -75,6 +76,9 @@ export function getAdminFeaturedBooks() {
 }
 export function saveAdminFeaturedBooks(bookIds: number[]) {
   return apiRequest<{ rows: BookRow[] }>('/books/admin/featured', { method: 'PUT', body: JSON.stringify({ bookIds }) });
+}
+export function toggleAdminFeaturedBook(bookId: string | number, featured: boolean) {
+  return apiRequest<{ row: BookRow }>(`/books/admin/featured/${bookId}`, { method: 'PATCH', body: JSON.stringify({ featured }) });
 }
 export function getMyBooks() { return apiRequest<{ rows: BookRow[] }>('/books/me/books'); }
 export function setBookHold(bookId: string | number, held: boolean) { return apiRequest<{ data: { held: boolean } }>(`/books/${bookId}/availability`, { method: 'PATCH', body: JSON.stringify({ held }) }); }

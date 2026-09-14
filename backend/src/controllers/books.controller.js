@@ -137,4 +137,11 @@ async function adminFeaturedReplace(req, res, next) {
   try { res.json({ rows: await booksRepository.replaceFeaturedBooks({ bookIds: req.body?.bookIds, actorUserId: req.auth.userId }) }); } catch (error) { next(error); }
 }
 
-module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension, adminRequests, adminRequestUpdate, adminFeaturedList, adminFeaturedReplace };
+async function adminFeaturedToggle(req, res, next) {
+  try {
+    const row = await booksRepository.setBookFeatured({ bookId: id(req.params.bookId, 'bookId'), featured: Boolean(req.body?.featured), actorUserId: req.auth.userId });
+    res.json({ row });
+  } catch (error) { next(error); }
+}
+
+module.exports = { categories, list, detail, activation, activate, createCategory, create, update, remove, myBooks, availability, uploadSignature, request, myRequests, ownerAction, received, extension, resolveExtension, adminRequests, adminRequestUpdate, adminFeaturedList, adminFeaturedReplace, adminFeaturedToggle };

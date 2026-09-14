@@ -33,6 +33,9 @@ const BOOK_CATEGORIES_JOIN = `
     WHERE lc2.book_id = b.id
   ) categories_agg ON TRUE`;
 
+const BOOK_FEATURED_FLAG = `
+  EXISTS(SELECT 1 FROM book_featured bf WHERE bf.book_id = b.id) AS featured`;
+
 async function listCategories({ includeCounts = false } = {}) {
   if (!includeCounts) {
     const res = await query('SELECT id, category_name, slug, created_at FROM book_categories ORDER BY category_name ASC');
@@ -95,7 +98,7 @@ async function listBooks({ search, categoryId, categorySlugs, ownerUserId, statu
   }
   values.push(Math.min(Number(limit) || 40, 100), Math.max(Number(offset) || 0, 0));
   const res = await query(
-    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}, ${BOOK_FEATURED_FLAG}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
@@ -120,7 +123,7 @@ async function listBooks({ search, categoryId, categorySlugs, ownerUserId, statu
 
 async function getBookById(bookId) {
   const res = await query(
-    `SELECT ${BOOK_COLUMNS}, categories_agg.categories, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT ${BOOK_COLUMNS}, categories_agg.categories, ${BOOK_AVAILABILITY_COLUMNS}, ${BOOK_FEATURED_FLAG}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
@@ -185,6 +188,7 @@ async function listBooksGroupedByCategory({ sectionSize = 8 } = {}) {
        SELECT DISTINCT ON (lc.category_id, b.canonical_key COLLATE "C")
          ${BOOK_COLUMNS.replace('c.category_name', 'pc.category_name')},
          ${BOOK_AVAILABILITY_COLUMNS},
+         ${BOOK_FEATURED_FLAG},
          lc.category_id AS section_category_id,
          sc.category_name AS section_category_name,
          sc.slug AS section_category_slug
@@ -224,7 +228,7 @@ async function listBooksGroupedByCategory({ sectionSize = 8 } = {}) {
   orderedSections.sort((a, b) => String(a.categoryName).localeCompare(String(b.categoryName), 'bn'));
 
   const uncatRes = await query(
-    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}, ${BOOK_FEATURED_FLAG}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
@@ -239,7 +243,7 @@ async function listBooksGroupedByCategory({ sectionSize = 8 } = {}) {
 
 async function listFeaturedBooks() {
   const res = await query(
-    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}, ${BOOK_FEATURED_FLAG}
      FROM books b
      JOIN book_featured f ON f.book_id = b.id
      JOIN app_users o ON o.id = b.owner_user_id
@@ -249,6 +253,22 @@ async function listFeaturedBooks() {
      ORDER BY b.title_script, b.canonical_key COLLATE "C", f.position ASC, CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC`,
   );
   return res.rows;
+}
+
+async function setBookFeatured({ bookId, featured, actorUserId }) {
+  if (featured) {
+    const maxRes = await query('SELECT COALESCE(MAX(position), 0) + 1 AS next_position FROM book_featured');
+    const nextPosition = Number(maxRes.rows[0]?.next_position ?? 1);
+    await query(
+      `INSERT INTO book_featured (book_id, position, created_by_user_id)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (book_id) DO NOTHING`,
+      [bookId, nextPosition, actorUserId],
+    );
+  } else {
+    await query('DELETE FROM book_featured WHERE book_id = $1', [bookId]);
+  }
+  return getBookById(bookId);
 }
 
 async function replaceFeaturedBooks({ bookIds, actorUserId }) {
@@ -660,7 +680,7 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, listBooksGroupedByCategory, listFeaturedBooks, replaceFeaturedBooks, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
+  listCategories, createCategory, listBooks, listBooksGroupedByCategory, listFeaturedBooks, replaceFeaturedBooks, setBookFeatured, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,

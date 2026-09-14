@@ -13,13 +13,14 @@ import { ShareButton } from '@/components/books/ShareButton';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
 import { useAuth } from '@/contexts/AuthContext';
-import { getBookActivation, getBookCategories, getMyBooks, getMyBookRequests, getPublicBooks, getPublicBooksGrouped, requestBook, type BookActivationInput, type BookCategoryRow, type BookRequestRow, type BookRow, type BookStoreSection } from '@/lib/api';
+import { getBookActivation, getBookCategories, getMyBooks, getMyBookRequests, getPublicBooks, getPublicBooksGrouped, requestBook, toggleAdminFeaturedBook, type BookActivationInput, type BookCategoryRow, type BookRequestRow, type BookRow, type BookStoreSection } from '@/lib/api';
 import { bookDate } from '@/components/books/bookUtils';
 
 function BooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, roleKey, user } = useAuth();
+  const isSuperAdmin = roleKey === 'super_admin';
   const PAGE_SIZE = 40;
   const categoryParam = searchParams.get('category') || '';
   const searchParam = searchParams.get('search') || '';
@@ -38,6 +39,7 @@ function BooksPageContent() {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [requestDays, setRequestDays] = useState(7);
+  const [featuredBusyId, setFeaturedBusyId] = useState<string | number | null>(null);
   const [myRequests, setMyRequests] = useState<BookRequestRow[]>([]);
   const [myBooks, setMyBooks] = useState<BookRow[]>([]);
 
@@ -115,6 +117,15 @@ function BooksPageContent() {
   const categoryCounts = useMemo(() => new Map(categories.map((category) => [category.id, category.book_count ?? 0])), [categories]);
 
   const showToast = (message: string) => { setToast(message); window.setTimeout(() => setToast(null), 2600); };
+  const toggleFeatured = async (book: BookRow) => {
+    if (featuredBusyId !== null) return;
+    setFeaturedBusyId(book.id);
+    try {
+      await toggleAdminFeaturedBook(book.id, !Boolean(book.featured));
+      showToast(!book.featured ? 'শীর্ষ রেটেড করা হয়েছে' : 'শীর্ষ রেটেড থেকে সরানো হয়েছে');
+      await load();
+    } catch (error) { showToast(error instanceof Error ? error.message : 'হালনাগাদ করা যায়নি'); } finally { setFeaturedBusyId(null); }
+  };
   const requireActivated = (next: 'add' | 'request', book?: BookRow) => {
     if (!isAuthenticated) { router.push('/login?books=1'); return; }
     setSelectedBook(book ?? null);
@@ -145,7 +156,7 @@ function BooksPageContent() {
     const totalCopies = Number(book.total_copy_count ?? 1);
     const estimatedFree = bookDate(book.estimated_available_on);
     const isOwner = isAuthenticated && Number(book.owner_user_id) === Number(user?.id);
-    return <article key={book.id} className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"><div className="relative aspect-[3/4] bg-surface-2">{book.cover_url ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-muted"><BookOpen className="h-10 w-10" /></div>}</div><div className="p-4"><p className="text-xs font-semibold text-brand">{book.category_name ?? 'বিভাগহীন'}</p><Link href={`/books/${book.id}`} className="mt-1 block font-bold text-fg hover:text-brand">{book.title}</Link><p className="mt-1 text-sm text-muted">{book.author_name || 'লেখক অজানা'}</p><p className="mt-3 text-xs text-muted">মালিক: {book.owner_name}</p><div className="mt-3 space-y-1 text-xs text-muted">{isOwner ? <p className="flex items-center gap-1 font-semibold text-brand"><BookMarked className="h-3.5 w-3.5" />এটি আপনার বই</p> : <p className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{totalCopies > 1 ? `${availableCopies}/${totalCopies} কপি এখন উপলব্ধ` : availableCopies ? 'কপি উপলব্ধ' : Number(book.status) === 3 ? 'মালিক সাময়িকভাবে বইটি বন্ধ রেখেছেন' : 'কপি এখন ধার দেওয়া আছে'}</p>}{estimatedFree && <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />সম্ভাব্য ফ্রি: {estimatedFree}</p>}</div><div className="mt-3 flex gap-2"><Link href={`/books/${book.id}`} className="flex-1"><Button size="sm" fullWidth variant="secondary">বিস্তারিত</Button></Link>{isOwner ? <Link href="/books/my"><Button size="sm" variant="secondary"><Pencil className="h-3.5 w-3.5" />ব্যবস্থাপনা</Button></Link> : <Button size="sm" disabled={!availableCopies} onClick={() => requireActivated('request', book)}><Send className="h-3.5 w-3.5" />{availableCopies ? 'ধার নিন' : 'ব্যস্ত'}</Button>}<ShareButton url={`/books/${book.id}`} title={book.title} /></div></div></article>;
+    return <article key={book.id} className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"><div className="relative aspect-[3/4] bg-surface-2">{book.cover_url ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-muted"><BookOpen className="h-10 w-10" /></div>}{isSuperAdmin && <button type="button" title={book.featured ? 'শীর্ষ রেটেড থেকে সরান' : 'শীর্ষ রেটেড করুন'} aria-label={book.featured ? 'শীর্ষ রেটেড থেকে সরান' : 'শীর্ষ রেটেড করুন'} disabled={featuredBusyId === book.id} onClick={() => void toggleFeatured(book)} className="absolute right-2 top-2 rounded-full bg-black/40 p-1.5 text-white backdrop-blur-sm transition hover:scale-110 disabled:opacity-60"><Star className={`h-4 w-4 ${book.featured ? 'fill-amber-400 text-amber-400' : 'text-white'}`} /></button>}</div><div className="p-4"><p className="text-xs font-semibold text-brand">{book.category_name ?? 'বিভাগহীন'}</p><Link href={`/books/${book.id}`} className="mt-1 block font-bold text-fg hover:text-brand">{book.title}</Link><p className="mt-1 text-sm text-muted">{book.author_name || 'লেখক অজানা'}</p><p className="mt-3 text-xs text-muted">মালিক: {book.owner_name}</p><div className="mt-3 space-y-1 text-xs text-muted">{isOwner ? <p className="flex items-center gap-1 font-semibold text-brand"><BookMarked className="h-3.5 w-3.5" />এটি আপনার বই</p> : <p className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{totalCopies > 1 ? `${availableCopies}/${totalCopies} কপি এখন উপলব্ধ` : availableCopies ? 'কপি উপলব্ধ' : Number(book.status) === 3 ? 'মালিক সাময়িকভাবে বইটি বন্ধ রেখেছেন' : 'কপি এখন ধার দেওয়া আছে'}</p>}{estimatedFree && <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />সম্ভাব্য ফ্রি: {estimatedFree}</p>}</div><div className="mt-3 flex gap-2"><Link href={`/books/${book.id}`} className="flex-1"><Button size="sm" fullWidth variant="secondary">বিস্তারিত</Button></Link>{isOwner ? <Link href="/books/my"><Button size="sm" variant="secondary"><Pencil className="h-3.5 w-3.5" />ব্যবস্থাপনা</Button></Link> : <Button size="sm" disabled={!availableCopies} onClick={() => requireActivated('request', book)}><Send className="h-3.5 w-3.5" />{availableCopies ? 'ধার নিন' : 'ব্যস্ত'}</Button>}<ShareButton url={`/books/${book.id}`} title={book.title} /></div></div></article>;
   };
 
   return (
