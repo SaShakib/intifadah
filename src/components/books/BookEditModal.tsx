@@ -25,7 +25,7 @@ export function BookEditModal({ book, open, onClose, onUpdated, onMessage }: Boo
     authorName: book.author_name || '',
     searchAliases: '',
     bookPriceMinor: String(book.book_price_minor),
-    categoryId: book.category_id ? String(book.category_id) : '',
+    categoryIds: (book.categories ?? []).map((category) => Number(category.id)),
     description: book.description || '',
     coverUrl: book.cover_url || '',
     coverPublicId: book.cover_public_id || '',
@@ -52,7 +52,7 @@ export function BookEditModal({ book, open, onClose, onUpdated, onMessage }: Boo
     if (!Number(form.bookPriceMinor) || Number(form.bookPriceMinor) < 1) { onMessage('বইয়ের মূল্য দিন।'); return; }
     setSaving(true);
     try {
-      const result = await updateBook(book.id, { ...form, categoryId: form.categoryId ? Number(form.categoryId) : undefined, bookPriceMinor: Number(form.bookPriceMinor) });
+      const result = await updateBook(book.id, { ...form, bookPriceMinor: Number(form.bookPriceMinor) });
       onUpdated(result.row);
       onClose();
       onMessage('বইয়ের তথ্য আপডেট হয়েছে।');
@@ -75,7 +75,7 @@ export function BookEditModal({ book, open, onClose, onUpdated, onMessage }: Boo
       {form.coverUrl && <Image src={form.coverUrl} alt="নির্বাচিত কভার" width={96} height={132} className="h-36 w-24 rounded border border-border object-cover" unoptimized />}
       <label className="block text-sm font-semibold text-fg">লেখকের নাম <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={form.authorName} onChange={(event) => setForm({ ...form, authorName: event.target.value })} /></label>
       <label className="block text-sm font-semibold text-fg">বইয়ের মূল্য <span className="text-danger">*</span><Input className="mt-1" type="number" min="1" value={form.bookPriceMinor} onChange={(event) => setForm({ ...form, bookPriceMinor: event.target.value })} /></label>
-      <label className="block text-sm font-semibold text-fg">বিভাগ <span className="font-normal text-muted">(ঐচ্ছিক)</span><select value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-border px-3 text-sm"><option value="">বিভাগ নির্বাচন করুন</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></label>
+      <label className="block text-sm font-semibold text-fg">বিভাগ <span className="font-normal text-muted">(ঐচ্ছিক, একাধিক হতে পারে)</span><div className="mt-1 flex flex-wrap gap-2">{categories.map((category) => { const selected = form.categoryIds.includes(category.id); return <button key={category.id} type="button" onClick={() => setForm({ ...form, categoryIds: selected ? form.categoryIds.filter((id) => id !== category.id) : [...form.categoryIds, category.id] })} className={selected ? 'rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand/30' : 'rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-fg-2 hover:border-brand/40 hover:text-brand'}>{category.category_name}</button>; })}</div></label>
       <label className="block text-sm font-semibold text-fg">বিকল্প নাম / বানান <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={form.searchAliases} onChange={(event) => setForm({ ...form, searchAliases: event.target.value })} placeholder="কমা দিয়ে লিখুন" /></label>
       <label className="block text-sm font-semibold text-fg">সংক্ষিপ্ত বিবরণ <span className="font-normal text-muted">(ঐচ্ছিক)</span><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-1 h-24 w-full rounded-lg border border-border p-3 text-sm" /></label>
     </div>

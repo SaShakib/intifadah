@@ -25,23 +25,43 @@ const BOOK_AVAILABILITY_JOIN = `
       AND grouped.deleted_at IS NULL
   ) availability ON TRUE`;
 
-async function listCategories() {
-  const res = await query('SELECT id, category_name, created_at FROM book_categories ORDER BY category_name ASC');
+const BOOK_CATEGORIES_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object('id', c2.id, 'categoryName', c2.category_name, 'slug', c2.slug) ORDER BY c2.category_name), '[]'::jsonb) AS categories
+    FROM book_category_links lc2
+    JOIN book_categories c2 ON c2.id = lc2.category_id
+    WHERE lc2.book_id = b.id
+  ) categories_agg ON TRUE`;
+
+async function listCategories({ includeCounts = false } = {}) {
+  if (!includeCounts) {
+    const res = await query('SELECT id, category_name, slug, created_at FROM book_categories ORDER BY category_name ASC');
+    return res.rows;
+  }
+  const res = await query(
+    `SELECT c.id, c.category_name, c.slug, c.created_at,
+       COUNT(DISTINCT b.canonical_key)::int AS book_count
+     FROM book_categories c
+     LEFT JOIN book_category_links lc ON lc.category_id = c.id
+     LEFT JOIN books b ON b.id = lc.book_id AND b.deleted_at IS NULL
+     GROUP BY c.id, c.category_name, c.slug, c.created_at
+     ORDER BY c.category_name ASC`,
+  );
   return res.rows;
 }
 
-async function createCategory({ categoryName, userId }) {
+async function createCategory({ categoryName, slug, userId }) {
   const res = await query(
-    `INSERT INTO book_categories (category_name, created_by_user_id)
-     VALUES ($1,$2)
+    `INSERT INTO book_categories (category_name, slug, created_by_user_id)
+     VALUES ($1,$2,$3)
      ON CONFLICT (category_name) DO UPDATE SET category_name = EXCLUDED.category_name
-     RETURNING id, category_name, created_at`,
-    [categoryName, userId],
+     RETURNING id, category_name, slug, created_at`,
+    [categoryName, slug || null, userId],
   );
   return res.rows[0];
 }
 
-async function listBooks({ search, categoryId, ownerUserId, status = null, limit = 40, offset = 0, includeTotal = false } = {}) {
+async function listBooks({ search, categoryId, categorySlugs, ownerUserId, status = null, limit = 40, offset = 0, includeTotal = false } = {}) {
   const values = [];
   const where = ['b.deleted_at IS NULL'];
   if (status !== null) {
@@ -51,6 +71,14 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
   if (categoryId) {
     values.push(Number(categoryId));
     where.push(`b.category_id = $${values.length}`);
+  }
+  if (categorySlugs && categorySlugs.length) {
+    values.push(categorySlugs.slice(0, 12));
+    where.push(`EXISTS (
+      SELECT 1 FROM book_category_links lc
+      JOIN book_categories cc ON cc.id = lc.category_id
+      WHERE lc.book_id = b.id AND cc.slug = ANY($${values.length})
+    )`);
   }
   if (ownerUserId) {
     values.push(Number(ownerUserId));
@@ -92,10 +120,11 @@ async function listBooks({ search, categoryId, ownerUserId, status = null, limit
 
 async function getBookById(bookId) {
   const res = await query(
-    `SELECT ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+    `SELECT ${BOOK_COLUMNS}, categories_agg.categories, ${BOOK_AVAILABILITY_COLUMNS}
      FROM books b
      JOIN app_users o ON o.id = b.owner_user_id
      LEFT JOIN book_categories c ON c.id = b.category_id
+     ${BOOK_CATEGORIES_JOIN}
      ${BOOK_AVAILABILITY_JOIN}
     WHERE b.id = $1 AND b.deleted_at IS NULL`,
     [bookId],
@@ -104,32 +133,108 @@ async function getBookById(bookId) {
 }
 
 async function createBook(input) {
-  const res = await query(
-    `INSERT INTO books (
-      owner_user_id, category_id, title, author_name, canonical_key, search_text, book_price_minor, cover_url,
-      cover_public_id, external_source, external_volume_id, description, approval_status
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)
-    RETURNING id`,
-    [input.ownerUserId, input.categoryId || null, input.title, input.authorName || null, input.canonicalKey, input.searchText, input.bookPriceMinor,
-      input.coverUrl || null, input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
-  );
-  return getBookById(res.rows[0].id);
+  const categoryIds = [...new Set((input.categoryIds || []).map(Number).filter((value) => Number.isInteger(value) && value > 0))].slice(0, 6);
+  const bookId = await withTransaction(async (client) => {
+    const res = await client.query(
+      `INSERT INTO books (
+        owner_user_id, category_id, title, author_name, canonical_key, search_text, book_price_minor, cover_url,
+        cover_public_id, external_source, external_volume_id, description, approval_status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)
+      RETURNING id`,
+      [input.ownerUserId, categoryIds[0] ?? null, input.title, input.authorName || null, input.canonicalKey, input.searchText, input.bookPriceMinor,
+        input.coverUrl || null, input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
+    );
+    const id = res.rows[0].id;
+    for (const categoryId of categoryIds) {
+      await client.query('INSERT INTO book_category_links (book_id, category_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [id, categoryId]);
+    }
+    return id;
+  });
+  return getBookById(bookId);
 }
 
 async function updateBook(input) {
+  const categoryIds = [...new Set((input.categoryIds || []).map(Number).filter((value) => Number.isInteger(value) && value > 0))].slice(0, 6);
+  const bookId = await withTransaction(async (client) => {
+    const res = await client.query(
+      `UPDATE books SET
+        category_id = $3, title = $4, author_name = $5, canonical_key = $6, search_text = $7,
+        book_price_minor = $8, cover_url = $9, cover_public_id = $10, external_source = $11,
+        external_volume_id = $12, description = $13, updated_at = NOW()
+       WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL
+       RETURNING id`,
+      [input.bookId, input.ownerUserId, categoryIds[0] ?? null, input.title, input.authorName || null,
+        input.canonicalKey, input.searchText, input.bookPriceMinor, input.coverUrl || null,
+        input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
+    );
+    if (!res.rowCount) return null;
+    const id = res.rows[0].id;
+    await client.query('DELETE FROM book_category_links WHERE book_id = $1', [id]);
+    for (const categoryId of categoryIds) {
+      await client.query('INSERT INTO book_category_links (book_id, category_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [id, categoryId]);
+    }
+    return id;
+  });
+  if (!bookId) return null;
+  return getBookById(bookId);
+}
+
+async function listBooksGroupedByCategory({ sectionSize = 8 } = {}) {
   const res = await query(
-    `UPDATE books SET
-      category_id = $3, title = $4, author_name = $5, canonical_key = $6, search_text = $7,
-      book_price_minor = $8, cover_url = $9, cover_public_id = $10, external_source = $11,
-      external_volume_id = $12, description = $13, updated_at = NOW()
-     WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL
-     RETURNING id`,
-    [input.bookId, input.ownerUserId, input.categoryId || null, input.title, input.authorName || null,
-      input.canonicalKey, input.searchText, input.bookPriceMinor, input.coverUrl || null,
-      input.coverPublicId || null, input.externalSource || null, input.externalVolumeId || null, input.description || null],
+    `WITH dedupe AS (
+       SELECT DISTINCT ON (lc.category_id, b.canonical_key COLLATE "C")
+         ${BOOK_COLUMNS.replace('c.category_name', 'pc.category_name')},
+         ${BOOK_AVAILABILITY_COLUMNS},
+         lc.category_id AS section_category_id,
+         sc.category_name AS section_category_name,
+         sc.slug AS section_category_slug
+       FROM book_category_links lc
+       JOIN book_categories sc ON sc.id = lc.category_id
+       JOIN books b ON b.id = lc.book_id
+       JOIN app_users o ON o.id = b.owner_user_id
+       LEFT JOIN book_categories pc ON pc.id = b.category_id
+       ${BOOK_AVAILABILITY_JOIN}
+       WHERE b.deleted_at IS NULL
+       ORDER BY lc.category_id, b.canonical_key COLLATE "C", CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC
+     )
+     SELECT dedupe.*,
+       ROW_NUMBER() OVER (
+         PARTITION BY section_category_id
+         ORDER BY title_script, canonical_key COLLATE "C", CASE WHEN status = 0 THEN 0 ELSE 1 END, created_at DESC, id DESC
+       ) AS section_rn
+     FROM dedupe`,
   );
-  if (!res.rowCount) return null;
-  return getBookById(res.rows[0].id);
+
+  const sections = new Map();
+  const orderedSections = [];
+  for (const row of res.rows) {
+    let section = sections.get(row.section_category_id);
+    if (!section) {
+      section = {
+        categoryId: Number(row.section_category_id),
+        categoryName: row.section_category_name,
+        slug: row.section_category_slug,
+        books: [],
+      };
+      sections.set(row.section_category_id, section);
+      orderedSections.push(section);
+    }
+    if (section.books.length < Number(sectionSize)) section.books.push(row);
+  }
+  orderedSections.sort((a, b) => String(a.categoryName).localeCompare(String(b.categoryName), 'bn'));
+
+  const uncatRes = await query(
+    `SELECT DISTINCT ON (b.title_script, b.canonical_key COLLATE "C") ${BOOK_COLUMNS}, ${BOOK_AVAILABILITY_COLUMNS}
+     FROM books b
+     JOIN app_users o ON o.id = b.owner_user_id
+     LEFT JOIN book_categories c ON c.id = b.category_id
+     LEFT JOIN book_category_links lc3 ON lc3.book_id = b.id
+     ${BOOK_AVAILABILITY_JOIN}
+     WHERE b.deleted_at IS NULL AND lc3.book_id IS NULL
+     ORDER BY b.title_script, b.canonical_key COLLATE "C", CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC`,
+  );
+
+  return { sections: orderedSections, uncategorized: uncatRes.rows };
 }
 
 async function archiveBook({ bookId, actorUserId, canDeleteAnyBook }) {
@@ -520,7 +625,7 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
+  listCategories, createCategory, listBooks, listBooksGroupedByCategory, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,

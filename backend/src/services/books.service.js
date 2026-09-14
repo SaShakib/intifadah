@@ -32,6 +32,26 @@ function normalizeBookKey(value) {
     .replace(/[\s.,:;!?'"()[\]{}\\/|+*=~`@#$%^&…।-]+/g, '');
 }
 
+function makeCategorySlug(value) {
+  const slug = String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('bn-BD')
+    .replace(/&+/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-')
+    .slice(0, 120);
+  return slug || null;
+}
+
+function categoryIdsFromInput(input) {
+  if (Array.isArray(input.categoryIds)) {
+    return [...new Set(input.categoryIds.map(Number).filter((value) => Number.isInteger(value) && value > 0))].slice(0, 6);
+  }
+  if (input.categoryId) return [parsePositive(input.categoryId, 'categoryId')];
+  return [];
+}
+
 async function requireActivation(userId) {
   const profile = await booksRepository.getActivationProfile(userId);
   if (!profile) {
@@ -63,7 +83,21 @@ async function activateBooks(userId, input) {
 
 async function createBookCategory(userId, input) {
   await requireActivation(userId);
-  return booksRepository.createCategory({ categoryName: cleanText(input.categoryName, 'categoryName', 100), userId });
+  const categoryName = cleanText(input.categoryName, 'categoryName', 100);
+  const baseSlug = makeCategorySlug(categoryName);
+  try {
+    return await booksRepository.createCategory({ categoryName, slug: baseSlug, userId });
+  } catch (error) {
+    if (error?.code !== '23505' || !baseSlug) throw error;
+    for (let attempt = 2; attempt < 20; attempt += 1) {
+      try {
+        return await booksRepository.createCategory({ categoryName, slug: `${baseSlug}-${attempt}`, userId });
+      } catch (retryError) {
+        if (retryError?.code !== '23505') throw retryError;
+      }
+    }
+    throw error;
+  }
 }
 
 async function addBook(userId, input) {
@@ -73,10 +107,10 @@ async function addBook(userId, input) {
 }
 
 function bookInput(input) {
-  const categoryId = input.categoryId ? parsePositive(input.categoryId, 'categoryId') : null;
+  const categoryIds = categoryIdsFromInput(input);
   const searchAliases = cleanText(input.searchAliases, 'searchAliases', 600, false);
   return {
-    categoryId,
+    categoryIds,
     title: cleanText(input.title, 'title', 240),
     authorName: cleanText(input.authorName, 'authorName', 180, false),
     bookPriceMinor: parsePositive(input.bookPriceMinor, 'bookPriceMinor'),

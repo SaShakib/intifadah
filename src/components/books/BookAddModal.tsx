@@ -11,7 +11,7 @@ import { createBook, createBookCategory, getBookCategories, uploadBookCover, typ
 import { googleImagesUrl } from '@/components/books/bookUtils';
 import { useAuth } from '@/contexts/AuthContext';
 
-const emptyForm = { title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryId: '', description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' };
+const emptyForm = { title: '', authorName: '', searchAliases: '', bookPriceMinor: '', categoryIds: [] as number[], description: '', coverUrl: '', coverPublicId: '', externalSource: '', externalVolumeId: '' };
 
 interface BookAddModalProps {
   open: boolean;
@@ -54,7 +54,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
     if (!newCategory.trim()) return;
     const result = await createBookCategory(newCategory.trim());
     setCategories((current) => [...current, result.row].sort((a, b) => a.category_name.localeCompare(b.category_name)));
-    setBookForm((current) => ({ ...current, categoryId: String(result.row.id) }));
+    setBookForm((current) => ({ ...current, categoryIds: current.categoryIds.includes(Number(result.row.id)) ? current.categoryIds : [...current.categoryIds, Number(result.row.id)] }));
     setNewCategory('');
   };
   const submitBook = async () => {
@@ -62,7 +62,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
     if (!Number(bookForm.bookPriceMinor) || Number(bookForm.bookPriceMinor) < 1) { setBookStep(1); onMessage('বইয়ের মূল্য দিন।'); return; }
     setBusy(true);
     try {
-      await createBook({ ...bookForm, categoryId: bookForm.categoryId ? Number(bookForm.categoryId) : undefined, bookPriceMinor: Number(bookForm.bookPriceMinor) });
+      await createBook({ ...bookForm, bookPriceMinor: Number(bookForm.bookPriceMinor) });
       closeModal();
       onAdded();
       onMessage('বইটি বইঘরে যোগ করা হয়েছে।');
@@ -91,7 +91,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
             <p className="text-xs text-muted"><span className="text-danger">*</span> চিহ্নিত তথ্য অবশ্যই দিতে হবে।</p>
           </> : <>
             <label className="block text-sm font-semibold text-fg">লেখকের নাম <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.authorName} onChange={(event) => setBookForm({ ...bookForm, authorName: event.target.value })} placeholder="লেখকের নাম" /></label>
-            <label className="block text-sm font-semibold text-fg">বিভাগ <span className="font-normal text-muted">(ঐচ্ছিক)</span><select value={bookForm.categoryId} onChange={(event) => setBookForm({ ...bookForm, categoryId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-border px-3 text-sm"><option value="">বিভাগ নির্বাচন করুন</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></label>
+            <label className="block text-sm font-semibold text-fg">বিভাগ <span className="font-normal text-muted">(ঐচ্ছিক, একাধিক হতে পারে)</span><div className="mt-1 flex flex-wrap gap-2">{categories.map((category) => { const selected = bookForm.categoryIds.includes(category.id); return <button key={category.id} type="button" onClick={() => setBookForm({ ...bookForm, categoryIds: selected ? bookForm.categoryIds.filter((id) => id !== category.id) : [...bookForm.categoryIds, category.id] })} className={selected ? 'rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand/30' : 'rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-fg-2 hover:border-brand/40 hover:text-brand'}>{category.category_name}</button>; })}</div></label>
             <div className="flex gap-2"><Input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="নতুন বিভাগ (ঐচ্ছিক)" /><Button type="button" variant="secondary" onClick={() => void createCategoryInline()}><Plus className="h-4 w-4" /></Button></div>
             <label className="block text-sm font-semibold text-fg">বিকল্প নাম / বানান <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.searchAliases} onChange={(event) => setBookForm({ ...bookForm, searchAliases: event.target.value })} placeholder="কমা দিয়ে লিখুন" /></label>
             <label className="block text-sm font-semibold text-fg">সংক্ষিপ্ত বিবরণ <span className="font-normal text-muted">(ঐচ্ছিক)</span><textarea value={bookForm.description} onChange={(event) => setBookForm({ ...bookForm, description: event.target.value })} className="mt-1 h-24 w-full rounded-lg border border-border p-3 text-sm" placeholder="বই সম্পর্কে লিখুন" /></label>

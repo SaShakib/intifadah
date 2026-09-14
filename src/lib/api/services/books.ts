@@ -1,11 +1,15 @@
 import { apiRequest, createQueryString } from '../client';
 
-export interface BookCategoryRow { id: number; category_name: string; created_at: string; }
+export interface BookCategoryRow {
+  id: number; category_name: string; slug: string | null; created_at: string; book_count?: number;
+}
+export interface BookCategoryRef { id: number; categoryName: string; slug: string | null; }
 export interface BookRow {
   id: string | number; owner_user_id: number; category_id: number | null; title: string; author_name: string | null;
   book_price_minor: string | number; cover_url: string | null; cover_public_id: string | null; external_source: string | null;
   external_volume_id: string | null; status: number; approval_status: number; description: string | null; canonical_key: string; owner_name: string; category_name: string | null;
   total_copy_count: number; available_copy_count: number; estimated_available_on: string | null;
+  categories?: BookCategoryRef[];
 }
 export interface BookActivationInput {
   village: string; wardNo: number; fatherName: string; occupationType: 'student' | 'working' | 'business';
@@ -41,9 +45,14 @@ export interface AdminBookRequestRow extends BookRequestRow {
 export interface AdminBookRequestListResult { rows: AdminBookRequestRow[]; total: number; }
 
 export interface BookListResult { rows: BookRow[]; total: number; }
+export interface BookStoreSection { categoryId: number; categoryName: string; slug: string | null; books: BookRow[]; }
+export interface BookStoreGroupedResult { sections: BookStoreSection[]; uncategorized: BookRow[]; }
 
-export function getPublicBooks(params: { search?: string; categoryId?: number; limit?: number; offset?: number } = {}) {
+export function getPublicBooks(params: { search?: string; category?: string; limit?: number; offset?: number } = {}) {
   return apiRequest<BookListResult>(`/books${createQueryString(params)}`, {}, { withAuth: false });
+}
+export function getPublicBooksGrouped() {
+  return apiRequest<BookStoreGroupedResult>('/books?grouped=1', {}, { withAuth: false });
 }
 export function getPublicBook(bookId: string | number) { return apiRequest<{ row: BookRow }>(`/books/${bookId}`, {}, { withAuth: false }); }
 export function getBookCategories() { return apiRequest<{ rows: BookCategoryRow[] }>('/books/categories', {}, { withAuth: false }); }

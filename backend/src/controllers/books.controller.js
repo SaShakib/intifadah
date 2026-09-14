@@ -29,13 +29,27 @@ function id(value, field) {
 }
 
 async function categories(_req, res, next) {
-  try { res.json({ rows: await booksRepository.listCategories() }); } catch (error) { next(error); }
+  try { res.json({ rows: await booksRepository.listCategories({ includeCounts: true }) }); } catch (error) { next(error); }
 }
 
 async function list(req, res, next) {
   try {
-    const result = await booksRepository.listBooks({ search: req.query.search, categoryId: req.query.categoryId, limit: req.query.limit, offset: req.query.offset, includeTotal: true });
-    res.json(result);
+    if (req.query.grouped && req.query.grouped !== '0' && !req.query.search && !req.query.category && !req.query.categoryId) {
+      const row = await booksRepository.listBooksGroupedByCategory({});
+      return res.json(row);
+    }
+    const categorySlugs = req.query.category
+      ? String(req.query.category).split(',').map((slug) => slug.trim()).filter(Boolean)
+      : undefined;
+    const result = await booksRepository.listBooks({
+      search: req.query.search,
+      categoryId: req.query.categoryId,
+      categorySlugs,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      includeTotal: true,
+    });
+    return res.json(result);
   } catch (error) { next(error); }
 }
 
