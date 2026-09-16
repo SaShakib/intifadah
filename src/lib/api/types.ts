@@ -466,7 +466,9 @@ export interface ApiBookPlanRow {
 }
 
 export interface BookPlanInput {
-  bookId: string | number;
+  bookId?: string | number;
+  bookTitle?: string;
+  bookAuthor?: string;
   totalPages: number;
   currentPage?: number;
   note?: string;

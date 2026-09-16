@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE book_plans
+  ALTER COLUMN book_id DROP NOT NULL;
+
+COMMIT;

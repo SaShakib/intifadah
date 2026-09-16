@@ -56,21 +56,14 @@ export default function BookPlansPage() {
   const savePlan = async (input: BookPlanModalInput) => {
     setBusy(true);
     try {
+      const payload = input.book
+        ? { bookId: input.book.id, totalPages: input.totalPages, currentPage: input.currentPage, note: input.note }
+        : { bookTitle: input.bookTitle, bookAuthor: input.bookAuthor, totalPages: input.totalPages, currentPage: input.currentPage, note: input.note };
       if (planModal.plan) {
-        await updateBookPlan(planModal.plan.id, {
-          bookId: input.book.id,
-          totalPages: input.totalPages,
-          currentPage: input.currentPage,
-          note: input.note,
-        });
+        await updateBookPlan(planModal.plan.id, payload);
         showToast('প্ল্যান আপডেট হয়েছে।');
       } else {
-        await createBookPlan({
-          bookId: input.book.id,
-          totalPages: input.totalPages,
-          currentPage: input.currentPage,
-          note: input.note,
-        });
+        await createBookPlan(payload);
         showToast('নতুন পড়ার প্ল্যান তৈরি হয়েছে।');
       }
       setPlanModal({ open: false, plan: null });
@@ -168,8 +161,9 @@ export default function BookPlansPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-bold text-fg">{plan.book_title}</h3>
-                        {isCompleted && <Badge variant="success">সম্পন্ন</Badge>}
+<h3 className="font-bold text-fg">{plan.book_title}</h3>
+                      {!plan.book_id && <Badge variant="brand">নিজের বই</Badge>}
+                      {isCompleted && <Badge variant="success">সম্পন্ন</Badge>}
                       </div>
                       <p className="mt-0.5 text-sm text-muted">{plan.book_author || 'লেখক অজানা'}</p>
                       <div className="mt-3">

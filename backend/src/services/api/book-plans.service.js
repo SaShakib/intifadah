@@ -57,6 +57,34 @@ function parseStatus(value) {
   return parsed;
 }
 
+function parseOptionalBookId(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > Number.MAX_SAFE_INTEGER) {
+    throw badRequest('bookId must be a positive integer');
+  }
+  return parsed;
+}
+
+function parseCustomBook(value) {
+  const title = String(value.bookTitle ?? '').trim();
+  if (!title) {
+    throw badRequest('bookTitle is required when no store book is selected');
+  }
+  let authorName = null;
+  if (value.bookAuthor !== undefined && value.bookAuthor !== null) {
+    authorName = String(value.bookAuthor).trim() || null;
+  }
+  return {
+    bookId: null,
+    bookTitle: title.slice(0, 240),
+    bookAuthor: authorName ? authorName.slice(0, 180) : null,
+    bookCoverUrl: null,
+  };
+}
+
 function parseOptionalNote(value) {
   if (value === undefined || value === null) {
     return null;
@@ -77,13 +105,29 @@ async function requireBook(bookId) {
 }
 
 async function createPlan(userId, input) {
-  const book = await requireBook(parsePositiveInt(input.bookId, 'bookId', Number.MAX_SAFE_INTEGER));
+  const bookId = parseOptionalBookId(input.bookId);
+
+  let bookTitle;
+  let bookAuthor;
+  let bookCoverUrl;
+  if (bookId) {
+    const book = await requireBook(bookId);
+    bookTitle = String(book.title || '').slice(0, 240);
+    bookAuthor = book.author_name ? String(book.author_name).slice(0, 180) : null;
+    bookCoverUrl = book.cover_url || null;
+  } else {
+    const custom = parseCustomBook(input);
+    bookTitle = custom.bookTitle;
+    bookAuthor = custom.bookAuthor;
+    bookCoverUrl = custom.bookCoverUrl;
+  }
+
   return bookPlansRepository.createPlan({
     userId,
-    bookId: book.id,
-    bookTitle: String(book.title || '').slice(0, 240),
-    bookAuthor: book.author_name ? String(book.author_name).slice(0, 180) : null,
-    bookCoverUrl: book.cover_url || null,
+    bookId,
+    bookTitle,
+    bookAuthor,
+    bookCoverUrl,
     totalPages: parsePositiveInt(input.totalPages, 'totalPages', MAX_PAGES),
     currentPage: parseNonNegativeInt(input.currentPage, 'currentPage', MAX_PAGES) ?? 0,
     note: parseOptionalNote(input.note),
@@ -96,12 +140,19 @@ async function updatePlan(userId, planId, input) {
   }
 
   const patch = {};
-  if ('bookId' in input) {
-    const book = await requireBook(parsePositiveInt(input.bookId, 'bookId', Number.MAX_SAFE_INTEGER));
+  const bookId = parseOptionalBookId(input.bookId);
+  if (bookId) {
+    const book = await requireBook(bookId);
     patch.book_id = book.id;
     patch.book_title = String(book.title || '').slice(0, 240);
     patch.book_author = book.author_name ? String(book.author_name).slice(0, 180) : null;
     patch.book_cover_url = book.cover_url || null;
+  } else if (input.bookTitle !== undefined) {
+    const custom = parseCustomBook(input);
+    patch.book_id = custom.bookId;
+    patch.book_title = custom.bookTitle;
+    patch.book_author = custom.bookAuthor;
+    patch.book_cover_url = null;
   }
   if ('totalPages' in input) {
     patch.total_pages = parsePositiveInt(input.totalPages, 'totalPages', MAX_PAGES);
