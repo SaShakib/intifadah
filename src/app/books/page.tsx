@@ -7,6 +7,8 @@ import { BookMarked, BookOpen, CalendarDays, FolderOpen, Pencil, Search, Send, S
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { BooksHeader } from '@/components/books/BooksHeader';
+import { BooksBottomNav } from '@/components/books/BooksBottomNav';
+import { ScrollToTopButton } from '@/components/books/ScrollToTopButton';
 import { BookActivationModal } from '@/components/books/BookActivationModal';
 import { BookAddModal } from '@/components/books/BookAddModal';
 import { ShareButton } from '@/components/books/ShareButton';
@@ -160,8 +162,10 @@ function BooksPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-surface-2 pb-12">
+    <main className="min-h-screen bg-surface-2 pb-[calc(var(--bottomnav-h)+1.5rem)] md:pb-12">
       <BooksHeader active="store" myBookCount={myBooks.length} requestCount={visibleRequests.length} onAddBook={() => requireActivated('add')} />
+      <BooksBottomNav />
+      <ScrollToTopButton />
 
       <section className="border-b border-border bg-white"><div className="mx-auto max-w-6xl px-4 py-8"><h1 className="text-3xl font-bold text-fg">বইঘর</h1><p className="mt-2 text-sm text-muted">সবার জন্য বই দেখুন, সক্রিয় হওয়ার পর বই যোগ করুন বা ধার নিন। বই হারালে তালিকাভুক্ত মূল্য পরিশোধ করতে হবে।</p><div className="mt-5"><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input className="pl-9" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="বই বা লেখক খুঁজুন" /></div><div className="mt-3 flex flex-wrap gap-2">{[{ slug: null, label: 'সব বিভাগ' }, ...categories.map((category) => ({ slug: category.slug, label: `${category.category_name} (${category.book_count ?? 0})` }))].map((item) => <button key={item.slug ?? 'all'} type="button" onClick={() => updateParams({ category: item.slug ?? undefined, page: undefined })} className={categoryParam === (item.slug ?? '') ? 'rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand/30' : 'rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-fg-2 hover:border-brand/40 hover:text-brand'}>{item.label}</button>)}</div></div></div></section>
 

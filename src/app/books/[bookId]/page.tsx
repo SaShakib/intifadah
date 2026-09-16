@@ -10,6 +10,8 @@ import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { deleteBook, getPublicBook, requestBook, type BookRow } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookEditModal } from '@/components/books/BookEditModal';
+import { BooksBottomNav } from '@/components/books/BooksBottomNav';
+import { ScrollToTopButton } from '@/components/books/ScrollToTopButton';
 import { ShareButton } from '@/components/books/ShareButton';
 
 export default function BookDetailPage() {
@@ -47,7 +49,7 @@ export default function BookDetailPage() {
       setBusy(false);
     }
   };
-  return <main className="min-h-screen bg-surface-2">
+  return <main className="min-h-screen bg-surface-2 pb-[calc(var(--bottomnav-h)+1.5rem)] md:pb-12">
     <header className="border-b border-border bg-white"><div className="mx-auto max-w-5xl px-4 py-4"><Link href="/books" className="inline-flex items-center gap-2 text-sm font-semibold text-fg"><ArrowLeft className="h-4 w-4" />বইঘরে ফিরুন</Link></div></header>
     <article className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-[300px_1fr]">
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-border bg-white shadow-sm">{book.cover_url ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-muted"><BookOpen className="h-12 w-12" /></div>}</div>
@@ -56,6 +58,8 @@ export default function BookDetailPage() {
     <AppModal open={open} title="বই ধার নিন" onClose={() => setOpen(false)} footer={<><Button variant="secondary" onClick={() => setOpen(false)}>বাতিল</Button><Button disabled={busy || !availableCopies} onClick={() => void submit()}>অনুরোধ পাঠান</Button></>}><p className="text-sm text-muted">উপলব্ধ সব কপির মালিককে অনুরোধ পাঠানো হবে। যিনি আগে গ্রহণ করবেন, তাঁর কপিটিই আপনার জন্য সংরক্ষিত হবে।</p><select className="mt-4 h-10 w-full rounded-lg border border-border px-3 text-sm" value={days} onChange={(event) => setDays(Number(event.target.value))}>{[3, 7, 10, 15, 30].map((value) => <option key={value} value={value}>{value} দিন</option>)}</select></AppModal>
     <AppModal open={deleteOpen} title="বইটি সরিয়ে দেবেন?" onClose={() => setDeleteOpen(false)} footer={<><Button variant="secondary" disabled={busy} onClick={() => setDeleteOpen(false)}>বাতিল</Button><Button variant="danger" disabled={busy} onClick={() => void remove()}><Trash2 className="h-4 w-4" />{busy ? 'সরানো হচ্ছে...' : 'হ্যাঁ, সরিয়ে দিন'}</Button></>}><p className="text-sm leading-6 text-fg-2">বইটি আর বইঘরে দেখা যাবে না। আগের সম্পন্ন ধার নেওয়ার রেকর্ড থাকবে, তবে কোনো চলমান অনুরোধ বা ধার থাকলে বইটি সরানো যাবে না।</p>{canDeleteAnyBook && !isOwner && <p className="mt-3 text-xs text-muted">আপনি অ্যাডমিন হিসেবে অন্য সদস্যের বই সরাচ্ছেন।</p>}</AppModal>
     {isOwner && <BookEditModal book={book} open={editOpen} onClose={() => setEditOpen(false)} onUpdated={setBook} onMessage={setToast} />}
+    <BooksBottomNav />
+    <ScrollToTopButton />
     <AppToast message={toast} />
   </main>;
 }

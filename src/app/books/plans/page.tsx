@@ -9,6 +9,8 @@ import { Button } from '@/components/base/Button';
 import { BookPageUpdateModal } from '@/components/books/BookPageUpdateModal';
 import { BookPlanModal, type BookPlanModalInput } from '@/components/books/BookPlanModal';
 import { BooksHeader } from '@/components/books/BooksHeader';
+import { BooksBottomNav } from '@/components/books/BooksBottomNav';
+import { ScrollToTopButton } from '@/components/books/ScrollToTopButton';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { ApiErrorNotice, ApiLoadingNotice } from '@/components/custom/ApiNotice';
 import { RichTextPreview } from '@/components/custom/RichTextPreview';
@@ -125,8 +127,10 @@ export default function BookPlansPage() {
   const percent = (plan: ApiBookPlanRow) => Math.min(100, Math.round((Number(plan.current_page) / Math.max(1, Number(plan.total_pages))) * 100));
 
   return (
-    <main className="min-h-screen bg-surface-2 pb-12">
-      <BooksHeader onAddBook={() => setPlanModal({ open: true, plan: null })} />
+    <main className="min-h-screen bg-surface-2 pb-[calc(var(--bottomnav-h)+1.5rem)] md:pb-12">
+      <BooksHeader active="plans" onAddBook={() => setPlanModal({ open: true, plan: null })} />
+      <BooksBottomNav />
+      <ScrollToTopButton />
 
       <section className="mx-auto max-w-6xl px-4 py-7">
         <div className="flex flex-wrap items-center justify-between gap-3">

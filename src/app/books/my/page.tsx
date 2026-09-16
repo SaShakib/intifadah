@@ -7,6 +7,8 @@ import { BookMarked, BookOpen, PauseCircle, Pencil, PlayCircle, Plus, Trash2 } f
 import { useRouter } from 'next/navigation';
 import { AppModal, AppToast } from '@/components/semibase/AppModal';
 import { BooksHeader } from '@/components/books/BooksHeader';
+import { BooksBottomNav } from '@/components/books/BooksBottomNav';
+import { ScrollToTopButton } from '@/components/books/ScrollToTopButton';
 import { BookActivationModal } from '@/components/books/BookActivationModal';
 import { BookAddModal } from '@/components/books/BookAddModal';
 import { BookEditModal } from '@/components/books/BookEditModal';
@@ -121,8 +123,10 @@ export default function MyBooksPage() {
   }
 
   return (
-    <main className="min-h-screen bg-surface-2 pb-12">
+    <main className="min-h-screen bg-surface-2 pb-[calc(var(--bottomnav-h)+1.5rem)] md:pb-12">
       <BooksHeader active="my" myBookCount={myBooks.length} requestCount={visibleRequests.length} onAddBook={() => requireActivated('add')} />
+      <BooksBottomNav />
+      <ScrollToTopButton />
 
       <section className="mx-auto max-w-6xl px-4 py-7">
         <div className="flex flex-wrap items-center justify-between gap-3">

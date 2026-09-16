@@ -5,6 +5,8 @@ import { Mail, MessagesSquare, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppToast } from '@/components/semibase/AppModal';
 import { BooksHeader } from '@/components/books/BooksHeader';
+import { BooksBottomNav } from '@/components/books/BooksBottomNav';
+import { ScrollToTopButton } from '@/components/books/ScrollToTopButton';
 import { Button } from '@/components/base/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmBookReceived, getMyBooks, getMyBookRequests, ownerBookRequestAction, requestBookExtension, resolveBookExtension, type BookRequestRow, type BookRow } from '@/lib/api';
@@ -72,8 +74,10 @@ export default function BookRequestsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-surface-2 pb-12">
+    <main className="min-h-screen bg-surface-2 pb-[calc(var(--bottomnav-h)+1.5rem)] md:pb-12">
       <BooksHeader active="requests" myBookCount={myBooks.length} requestCount={visibleRequests.length} onAddBook={() => router.push('/books/my?add=1')} />
+      <BooksBottomNav />
+      <ScrollToTopButton />
 
       <section className="mx-auto max-w-6xl space-y-5 px-4 py-7">
         <div>
