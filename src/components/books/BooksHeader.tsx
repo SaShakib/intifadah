@@ -29,7 +29,7 @@ export function BooksHeader({ active, myBookCount = 0, requestCount = 0, onAddBo
     { href: '/books', key: 'store', label: 'বইঘর', icon: BookOpen },
     { href: '/books/my', key: 'my', label: 'আমার বই', icon: BookMarked, count: myBookCount },
     { href: '/books/requests', key: 'requests', label: 'অনুরোধ', icon: MessagesSquare, count: requestCount },
-    { href: '/books/plans', key: 'plans', label: 'পড়া প্ল্যান', icon: BookOpenCheck },
+    { href: '/books/plans', key: 'plans', label: 'প্ল্যান', icon: BookOpenCheck },
   ];
 
   return (

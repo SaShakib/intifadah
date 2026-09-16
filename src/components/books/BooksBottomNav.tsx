@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookMarked, BookOpen, LayoutDashboard, MessagesSquare } from 'lucide-react';
+import { BookMarked, BookOpen, BookOpenCheck, LayoutDashboard, MessagesSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils/cn';
 
@@ -17,10 +17,11 @@ export function BooksBottomNav() {
     { href: '/books', label: 'বইঘর', icon: BookOpen },
     { href: '/books/my', label: 'আমার বই', icon: BookMarked },
     { href: '/books/requests', label: 'অনুরোধ', icon: MessagesSquare },
+    { href: '/books/plans', label: 'প্ল্যান', icon: BookOpenCheck },
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[var(--bottomnav-h)] grid-cols-4 border-t border-border bg-white/95 backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[var(--bottomnav-h)] grid-cols-5 border-t border-border bg-white/95 backdrop-blur md:hidden">
       {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
