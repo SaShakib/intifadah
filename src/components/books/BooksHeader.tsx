@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookMarked, BookOpen, BookOpenCheck, LayoutDashboard, MessagesSquare, Plus } from 'lucide-react';
+import { BookMarked, BookOpen, BookOpenCheck, MessagesSquare, Plus } from 'lucide-react';
 import { Button } from '@/components/base/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils/cn';
@@ -22,8 +22,7 @@ interface BooksHeaderProps {
 }
 
 export function BooksHeader({ active, myBookCount = 0, requestCount = 0, onAddBook }: BooksHeaderProps) {
-  const { isAuthenticated, isAdmin } = useAuth();
-  const dashboardHref = isAdmin ? '/admin/dashboard' : '/user/dashboard';
+  const { isAuthenticated } = useAuth();
 
   const tabs: { href: string; key: BooksSection; label: string; icon: typeof BookOpen; count?: number }[] = [
     { href: '/books', key: 'store', label: 'বইঘর', icon: BookOpen },
@@ -34,7 +33,7 @@ export function BooksHeader({ active, myBookCount = 0, requestCount = 0, onAddBo
 
   return (
     <>
-      <header className="border-b border-border bg-white"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4"><Link href="/books" className="flex items-center gap-2 font-bold text-fg"><BookOpen className="h-5 w-5 text-brand" />ইনতিফাদাহ বইঘর</Link><div className="flex flex-wrap gap-2">{isAuthenticated && <Link href={dashboardHref}><Button size="sm" variant="secondary"><LayoutDashboard className="h-4 w-4" />ড্যাশবোর্ড</Button></Link>}{isAuthenticated ? <Button size="sm" variant="secondary" onClick={onAddBook}><Plus className="h-4 w-4" />বই যোগ করুন</Button> : <Link href="/login?books=1"><Button size="sm">লগইন করে যোগ করুন</Button></Link>}</div></div></header>
+      <header className="border-b border-border bg-white"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4"><Link href="/books" className="flex items-center gap-2 font-bold text-fg"><BookOpen className="h-5 w-5 text-brand" />ইনতিফাদাহ বইঘর</Link><div className="flex flex-wrap gap-2">{isAuthenticated ? <Button size="sm" variant="secondary" onClick={onAddBook}><Plus className="h-4 w-4" />বই যোগ করুন</Button> : <Link href="/login?books=1"><Button size="sm">লগইন করে যোগ করুন</Button></Link>}</div></div></header>
       {isAuthenticated && <nav className="border-b border-border bg-white"><div className="mx-auto max-w-6xl px-4 py-3"><div className="grid grid-cols-4 gap-1 rounded-full bg-surface-2 p-1">
         {tabs.map((tab) => {
           const isActive = active === tab.key;
