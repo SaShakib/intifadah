@@ -1,10 +1,16 @@
 const express = require('express');
 const { requireAuth, requireCompletedProfile, requireRoles } = require('../middleware/auth');
 const booksController = require('../controllers/books.controller');
+const bookPlansController = require('../controllers/book-plans.controller');
 
 const router = express.Router();
 
 router.get('/categories', booksController.categories);
+router.get('/plans', requireAuth, requireCompletedProfile, bookPlansController.plans);
+router.post('/plans', requireAuth, requireCompletedProfile, bookPlansController.create);
+router.get('/plans/:planId', requireAuth, requireCompletedProfile, bookPlansController.plan);
+router.patch('/plans/:planId', requireAuth, requireCompletedProfile, bookPlansController.update);
+router.delete('/plans/:planId', requireAuth, requireCompletedProfile, bookPlansController.remove);
 router.get('/admin/featured', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedList);
 router.put('/admin/featured', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedReplace);
 router.patch('/admin/featured/:bookId', requireAuth, requireRoles('super_admin'), booksController.adminFeaturedToggle);

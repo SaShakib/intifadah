@@ -447,6 +447,31 @@ export interface QuranPlanProgressInput {
   note?: string;
 }
 
+export type BookPlanStatus = 0 | 1;
+
+export interface ApiBookPlanRow {
+  id: string | number;
+  user_id: number;
+  book_id: string | number;
+  book_title: string;
+  book_author: string | null;
+  book_cover_url: string | null;
+  total_pages: number;
+  current_page: number;
+  note: string | null;
+  status: BookPlanStatus;
+  completed_on: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookPlanInput {
+  bookId: string | number;
+  totalPages: number;
+  currentPage?: number;
+  note?: string;
+}
+
 export interface LoginInput {
   identifier: string;
   password: string;

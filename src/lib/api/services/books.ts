@@ -1,4 +1,5 @@
 import { apiRequest, createQueryString } from '../client';
+import type { ApiBookPlanRow, ApiRowResponse, ApiRowsResponse, BookPlanInput } from '@/lib/api/types';
 
 export interface BookCategoryRow {
   id: number; category_name: string; slug: string | null; created_at: string; book_count?: number;
@@ -81,6 +82,18 @@ export function toggleAdminFeaturedBook(bookId: string | number, featured: boole
   return apiRequest<{ row: BookRow }>(`/books/admin/featured/${bookId}`, { method: 'PATCH', body: JSON.stringify({ featured }) });
 }
 export function getMyBooks() { return apiRequest<{ rows: BookRow[] }>('/books/me/books'); }
+export function getBookPlans() {
+  return apiRequest<ApiRowsResponse<ApiBookPlanRow>>('/books/plans').then((data) => data.rows);
+}
+export function createBookPlan(input: BookPlanInput) {
+  return apiRequest<ApiRowResponse<ApiBookPlanRow>>('/books/plans', { method: 'POST', body: JSON.stringify(input) }).then((data) => data.row);
+}
+export function updateBookPlan(planId: string | number, input: Partial<BookPlanInput> & { status?: 0 | 1 }) {
+  return apiRequest<ApiRowResponse<ApiBookPlanRow>>(`/books/plans/${planId}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.row);
+}
+export function deleteBookPlan(planId: string | number) {
+  return apiRequest<{ removed: boolean }>(`/books/plans/${planId}`, { method: 'DELETE' });
+}
 export function setBookHold(bookId: string | number, held: boolean) { return apiRequest<{ data: { held: boolean } }>(`/books/${bookId}/availability`, { method: 'PATCH', body: JSON.stringify({ held }) }); }
 export function ownerBookRequestAction(requestId: string | number, action: 'accept' | 'reject' | 'given' | 'return_received', ownerNote?: string) { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/owner`, { method: 'PATCH', body: JSON.stringify({ action, ownerNote }) }); }
 export function confirmBookReceived(requestId: string | number, action: 'received' | 'returned') { return apiRequest<{ row: unknown }>(`/books/requests/${requestId}/received`, { method: 'PATCH', body: JSON.stringify({ action }) }); }
