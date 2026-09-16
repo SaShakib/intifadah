@@ -9,6 +9,7 @@ const commentsRepository = require('./comments.repository');
 const reportsRepository = require('./reports.repository');
 const notificationsRepository = require('./notifications.repository');
 const quranRepository = require('./quran.repository');
+const quranPlansRepository = require('./quran-plans.repository');
 const savingsDuesRepository = require('./savings-dues.repository');
 const booksRepository = require('./books.repository');
 const fundTransfersRepository = require('./fund-transfers.repository');
@@ -26,6 +27,7 @@ module.exports = {
   reportsRepository,
   notificationsRepository,
   quranRepository,
+  quranPlansRepository,
   savingsDuesRepository,
   booksRepository,
   fundTransfersRepository,

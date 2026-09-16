@@ -401,6 +401,52 @@ export interface ApiQuranPenaltyRunResponse {
   penalties: ApiQuranPenaltyRow[];
 }
 
+export type QuranPlanGoalType = 1 | 2;
+export type QuranPlanStatus = 0 | 1;
+
+export interface ApiQuranPlanRow {
+  id: string | number;
+  user_id: number;
+  plan_name: string;
+  goal_type: QuranPlanGoalType;
+  from_ref: string | null;
+  to_ref: string | null;
+  surah_reference: string | null;
+  total_target: number;
+  note: string | null;
+  status: QuranPlanStatus;
+  completed_on: string | null;
+  total_quantity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiQuranPlanProgressRow {
+  id: string | number;
+  plan_id: string | number;
+  record_date: string;
+  quantity: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuranPlanInput {
+  planName: string;
+  goalType: QuranPlanGoalType;
+  fromRef?: string;
+  toRef?: string;
+  surahReference?: string;
+  totalTarget: number;
+  note?: string;
+}
+
+export interface QuranPlanProgressInput {
+  recordDate?: string;
+  quantity: number;
+  note?: string;
+}
+
 export interface LoginInput {
   identifier: string;
   password: string;

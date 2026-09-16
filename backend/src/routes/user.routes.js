@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth, requireCompletedProfile, requirePermission, requireUserKind } = require('../middleware/auth');
 const userController = require('../controllers/user.controller');
 const quranController = require('../controllers/quran.controller');
+const quranPlansController = require('../controllers/quran-plans.controller');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -46,6 +47,15 @@ router.post('/pusher/auth', userController.pusherAuth);
 router.post('/push-subscriptions', userController.savePushSubscription);
 router.delete('/push-subscriptions', userController.removePushSubscription);
 router.post('/push-subscriptions/test', userController.testPushNotification);
+
+router.get('/quran/plans', requirePermission('quran', 'read'), quranPlansController.plans);
+router.post('/quran/plans', requirePermission('quran', 'write'), quranPlansController.create);
+router.get('/quran/plans/:planId', requirePermission('quran', 'read'), quranPlansController.plan);
+router.patch('/quran/plans/:planId', requirePermission('quran', 'write'), quranPlansController.update);
+router.delete('/quran/plans/:planId', requirePermission('quran', 'write'), quranPlansController.remove);
+router.get('/quran/plans/:planId/progress', requirePermission('quran', 'read'), quranPlansController.progress);
+router.post('/quran/plans/:planId/progress', requirePermission('quran', 'write'), quranPlansController.createProgress);
+router.delete('/quran/plans/:planId/progress/:progressId', requirePermission('quran', 'write'), quranPlansController.removeProgress);
 
 router.get('/quran/progress', requirePermission('quran', 'read'), quranController.myProgress);
 router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);

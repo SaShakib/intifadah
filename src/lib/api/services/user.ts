@@ -23,6 +23,10 @@ import type {
   QuranProgressInput,
   UserLoanInput,
   UserTransactionInput,
+  ApiQuranPlanRow,
+  ApiQuranPlanProgressRow,
+  QuranPlanInput,
+  QuranPlanProgressInput,
 } from '../types';
 
 export function getUserDashboardSummary() {
@@ -230,4 +234,51 @@ export async function updateUserQuranProgress(progressId: string | number, input
     body: JSON.stringify(input),
   });
   return data.row;
+}
+
+export async function getUserQuranPlans() {
+  const data = await apiRequest<ApiRowsResponse<ApiQuranPlanRow>>('/user/quran/plans');
+  return data.rows;
+}
+
+export async function getUserQuranPlan(planId: string | number) {
+  const data = await apiRequest<{ row: ApiQuranPlanRow }>(`/user/quran/plans/${planId}`);
+  return data.row;
+}
+
+export async function createUserQuranPlan(input: QuranPlanInput) {
+  const data = await apiRequest<ApiRowResponse<ApiQuranPlanRow>>('/user/quran/plans', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function updateUserQuranPlan(planId: string | number, input: Partial<QuranPlanInput> & { status?: 0 | 1 }) {
+  const data = await apiRequest<ApiRowResponse<ApiQuranPlanRow>>(`/user/quran/plans/${planId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function deleteUserQuranPlan(planId: string | number) {
+  await apiRequest<{ removed: boolean }>(`/user/quran/plans/${planId}`, { method: 'DELETE' });
+}
+
+export async function getUserQuranPlanProgress(planId: string | number) {
+  const data = await apiRequest<ApiRowsResponse<ApiQuranPlanProgressRow>>(`/user/quran/plans/${planId}/progress`);
+  return data.rows;
+}
+
+export async function upsertUserQuranPlanProgress(planId: string | number, input: QuranPlanProgressInput) {
+  const data = await apiRequest<{ row: ApiQuranPlanProgressRow; plan: ApiQuranPlanRow }>(`/user/quran/plans/${planId}/progress`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data;
+}
+
+export async function deleteUserQuranPlanProgress(planId: string | number, progressId: string | number) {
+  await apiRequest<{ plan: ApiQuranPlanRow }>(`/user/quran/plans/${planId}/progress/${progressId}`, { method: 'DELETE' });
 }

@@ -21,6 +21,8 @@ export const queryKeys = {
     quranProgress: (params: Record<string, unknown> = {}) => `user:quran:progress${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     quranPenalties: () => 'user:quran:penalties',
     quranWeeklyCompletion: (params: Record<string, unknown> = {}) => `user:quran:weekly-completion${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
+    quranPlans: () => 'user:quran:plans',
+    quranPlanProgress: (planId: string | number) => `user:quran:plans:${planId}:progress`,
     expenses: (params: Record<string, unknown> = {}) => `user:expenses${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     commentsThreads: () => 'user:comments:threads',
     commentsMessages: (threadId: string | number) => `user:comments:threads:${threadId}:messages`,
