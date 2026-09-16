@@ -346,7 +346,7 @@ export default function TrackSection() {
       <Card className="border-brand/20 bg-brand-light/25">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand text-white"><BookOpenCheck className="h-5 w-5" /></span>
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand text-white"><BookOpenCheck className="h-6 w-6 shrink-0" /></span>
             <div>
               <h2 className="text-lg font-bold text-fg">{selectedDate === today() ? 'আজ Quran ও Namaj হয়েছে?' : 'এই দিনের Quran ও Namaj রেকর্ড'}</h2>
               <p className="mt-1 text-sm text-fg-2">Quran-এর তথ্য ও Namaj-এর ওয়াক্ত চাইলে দিন। কিছু না দিলেও দিনের রেকর্ড সংরক্ষণ করতে পারবেন।</p>

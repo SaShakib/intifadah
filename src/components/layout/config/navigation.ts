@@ -24,6 +24,7 @@ export const USER_NAV_ITEMS: NavItem[] = [
   { href: '/user/loan', label: 'ঋণ', icon: 'hand-coins', section: 'প্রধান মেনু' },
   { href: '/user/quran', label: 'Quran ও Namaj', icon: 'book-open-check', section: 'প্রধান মেনু' },
   { href: '/books', label: 'বইঘর', icon: 'book-open', section: 'প্রধান মেনু' },
+  { href: '/books/plans', label: 'বই পড়া প্ল্যান', icon: 'book-open-check', section: 'প্রধান মেনু' },
   { href: '/user/transactions', label: 'লেনদেন', icon: 'arrow-left-right', section: 'প্রধান মেনু' },
   { href: '/user/categories', label: 'খাতসূচি', icon: 'list-filter', section: 'প্রধান মেনু' },
   { href: '/user/expenses', label: 'খরচের হিসাব', icon: 'receipt-text', section: 'প্রধান মেনু' },

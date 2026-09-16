@@ -133,7 +133,7 @@ export default function BookPlansPage() {
 
   return (
     <main className="min-h-screen bg-surface-2 pb-12">
-      <BooksHeader active="plans" onAddBook={() => setPlanModal({ open: true, plan: null })} />
+      <BooksHeader onAddBook={() => setPlanModal({ open: true, plan: null })} />
 
       <section className="mx-auto max-w-6xl px-4 py-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
