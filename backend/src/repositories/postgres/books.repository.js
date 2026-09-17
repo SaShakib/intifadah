@@ -135,6 +135,23 @@ async function getBookById(bookId) {
   return res.rows[0] || null;
 }
 
+async function listBookCopies(bookId) {
+  const source = await query('SELECT canonical_key FROM books WHERE id = $1 AND deleted_at IS NULL', [bookId]);
+  if (!source.rows.length) return null;
+  const res = await query(
+    `SELECT ${BOOK_COLUMNS}, categories_agg.categories,
+            (SELECT MIN(r.due_on) FROM book_requests r WHERE r.book_id = b.id AND r.status IN (3, 4, 5)) AS estimated_available_on
+     FROM books b
+     JOIN app_users o ON o.id = b.owner_user_id
+     LEFT JOIN book_categories c ON c.id = b.category_id
+     ${BOOK_CATEGORIES_JOIN}
+     WHERE b.canonical_key = $1 AND b.deleted_at IS NULL
+     ORDER BY CASE WHEN b.status = 0 THEN 0 ELSE 1 END, b.created_at DESC, b.id DESC`,
+    [source.rows[0].canonical_key],
+  );
+  return res.rows;
+}
+
 async function createBook(input) {
   const categoryIds = [...new Set((input.categoryIds || []).map(Number).filter((value) => Number.isInteger(value) && value > 0))].slice(0, 6);
   const bookId = await withTransaction(async (client) => {
@@ -680,7 +697,7 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
 }
 
 module.exports = {
-  listCategories, createCategory, listBooks, listBooksGroupedByCategory, listFeaturedBooks, replaceFeaturedBooks, setBookFeatured, getBookById, createBook, updateBook, archiveBook, setBookAvailability,
+  listCategories, createCategory, listBooks, listBooksGroupedByCategory, listFeaturedBooks, replaceFeaturedBooks, setBookFeatured, getBookById, listBookCopies, createBook, updateBook, archiveBook, setBookAvailability,
   getActivationProfile, upsertActivationProfile, createRequest, listRequestsForUser,
   updateRequestByOwner, confirmReceived,
   createExtension, resolveExtension,

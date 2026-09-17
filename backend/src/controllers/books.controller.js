@@ -55,9 +55,11 @@ async function list(req, res, next) {
 
 async function detail(req, res, next) {
   try {
-    const row = await booksRepository.getBookById(id(req.params.bookId, 'bookId'));
+    const bookId = id(req.params.bookId, 'bookId');
+    const row = await booksRepository.getBookById(bookId);
     if (!row) return res.status(404).json({ message: 'Book not found' });
-    return res.json({ row });
+    const copies = await booksRepository.listBookCopies(bookId);
+    return res.json({ row, copies: copies || [] });
   } catch (error) { return next(error); }
 }
 

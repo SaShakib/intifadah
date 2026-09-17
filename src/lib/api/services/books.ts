@@ -49,6 +49,7 @@ export interface AdminBookRequestListResult { rows: AdminBookRequestRow[]; total
 export interface BookListResult { rows: BookRow[]; total: number; }
 export interface BookStoreSection { categoryId: number; categoryName: string; slug: string | null; books: BookRow[]; }
 export interface BookStoreGroupedResult { featured: BookRow[]; sections: BookStoreSection[]; uncategorized: BookRow[]; }
+export type BookCopyRow = Omit<BookRow, 'total_copy_count' | 'available_copy_count'>;
 
 export function getPublicBooks(params: { search?: string; category?: string; limit?: number; offset?: number } = {}) {
   return apiRequest<BookListResult>(`/books${createQueryString(params)}`, {}, { withAuth: false });
@@ -56,7 +57,7 @@ export function getPublicBooks(params: { search?: string; category?: string; lim
 export function getPublicBooksGrouped() {
   return apiRequest<BookStoreGroupedResult>('/books?grouped=1', {}, { withAuth: false });
 }
-export function getPublicBook(bookId: string | number) { return apiRequest<{ row: BookRow }>(`/books/${bookId}`, {}, { withAuth: false }); }
+export function getPublicBook(bookId: string | number) { return apiRequest<{ row: BookRow; copies: BookCopyRow[] }>(`/books/${bookId}`, {}, { withAuth: false }); }
 export function getBookCategories() { return apiRequest<{ rows: BookCategoryRow[] }>('/books/categories', {}, { withAuth: false }); }
 export function getBookActivation() { return apiRequest<{ row: BookActivationInput | null }>('/books/me/activation'); }
 export function activateBooks(input: BookActivationInput) { return apiRequest<{ row: BookActivationInput }>('/books/me/activation', { method: 'POST', body: JSON.stringify(input) }); }
