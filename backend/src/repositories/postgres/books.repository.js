@@ -562,7 +562,8 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
     );
     if (accepted) {
       await client.query(
-        `UPDATE book_requests SET due_on = COALESCE(due_on, CURRENT_DATE) + $2, updated_at = NOW() WHERE id = $1`,
+        `UPDATE book_requests SET due_on = COALESCE(due_on, CURRENT_DATE) + ($2 * INTERVAL '1 day'), 
+         updated_at = NOW() WHERE id = $1`,
         [extension.request_id, extension.requested_days],
       );
     }
