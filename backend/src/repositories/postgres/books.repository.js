@@ -504,10 +504,10 @@ async function confirmReceived({ requestId, requesterUserId, action }) {
   return withTransaction(async (client) => {
     const res = await client.query(
       `UPDATE book_requests br SET
-         status = $3,
-         received_at = CASE WHEN $3 = 4 THEN NOW() ELSE received_at END,
-         return_initiated_at = CASE WHEN $3 = 5 THEN NOW() ELSE return_initiated_at END,
-         returned_at = CASE WHEN $3 = 5 THEN NOW() ELSE returned_at END,
+         status = $3::int,
+         received_at = CASE WHEN $3::int = 4 THEN NOW() ELSE received_at END,
+         return_initiated_at = CASE WHEN $3::int = 5 THEN NOW() ELSE return_initiated_at END,
+         returned_at = CASE WHEN $3::int = 5 THEN NOW() ELSE returned_at END,
          updated_at = NOW()
        FROM books b
        WHERE br.id = $1 AND br.book_id = b.id AND br.requester_user_id = $2 AND br.status = $4
@@ -553,10 +553,11 @@ async function resolveExtension({ extensionId, ownerUserId, accepted, ownerNote 
        JOIN books b ON b.id = br.book_id
        WHERE bre.id = $1 FOR UPDATE`, [extensionId],
     );
+    console.log('extensionResult:', extensionResult.rows);
     const extension = extensionResult.rows[0];
     if (!extension || Number(extension.owner_user_id) !== Number(ownerUserId) || Number(extension.status) !== 0) return null;
     await client.query(
-      `UPDATE book_request_extensions SET status = $2, owner_note = $3, resolved_at = NOW() WHERE id = $1`,
+      `UPDATE book_request_extensions SET status = $2::int, owner_note = $3, resolved_at = NOW() WHERE id = $1`,
       [extensionId, accepted ? 1 : 2, ownerNote || null],
     );
     if (accepted) {
@@ -622,13 +623,12 @@ async function listAllBookRequests({ search, status, limit = 20, offset = 0 } = 
 async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
   return withTransaction(async (client) => {
     const result = await client.query(
-      `SELECT br.*, b.owner_user_id, b.id AS book_id, b.status AS book_status
+      `SELECT br.*, b.owner_user_id, b.id AS book_id, b.status AS book_status, b.title
        FROM book_requests br JOIN books b ON b.id = br.book_id
        WHERE br.id = $1 FOR UPDATE OF br, b`, [requestId],
     );
     const request = result.rows[0];
     if (!request) return { conflict: true };
-
     const current = Number(request.status);
     const target = Number(status);
     const allowedTargets = {
@@ -642,7 +642,6 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
     };
     const transitions = allowedTargets[target];
     if (!transitions || !transitions.includes(current)) return { conflict: true };
-
     if (target === 1) {
       const reserved = await client.query('UPDATE books SET status = 1, updated_at = NOW() WHERE id = $1 AND status = 0 RETURNING id', [request.book_id]);
       if (!reserved.rowCount) return { conflict: true };
@@ -664,15 +663,17 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
 
     const timestampColumns = { 1: 'accepted_at', 3: 'given_at', 4: 'received_at', 5: 'returned_at', 6: 'return_received_at' };
     const setStatements = ['status = $2', 'owner_note = COALESCE($3, owner_note)', 'updated_at = NOW()'];
-    const values = [requestId, target, note || null, actorUserId];
+    const values = [requestId, target, note || null];
     if (timestampColumns[target]) setStatements.push(`${timestampColumns[target]} = NOW()`);
-    if (target === 6) setStatements.push('return_received_by_user_id = $4');
+    if(target===6) {
+      setStatements.push('return_received_by_user_id = $4');
+      values.push(actorUserId);
+    }
 
     await client.query(
       `UPDATE book_requests br SET ${setStatements.join(', ')} WHERE br.id = $1`,
       values,
     );
-
     if (target === 3) {
       await client.query('UPDATE books SET status = 2, updated_at = NOW() WHERE id = $1', [request.book_id]);
     } else if (target === 6) {
@@ -680,7 +681,6 @@ async function adminUpdateRequest({ requestId, actorUserId, status, note }) {
     } else if (target === 7 && current === 1) {
       await client.query('UPDATE books SET status = 0, updated_at = NOW() WHERE id = $1', [request.book_id]);
     }
-
     const actionLabel = { 1: 'accepted', 2: 'rejected', 3: 'given', 4: 'received', 5: 'returned', 6: 'return_received', 7: 'cancelled' }[target];
     await client.query(
       `INSERT INTO book_request_events (request_id, action, actor_user_id, note) VALUES ($1, $2, $3, $4)`,

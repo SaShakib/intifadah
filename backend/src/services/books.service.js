@@ -285,10 +285,13 @@ async function adminListRequests(_userId, query) {
 }
 
 async function adminUpdateRequest(userId, requestId, input) {
-  const status = Number(input.status);
-  if (!Number.isInteger(status) || status < 1 || status > 7) throw badRequest('status is invalid');
+  const status=Number(input.status);
+  if(!Number.isInteger(status)||status<1||status>7) throw badRequest('status is invalid');
+  const note = input.note !== undefined ? String(input.note).trim() : null;
+  const requestIdNum = Number(requestId);
+  if (!Number.isInteger(requestIdNum) || requestIdNum <= 0) throw badRequest('requestId must be a positive integer');
   const result = await booksRepository.adminUpdateRequest({
-    requestId, actorUserId: userId, status, note: cleanText(input.note, 'note', 500, false),
+    requestId, actorUserId: userId, status, note: cleanText(note, 'note', 500, false),
   });
   if (!result || result.conflict) {
     const error = new Error('Book request not found or the chosen status is not allowed for it');
@@ -296,7 +299,8 @@ async function adminUpdateRequest(userId, requestId, input) {
     throw error;
   }
   const eventLabel = { 1: 'accepted', 2: 'rejected', 3: 'given', 4: 'received', 5: 'returned', 6: 'return_confirmed', 7: 'cancelled' }[status];
-  const recipientIds = [...new Set([result.ownerUserId, result.requesterUserId]).filter((id) => id && Number(id) !== Number(userId))];
+  const recipientIds=[...new Set([result.ownerUserId,result.requesterUserId])].filter((id) => id&&Number(id)!==Number(userId));
+  
   await Promise.all(recipientIds.map((recipientId) =>
     notificationsRepository.createForUser({
       userId: recipientId,
