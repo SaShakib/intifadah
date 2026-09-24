@@ -364,7 +364,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         AND qp.progress_date BETWEEN $1 AND $2
        WHERE u.is_active = TRUE
          AND u.user_kind = 1
-         AND COALESCE(sr.role_key, r.role_key) NOT IN ('super_admin', 'admin', 'manager')
+         AND COALESCE(sr.role_key, r.role_key) NOT IN ('super_admin')
        GROUP BY u.id, u.full_name, u.mobile, u.email
        ORDER BY u.full_name ASC`,
       [fromDate, toDate],
@@ -421,7 +421,7 @@ async function createWeeklyPenaltyRun({ fromDate, toDate, penaltyPerMissedDayMin
         .map((penalty) => Number(penalty.user.id));
       removedPenalties = previousPenalties.filter((penalty) => (
         !plannedByUserId.has(Number(penalty.user_id))
-        && !['super_admin', 'admin', 'manager'].includes(penalty.role_key)
+        && !['super_admin'].includes(penalty.role_key)
       ));
 
       const deletedPenalties = await client.query(

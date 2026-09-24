@@ -7,7 +7,7 @@ import { AppModal } from '@/components/semibase/AppModal';
 import { ProgrammableCoverSearch } from '@/components/books/ProgrammableCoverSearch';
 import { Button } from '@/components/base/Button';
 import { Input } from '@/components/base/Input';
-import { createBook, createBookCategory, getBookCategories, uploadBookCover, type BookCategoryRow } from '@/lib/api';
+import { createBook, createBookCategory, getBookCategories, getPublicBooks, uploadBookCover, type BookCategoryRow, type BookRow } from '@/lib/api';
 import { googleImagesUrl } from '@/components/books/bookUtils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -32,11 +32,24 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
   const [bookGuideOpen, setBookGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [titleMatches, setTitleMatches] = useState<BookRow[]>([]);
 
   useEffect(() => {
     if (!open) return;
     void getBookCategories().then((result) => setCategories(result.rows)).catch(() => undefined);
   }, [open]);
+
+  useEffect(() => {
+    const query = bookForm.title.trim().toLowerCase();
+    const timeout = setTimeout(() => {
+      if (!query) { setTitleMatches([]); return; }
+      void getPublicBooks({ search: bookForm.title.trim(), limit: 6 }).then((result) => {
+        if (bookForm.title.trim().toLowerCase() !== query) return;
+        setTitleMatches(result.rows);
+      }).catch(() => undefined);
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [bookForm.title, open, setTitleMatches]);
 
   const searchCover = () => {
     if (!bookForm.title.trim()) { onMessage('বইয়ের নাম দিন।'); return; }
@@ -79,6 +92,7 @@ export function BookAddModal({ open, onClose, onMessage, onAdded }: BookAddModal
             <label className="block text-sm font-semibold text-fg">বইয়ের নাম <span className="text-danger">*</span><div className="mt-1 flex gap-2"><Input value={bookForm.title} onChange={(event) => setBookForm({ ...bookForm, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); searchCover(); } }} placeholder="যেমন: তিন গোয়েন্দা" /><Button type="button" variant="secondary" disabled={searchingCover} onClick={searchCover}><Search className="h-4 w-4" />খুঁজুন</Button></div></label>
             <p className="-mt-3 text-xs text-muted">Google থেকে কভারের ছবি ডাউনলোড করতে চাইলে নাম লিখে Enter চাপুন বা খুঁজুন চাপুন।</p>
             <p className="-mt-3 text-xs leading-5 text-muted">সব কভার এখানে নাও আসতে পারে। সেক্ষেত্রে সরাসরি Google-এ সার্চ করে ছবিটি ডাউনলোড করুন।</p>
+            {titleMatches.length > 0 && <div className="space-y-2"><p className="-mt-3 text-xs font-semibold text-fg-2">একই নামে বইঘরে আছে ({titleMatches.length}) — নতুন কপি যোগ হবে:</p><div className="grid gap-2 sm:grid-cols-2">{titleMatches.map((match) => <div key={match.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 p-2"><Image src={match.cover_url || ''} alt="" width={40} height={56} className="h-14 w-10 shrink-0 rounded border border-border object-cover" unoptimized onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />{match.cover_url ? null : <div className="h-14 w-10 shrink-0 rounded border border-dashed border-border" />}<div className="min-w-0"><p className="truncate text-xs font-semibold text-fg">{match.title}</p>{match.author_name ? <p className="truncate text-[11px] text-muted">{match.author_name}</p> : null}<p className="text-[11px] text-muted">৳{Number(match.book_price_minor)} · {match.available_copy_count} টি কপি</p></div></div>)}</div></div>}
             {coverSearchQuery && <ProgrammableCoverSearch key={coverSearchRun} query={coverSearchQuery} onSearchStateChange={handleCoverSearchStateChange} />}
             {bookForm.title.trim() && <a href={googleImagesUrl(bookForm.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" />Google Images-এ কভার খুঁজুন</a>}
             {isAdmin && <label className="block text-sm font-semibold text-fg">কভারের সরাসরি image URL <span className="font-normal text-muted">(ঐচ্ছিক)</span><Input className="mt-1" value={bookForm.coverUrl} onChange={(event) => setBookForm({ ...bookForm, coverUrl: event.target.value, coverPublicId: '', externalSource: 'manual_url', externalVolumeId: '' })} placeholder="https://.../book-cover.jpg" /></label>}
