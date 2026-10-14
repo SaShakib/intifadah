@@ -217,6 +217,8 @@ async function updateMember(userId, input) {
     wardNo: input.wardNo !== undefined ? Number(input.wardNo) : undefined,
     photoUrl: input.photoUrl,
     isActive: input.isActive,
+    // Admin/Manager duty requires Intifadah membership; drop it with the membership.
+    clearStaffRole: membership.roleKey !== undefined && membership.roleKey !== 'member_internal',
   });
 
   const member = await membersRepository.getMemberById(userId);

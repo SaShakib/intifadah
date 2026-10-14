@@ -19,4 +19,14 @@ WHERE u.role_id = r.id
       WHEN 'org_user' THEN 3
     END;
 
+-- Admin/Manager duty can only be linked to an Intifadah member account.
+-- Drop links left behind on accounts that are no longer Intifadah members.
+UPDATE app_users AS u
+SET staff_role_id = NULL,
+    updated_at = NOW()
+FROM roles AS r
+WHERE u.role_id = r.id
+  AND u.staff_role_id IS NOT NULL
+  AND (r.role_key <> 'member_internal' OR u.user_kind <> 1);
+
 COMMIT;

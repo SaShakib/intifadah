@@ -229,6 +229,7 @@ async function updateUserAdmin(userId, input) {
       auth_provider = COALESCE($12, auth_provider),
       google_sub = COALESCE($13, google_sub),
       is_active = COALESCE($14, is_active),
+      staff_role_id = CASE WHEN $15::boolean THEN NULL ELSE staff_role_id END,
       updated_at = NOW()
      WHERE id = $1`,
     [
@@ -246,6 +247,7 @@ async function updateUserAdmin(userId, input) {
       input.authProvider,
       input.googleSub,
       input.isActive,
+      Boolean(input.clearStaffRole),
     ],
   );
 }
