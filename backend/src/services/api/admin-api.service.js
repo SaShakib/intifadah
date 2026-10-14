@@ -19,6 +19,21 @@ const ROLE_BY_KIND = {
   2: 'general_user',
   3: 'org_user',
 };
+const KIND_BY_ROLE = {
+  member_internal: 1,
+  general_user: 2,
+  org_user: 3,
+};
+
+// Role and user kind describe the same membership. Intifadah-only features
+// (Quran/Namaj weekly list, penalties) filter by user_kind, so a base role
+// always decides the kind instead of trusting a separately submitted value.
+function resolveMembership({ userKind, roleKey }) {
+  if (roleKey && KIND_BY_ROLE[roleKey] !== undefined) {
+    return { userKind: KIND_BY_ROLE[roleKey], roleKey };
+  }
+  return { userKind: userKind !== undefined ? Number(userKind) : undefined, roleKey };
+}
 
 function parseMinorAmount(value) {
   const amount = Number(value);
@@ -103,7 +118,8 @@ async function createMember(input) {
   const mobile = String(input.mobile || '').trim();
   const providedPassword = String(input.password || '').trim();
   const password = providedPassword || generateTemporaryPassword();
-  const userKind = Number(input.userKind || 2);
+  const membership = resolveMembership({ userKind: Number(input.userKind || 2), roleKey: input.roleKey });
+  const { userKind } = membership;
   const email = normalizeEmail(input.email);
 
   assertValidEmail(email);
@@ -134,7 +150,7 @@ async function createMember(input) {
     throw error;
   }
 
-  const roleId = await resolveRoleId({ userKind, roleKey: input.roleKey });
+  const roleId = await resolveRoleId(membership);
   const created = await authRepository.createUser({
     userKind,
     roleId,
@@ -182,9 +198,15 @@ async function updateMember(userId, input) {
     throw error;
   }
 
-  const roleId = input.roleKey ? await resolveRoleId({ userKind: input.userKind, roleKey: input.roleKey }) : undefined;
+  const membership = resolveMembership({ userKind: input.userKind, roleKey: input.roleKey });
+  if (membership.userKind !== undefined && ![1, 2, 3].includes(membership.userKind)) {
+    const error = new Error('userKind must be 1, 2 or 3');
+    error.statusCode = 400;
+    throw error;
+  }
+  const roleId = membership.roleKey ? await resolveRoleId(membership) : undefined;
   await authRepository.updateUserAdmin(userId, {
-    userKind: input.userKind !== undefined ? Number(input.userKind) : undefined,
+    userKind: membership.userKind,
     roleId,
     organizationId: input.organizationId !== undefined ? Number(input.organizationId) || null : undefined,
     fullName: input.fullName,
@@ -195,6 +217,8 @@ async function updateMember(userId, input) {
     wardNo: input.wardNo !== undefined ? Number(input.wardNo) : undefined,
     photoUrl: input.photoUrl,
     isActive: input.isActive,
+    // Admin/Manager duty requires Intifadah membership; drop it with the membership.
+    clearStaffRole: membership.roleKey !== undefined && membership.roleKey !== 'member_internal',
   });
 
   const member = await membersRepository.getMemberById(userId);

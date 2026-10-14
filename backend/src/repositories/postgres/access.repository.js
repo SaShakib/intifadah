@@ -162,15 +162,18 @@ async function assignUserRoleWithAudit({
   newRoleId,
   newRoleKey,
   newUserKind,
+  beforeStaffRoleId = null,
+  clearStaffRole = false,
 }) {
   await withTransaction(async (client) => {
     await client.query(
       `UPDATE app_users
        SET role_id = $2,
            user_kind = COALESCE($3, user_kind),
+           staff_role_id = CASE WHEN $4::boolean THEN NULL ELSE staff_role_id END,
            updated_at = NOW()
        WHERE id = $1`,
-      [userId, newRoleId, newUserKind ?? null],
+      [userId, newRoleId, newUserKind ?? null, clearStaffRole],
     );
 
     await client.query(
@@ -187,8 +190,13 @@ async function assignUserRoleWithAudit({
         2,
         2,
         userId,
-        JSON.stringify({ roleId: beforeRoleId, roleKey: beforeRoleKey, userKind: beforeUserKind }),
-        JSON.stringify({ roleId: newRoleId, roleKey: newRoleKey, userKind: newUserKind ?? beforeUserKind }),
+        JSON.stringify({ roleId: beforeRoleId, roleKey: beforeRoleKey, userKind: beforeUserKind, staffRoleId: beforeStaffRoleId }),
+        JSON.stringify({
+          roleId: newRoleId,
+          roleKey: newRoleKey,
+          userKind: newUserKind ?? beforeUserKind,
+          staffRoleId: clearStaffRole ? null : beforeStaffRoleId,
+        }),
       ],
     );
   });

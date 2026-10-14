@@ -157,6 +157,9 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     }
   }
 
+  // Admin/Manager duty is only ever linked to an Intifadah member account, so
+  // leaving that membership also revokes the linked staff access.
+  const clearStaffRole = Boolean(user.staff_role_id) && targetRole.role_key !== 'member_internal';
   await accessRepository.assignUserRoleWithAudit({
     actorUserId,
     userId: user.id,
@@ -166,6 +169,8 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     newRoleId: targetRole.id,
     newRoleKey: targetRole.role_key,
     newUserKind: targetUserKind,
+    beforeStaffRoleId: user.staff_role_id ?? null,
+    clearStaffRole,
   });
 
   return {
@@ -174,6 +179,7 @@ async function assignRoleToUser({ actorUserId, targetUserId, targetRoleKey }) {
     roleKey: targetRole.role_key,
     roleName: targetRole.role_name,
     userKind: targetUserKind ?? user.user_kind,
+    staffRoleId: clearStaffRole ? null : user.staff_role_id ?? null,
     changed: true,
   };
 }
