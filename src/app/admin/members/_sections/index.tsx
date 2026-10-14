@@ -60,6 +60,13 @@ const ROLE_OPTIONS: Array<{ value: BackendRoleKey; label: string }> = [
   { value: 'org_user', label: 'সংগঠন সদস্য' },
 ];
 
+function kindForRole(roleKey: BackendRoleKey): 1 | 2 | 3 | null {
+  if (roleKey === 'member_internal') return 1;
+  if (roleKey === 'general_user') return 2;
+  if (roleKey === 'org_user') return 3;
+  return null;
+}
+
 function roleForKind(userKind: number): BackendRoleKey {
   if (userKind === 1) return 'member_internal';
   if (userKind === 3) return 'org_user';
@@ -216,7 +223,10 @@ export function MembersMiddleSection({ members = MEMBER_TABLE_ROWS, onMutationSu
             const userKind = Number(event.target.value) as 1 | 2 | 3;
             setForm((current) => ({ ...current, userKind, roleKey: roleForKind(userKind) }));
           }} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"><option value="1">টাইপ ১ - ইনতিফাদাহ সদস্য</option><option value="2">টাইপ ২ - সাধারণ সদস্য</option><option value="3">টাইপ ৩ - সংগঠন সদস্য</option></select></label>
-          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">ভূমিকা</span><select value={form.roleKey} onChange={(event) => updateForm('roleKey', event.target.value as BackendRoleKey)} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">{ROLE_OPTIONS.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
+          <label className="space-y-1"><span className="text-xs font-semibold text-fg-2">ভূমিকা</span><select value={form.roleKey} onChange={(event) => {
+            const roleKey = event.target.value as BackendRoleKey;
+            setForm((current) => ({ ...current, roleKey, userKind: kindForRole(roleKey) ?? current.userKind }));
+          }} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">{ROLE_OPTIONS.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
           <label className="space-y-1 sm:col-span-2"><span className="text-xs font-semibold text-fg-2">ঠিকানা</span><Input value={form.addressLine ?? ''} onChange={(event) => updateForm('addressLine', event.target.value)} placeholder="ঠিকানা" /></label>
         </div>
       </AppModal>
