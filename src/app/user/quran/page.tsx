@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarCheck2, Target } from 'lucide-react';
 import { PageStack } from '@/components/custom/PageStack';
 import { cn } from '@/lib/utils/cn';
@@ -15,7 +15,22 @@ const VIEWS: Array<{ value: View; label: string; icon: typeof CalendarCheck2 }> 
 ];
 
 export default function UserQuranPage() {
-  const [view, setView] = useState<View>('track');
+  const [view, setView] = useState<View>(() => {
+    try {
+      const saved = window.localStorage.getItem('quran-view');
+      return saved === 'plan' ? 'plan' : 'track';
+    } catch {
+      return 'track';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('quran-view', view);
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [view]);
 
   return (
     <PageStack>

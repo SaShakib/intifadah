@@ -41,8 +41,8 @@ const GOAL_DETAILS: Record<QuranPlanGoalType, string> = {
 };
 
 export default function PlansSection() {
-  const [view, setView] = useState<'plans' | 'memorization'>('plans');
   const [toast, setToast] = useState<string | null>(null);
+  const [memorizationOpen, setMemorizationOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [planModal, setPlanModal] = useState<{ open: boolean; plan: ApiQuranPlanRow | null }>({ open: false, plan: null });
   const [progressPlan, setProgressPlan] = useState<ApiQuranPlanRow | null>(null);
@@ -171,7 +171,8 @@ export default function PlansSection() {
           : [entry, ...rows];
         return { ...current, [key]: nextRows.sort((a, b) => b.record_date.localeCompare(a.record_date)) };
       });
-      setProgressPlan(result.plan);
+      setProgressPlan(null);
+      await refreshPlans();
       showToast('আজকের অগ্রগতি সংরক্ষণ হয়েছে।');
     } catch (err) {
       showToast(getErrorMessage(err));
@@ -209,24 +210,8 @@ export default function PlansSection() {
   const unitShort = (plan: ApiQuranPlanRow) => (plan.goal_type === 1 ? 'পৃষ্ঠা' : 'আয়াত');
   const percent = (plan: ApiQuranPlanRow) => Math.min(100, Math.round((Number(plan.total_quantity) / Math.max(1, Number(plan.total_target))) * 100));
 
-  if (view === 'memorization') {
-    return (
-      <section className="space-y-4">
-        <div className="flex gap-1 rounded-xl border border-border bg-white p-1 shadow-sm" role="tablist" aria-label="Plan views">
-          <button type="button" onClick={() => setView('plans')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>প্ল্যান</button>
-          <button type="button" onClick={() => setView('memorization')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>মুখস্থ</button>
-        </div>
-        <MemorizationSection />
-      </section>
-    );
-  }
-
   return (
     <section>
-      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-white p-1 shadow-sm" role="tablist" aria-label="Plan views">
-        <button type="button" onClick={() => setView('plans')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${view === 'plans' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>প্ল্যান</button>
-        <button type="button" onClick={() => setView('memorization')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>মুখস্থ</button>
-      </div>
       <Card className="border-brand/20 bg-brand-light/25">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -236,6 +221,16 @@ export default function PlansSection() {
           <Button onClick={() => setPlanModal({ open: true, plan: null })} disabled={busy}>
             <Plus className="h-4 w-4" />নতুন প্ল্যান
           </Button>
+        </div>
+      </Card>
+
+      <Card className="border-brand/20 bg-brand-light/25">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-fg">মুখস্থ রিভিউ</h2>
+            <p className="mt-1 text-sm text-fg-2">হাফ-পৃষ্ঠা মুখস্থ, আজকের রিভিউ কিউ এবং সব সেকশন ব্রাউজ করুন।</p>
+          </div>
+          <Button onClick={() => setMemorizationOpen(true)}><CalendarDays className="h-4 w-4" />ব্রাউজ করুন</Button>
         </div>
       </Card>
 
@@ -400,6 +395,10 @@ export default function PlansSection() {
         )}
       >
         <p className="text-sm text-fg-2">“{confirmDelete?.plan_name}” প্ল্যানসহ এর সব অগ্রগতি ইতিহাস মুছে যাবে।</p>
+      </AppModal>
+
+      <AppModal open={memorizationOpen} title="মুখস্থ রিভিউ" onClose={() => setMemorizationOpen(false)}>
+        <MemorizationSection />
       </AppModal>
 
       <AppToast message={toast} />
