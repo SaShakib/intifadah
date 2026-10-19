@@ -223,7 +223,7 @@ export default function PlansSection() {
             </Button>
             <Link href="/user/quran/memorization">
               <Button variant="secondary">
-                <CalendarDays className="h-4 w-4" />মুখস্থ ব্রাউজ
+                <CalendarDays className="h-4 w-4" />মুখস্থ সেকশন
               </Button>
             </Link>
           </div>
