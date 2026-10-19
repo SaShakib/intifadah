@@ -212,24 +212,21 @@ export default function PlansSection() {
   return (
     <section>
       <Card className="border-brand/20 bg-brand-light/25">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-fg">Quran প্ল্যান</h2>
-            <p className="mt-1 text-sm text-fg-2">তিলাওয়াত বা মুখস্থের লক্ষ্য বানিয়ে প্রতিদিনের অগ্রগতি রেকর্ড করুন।</p>
+            <h2 className="text-lg font-bold text-fg">Quran প্ল্যান ও মুখস্থ</h2>
+            <p className="mt-1 text-sm text-fg-2">প্ল্যান তৈরি করুন অথবা মুখস্থ রিভিউ ব্রাউজ করুন।</p>
           </div>
-          <Button onClick={() => setPlanModal({ open: true, plan: null })} disabled={busy}>
-            <Plus className="h-4 w-4" />নতুন প্ল্যান
-          </Button>
-        </div>
-      </Card>
-
-      <Card className="border-brand/20 bg-brand-light/25">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-fg">মুখস্থ রিভিউ</h2>
-            <p className="mt-1 text-sm text-fg-2">হাফ-পৃষ্ঠা মুখস্থ, আজকের রিভিউ কিউ এবং সব সেকশন ব্রাউজ করুন।</p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setPlanModal({ open: true, plan: null })} disabled={busy}>
+              <Plus className="h-4 w-4" />নতুন প্ল্যান
+            </Button>
+            <Link href="/user/quran/memorization">
+              <Button variant="secondary">
+                <CalendarDays className="h-4 w-4" />মুখস্থ ব্রাউজ
+              </Button>
+            </Link>
           </div>
-          <Link href="/user/quran/memorization"><Button><CalendarDays className="h-4 w-4" />ব্রাউজ করুন</Button></Link>
         </div>
       </Card>
 
