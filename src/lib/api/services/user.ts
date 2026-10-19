@@ -27,6 +27,10 @@ import type {
   ApiQuranPlanProgressRow,
   QuranPlanInput,
   QuranPlanProgressInput,
+  ApiQuranMemorizationSectionRow,
+  ApiQuranMemorizationReviewRow,
+  QuranMemorizationSectionInput,
+  QuranMemorizationReviewInput,
 } from '../types';
 
 export function getUserDashboardSummary() {
@@ -281,4 +285,52 @@ export async function upsertUserQuranPlanProgress(planId: string | number, input
 
 export async function deleteUserQuranPlanProgress(planId: string | number, progressId: string | number) {
   await apiRequest<{ plan: ApiQuranPlanRow }>(`/user/quran/plans/${planId}/progress/${progressId}`, { method: 'DELETE' });
+}
+
+
+export async function getUserQuranMemorizationSections() {
+  const data = await apiRequest<ApiRowsResponse<ApiQuranMemorizationSectionRow>>('/user/quran/memorization');
+  return data.rows;
+}
+
+export async function getUserQuranMemorizationSection(sectionId: string | number) {
+  const data = await apiRequest<{ row: ApiQuranMemorizationSectionRow }>(`/user/quran/memorization/${sectionId}`);
+  return data.row;
+}
+
+export async function createUserQuranMemorizationSection(input: QuranMemorizationSectionInput) {
+  const data = await apiRequest<ApiRowResponse<ApiQuranMemorizationSectionRow>>('/user/quran/memorization', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function updateUserQuranMemorizationSection(sectionId: string | number, input: Partial<QuranMemorizationSectionInput>) {
+  const data = await apiRequest<ApiRowResponse<ApiQuranMemorizationSectionRow>>(`/user/quran/memorization/${sectionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return data.row;
+}
+
+export async function deleteUserQuranMemorizationSection(sectionId: string | number) {
+  await apiRequest<{ removed: boolean }>(`/user/quran/memorization/${sectionId}`, { method: 'DELETE' });
+}
+
+export async function getUserQuranMemorizationReviews(sectionId: string | number) {
+  const data = await apiRequest<ApiRowsResponse<ApiQuranMemorizationReviewRow>>(`/user/quran/memorization/${sectionId}/reviews`);
+  return data.rows;
+}
+
+export async function createUserQuranMemorizationReview(sectionId: string | number, input: QuranMemorizationReviewInput) {
+  const data = await apiRequest<{ review: ApiQuranMemorizationReviewRow; section: ApiQuranMemorizationSectionRow }>(`/user/quran/memorization/${sectionId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return data;
+}
+
+export async function deleteUserQuranMemorizationReview(sectionId: string | number, reviewId: string | number) {
+  await apiRequest<{ removed: boolean }>(`/user/quran/memorization/${sectionId}/reviews/${reviewId}`, { method: 'DELETE' });
 }

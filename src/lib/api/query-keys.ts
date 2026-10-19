@@ -22,6 +22,7 @@ export const queryKeys = {
     quranPenalties: () => 'user:quran:penalties',
     quranWeeklyCompletion: (params: Record<string, unknown> = {}) => `user:quran:weekly-completion${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,
     quranPlans: () => 'user:quran:plans',
+    quranMemorization: () => 'user:quran:memorization',
     quranPlanProgress: (planId: string | number) => `user:quran:plans:${planId}:progress`,
     bookPlans: () => 'user:books:plans',
     expenses: (params: Record<string, unknown> = {}) => `user:expenses${createQueryString(params as Record<string, string | number | boolean | null | undefined>)}`,

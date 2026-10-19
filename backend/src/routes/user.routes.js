@@ -3,6 +3,7 @@ const { requireAuth, requireCompletedProfile, requirePermission, requireUserKind
 const userController = require('../controllers/user.controller');
 const quranController = require('../controllers/quran.controller');
 const quranPlansController = require('../controllers/quran-plans.controller');
+const quranMemorizationController = require('../controllers/quran-memorization.controller');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -56,6 +57,15 @@ router.delete('/quran/plans/:planId', requirePermission('quran', 'write'), quran
 router.get('/quran/plans/:planId/progress', requirePermission('quran', 'read'), quranPlansController.progress);
 router.post('/quran/plans/:planId/progress', requirePermission('quran', 'write'), quranPlansController.createProgress);
 router.delete('/quran/plans/:planId/progress/:progressId', requirePermission('quran', 'write'), quranPlansController.removeProgress);
+
+router.get('/quran/memorization', requirePermission('quran', 'read'), quranMemorizationController.sections);
+router.post('/quran/memorization', requirePermission('quran', 'write'), quranMemorizationController.create);
+router.get('/quran/memorization/:sectionId', requirePermission('quran', 'read'), quranMemorizationController.section);
+router.patch('/quran/memorization/:sectionId', requirePermission('quran', 'write'), quranMemorizationController.update);
+router.delete('/quran/memorization/:sectionId', requirePermission('quran', 'write'), quranMemorizationController.remove);
+router.get('/quran/memorization/:sectionId/reviews', requirePermission('quran', 'read'), quranMemorizationController.reviews);
+router.post('/quran/memorization/:sectionId/reviews', requirePermission('quran', 'write'), quranMemorizationController.createReview);
+router.delete('/quran/memorization/:sectionId/reviews/:reviewId', requirePermission('quran', 'write'), quranMemorizationController.removeReview);
 
 router.get('/quran/progress', requirePermission('quran', 'read'), quranController.myProgress);
 router.post('/quran/progress', requirePermission('quran', 'write'), quranController.createProgress);

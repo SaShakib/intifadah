@@ -447,6 +447,64 @@ export interface QuranPlanProgressInput {
   note?: string;
 }
 
+export type QuranMemorizationStatus = 0 | 1 | 2;
+export type QuranMemorizationRecallResult = 'strong' | 'shaky' | 'weak' | 'failed';
+
+export interface ApiQuranMemorizationSectionRow {
+  id: string | number;
+  user_id: number;
+  surah_name: string;
+  from_ayah: number | null;
+  to_ayah: number | null;
+  mushaf_page: number | null;
+  page_half: number | null;
+  from_line: number | null;
+  to_line: number | null;
+  memorized_date: string;
+  last_reviewed_date: string | null;
+  next_review_date: string;
+  interval_level: number;
+  current_interval_days: number;
+  recall_quality: QuranMemorizationRecallResult | null;
+  error_count: number;
+  status: QuranMemorizationStatus;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiQuranMemorizationReviewRow {
+  id: string | number;
+  section_id: string | number;
+  review_date: string;
+  result: QuranMemorizationRecallResult;
+  error_count: number;
+  verified: boolean;
+  note: string | null;
+  created_at: string;
+}
+
+export interface QuranMemorizationSectionInput {
+  surahName: string;
+  fromAyah?: number | string | null;
+  toAyah?: number | string | null;
+  mushafPage?: number | string | null;
+  pageHalf?: number | string | null;
+  fromLine?: number | string | null;
+  toLine?: number | string | null;
+  memorizedDate?: string;
+  status?: QuranMemorizationStatus;
+  note?: string;
+}
+
+export interface QuranMemorizationReviewInput {
+  reviewDate?: string;
+  result: QuranMemorizationRecallResult;
+  errorCount?: number;
+  verified: boolean;
+  note?: string;
+}
+
 export type BookPlanStatus = 0 | 1;
 
 export interface ApiBookPlanRow {

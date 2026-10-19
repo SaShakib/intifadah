@@ -26,6 +26,7 @@ import {
 import type { ApiQuranPlanProgressRow, ApiQuranPlanRow, QuranPlanGoalType, QuranPlanInput } from '@/lib/api';
 import { PlanModal } from './plan-modal';
 import { ProgressModal } from './progress-modal';
+import MemorizationSection from './memorization-section';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -40,6 +41,7 @@ const GOAL_DETAILS: Record<QuranPlanGoalType, string> = {
 };
 
 export default function PlansSection() {
+  const [view, setView] = useState<'plans' | 'memorization'>('plans');
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [planModal, setPlanModal] = useState<{ open: boolean; plan: ApiQuranPlanRow | null }>({ open: false, plan: null });
@@ -207,8 +209,24 @@ export default function PlansSection() {
   const unitShort = (plan: ApiQuranPlanRow) => (plan.goal_type === 1 ? 'পৃষ্ঠা' : 'আয়াত');
   const percent = (plan: ApiQuranPlanRow) => Math.min(100, Math.round((Number(plan.total_quantity) / Math.max(1, Number(plan.total_target))) * 100));
 
+  if (view === 'memorization') {
+    return (
+      <section className="space-y-4">
+        <div className="flex gap-1 rounded-xl border border-border bg-white p-1 shadow-sm" role="tablist" aria-label="Plan views">
+          <button type="button" onClick={() => setView('plans')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>প্ল্যান</button>
+          <button type="button" onClick={() => setView('memorization')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>মুখস্থ</button>
+        </div>
+        <MemorizationSection />
+      </section>
+    );
+  }
+
   return (
     <section>
+      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-white p-1 shadow-sm" role="tablist" aria-label="Plan views">
+        <button type="button" onClick={() => setView('plans')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${view === 'plans' ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>প্ল্যান</button>
+        <button type="button" onClick={() => setView('memorization')} className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-bold transition ${false ? 'bg-brand text-white shadow-sm' : 'text-fg-2 hover:bg-surface-2'}`}>মুখস্থ</button>
+      </div>
       <Card className="border-brand/20 bg-brand-light/25">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
