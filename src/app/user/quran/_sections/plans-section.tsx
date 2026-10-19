@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import Link from 'next/link';
 import { CalendarDays, ChevronDown, ChevronUp, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/base/Badge';
 import { Button } from '@/components/base/Button';
@@ -26,7 +27,6 @@ import {
 import type { ApiQuranPlanProgressRow, ApiQuranPlanRow, QuranPlanGoalType, QuranPlanInput } from '@/lib/api';
 import { PlanModal } from './plan-modal';
 import { ProgressModal } from './progress-modal';
-import MemorizationSection from './memorization-section';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -42,7 +42,6 @@ const GOAL_DETAILS: Record<QuranPlanGoalType, string> = {
 
 export default function PlansSection() {
   const [toast, setToast] = useState<string | null>(null);
-  const [memorizationOpen, setMemorizationOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [planModal, setPlanModal] = useState<{ open: boolean; plan: ApiQuranPlanRow | null }>({ open: false, plan: null });
   const [progressPlan, setProgressPlan] = useState<ApiQuranPlanRow | null>(null);
@@ -230,7 +229,7 @@ export default function PlansSection() {
             <h2 className="text-lg font-bold text-fg">মুখস্থ রিভিউ</h2>
             <p className="mt-1 text-sm text-fg-2">হাফ-পৃষ্ঠা মুখস্থ, আজকের রিভিউ কিউ এবং সব সেকশন ব্রাউজ করুন।</p>
           </div>
-          <Button onClick={() => setMemorizationOpen(true)}><CalendarDays className="h-4 w-4" />ব্রাউজ করুন</Button>
+          <Link href="/user/quran/memorization"><Button><CalendarDays className="h-4 w-4" />ব্রাউজ করুন</Button></Link>
         </div>
       </Card>
 
@@ -395,10 +394,6 @@ export default function PlansSection() {
         )}
       >
         <p className="text-sm text-fg-2">“{confirmDelete?.plan_name}” প্ল্যানসহ এর সব অগ্রগতি ইতিহাস মুছে যাবে।</p>
-      </AppModal>
-
-      <AppModal open={memorizationOpen} title="মুখস্থ রিভিউ" onClose={() => setMemorizationOpen(false)}>
-        <MemorizationSection />
       </AppModal>
 
       <AppToast message={toast} />

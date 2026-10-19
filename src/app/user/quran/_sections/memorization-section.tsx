@@ -81,6 +81,10 @@ export default function MemorizationSection() {
   const [reviewErrors, setReviewErrors] = useState('');
   const [reviewVerified, setReviewVerified] = useState(false);
   const [reviewNote, setReviewNote] = useState('');
+  const [browseOpen, setBrowseOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterRecall, setFilterRecall] = useState('all');
+  const [browsePage, setBrowsePage] = useState(1);
 
   const loadSections = useCallback(async () => {
     const rows = await getUserQuranMemorizationSections();
@@ -233,7 +237,19 @@ export default function MemorizationSection() {
     }
   };
 
-  const sectionRows = sections.map((section) => {
+  const filteredBrowseSections = useMemo(() => sections.filter((section) => {
+    if (filterStatus !== 'all' && String(section.status) !== filterStatus) return false;
+    if (filterRecall === 'none' && section.recall_quality) return false;
+    if (filterRecall !== 'all' && filterRecall !== 'none' && section.recall_quality !== filterRecall) return false;
+    return true;
+  }), [sections, filterStatus, filterRecall]);
+
+  const browsePageSize = 10;
+  const browseTotalPages = Math.max(1, Math.ceil(filteredBrowseSections.length / browsePageSize));
+  const safeBrowsePage = Math.min(browsePage, browseTotalPages);
+  const pagedBrowseSections = filteredBrowseSections.slice((safeBrowsePage - 1) * browsePageSize, safeBrowsePage * browsePageSize);
+
+  const sectionToRow = (section: ApiQuranMemorizationSectionRow) => {
     const ayatRange = [section.from_ayah, section.to_ayah].filter((value) => value !== null && value !== undefined).join('–');
     const pageRange = section.mushaf_page ? `${section.mushaf_page}${section.page_half ? (section.page_half === 1 ? ' (প্রথম)' : ' (দ্বিতীয়)') : ''}` : '-';
     const lineRange = [section.from_line, section.to_line].filter((value) => value !== null && value !== undefined).join('–') || '-';
@@ -265,7 +281,9 @@ export default function MemorizationSection() {
         </div>,
       ],
     };
-  });
+  };
+
+  const browseRows = pagedBrowseSections.map(sectionToRow);
 
   return (
     <>
@@ -355,14 +373,70 @@ export default function MemorizationSection() {
 
       <section>
         <Card>
-          <SectionHeader title="মুখস্থ করা সেকশন" subtitle="সব হাফ-পৃষ্ঠা, বিরতি ও অবস্থা" />
-          {loading ? <ApiLoadingNotice label="সেকশন লোড হচ্ছে..." /> : (
-            <DataTable
-              headers={['সেকশন', 'অবস্থান', 'মুখস্থ তারিখ', 'পরবর্তী রিভিউ', 'অবস্থা', 'ফলাফল', 'ভুল', 'কাজ']}
-              rows={sectionRows}
-              searchPlaceholder="সূরা, আয়াত বা নোট..."
-              emptyMessage="এখনও কোনো মুখস্থ সেকশন নেই"
-            />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-fg">সব মুখস্থ সেকশন</h2>
+              <p className="mt-1 text-sm text-fg-2">প্রয়োজনে ব্রাউজ করুন; ফিল্টার ও পেজিনেশনসহ সব সেকশন দেখানো হবে।</p>
+            </div>
+            <Button variant="secondary" onClick={() => setBrowseOpen((value) => !value)}>
+              {browseOpen ? 'বন্ধ করুন' : 'ব্রাউজ করুন'}
+            </Button>
+          </div>
+
+          {browseOpen && (
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold text-fg-2">অবস্থা</span>
+                  <select
+                    value={filterStatus}
+                    onChange={(event) => { setFilterStatus(event.target.value); setBrowsePage(1); }}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm font-semibold text-fg outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                  >
+                    <option value="all">সব</option>
+                    <option value="0">শিখছে</option>
+                    <option value="1">স্থিতিশীল হচ্ছে</option>
+                    <option value="2">সংরক্ষিত</option>
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold text-fg-2">ফলাফল</span>
+                  <select
+                    value={filterRecall}
+                    onChange={(event) => { setFilterRecall(event.target.value); setBrowsePage(1); }}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm font-semibold text-fg outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                  >
+                    <option value="all">সব</option>
+                    <option value="strong">শক্তিশালী</option>
+                    <option value="shaky">অনিশ্চিত</option>
+                    <option value="weak">দুর্বল</option>
+                    <option value="failed">ব্যর্থ</option>
+                    <option value="none">এখনও রিভিউ হয়নি</option>
+                  </select>
+                </label>
+              </div>
+
+              {loading ? <ApiLoadingNotice label="সেকশন লোড হচ্ছে..." /> : (
+                <>
+                  <DataTable
+                    headers={['সেকশন', 'অবস্থান', 'মুখস্থ তারিখ', 'পরবর্তী রিভিউ', 'অবস্থা', 'ফলাফল', 'ভুল', 'কাজ']}
+                    rows={browseRows}
+                    searchPlaceholder="সূরা, আয়াত বা নোট..."
+                    emptyMessage="এই ফিল্টারে কোনো সেকশন নেই"
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-fg-2">
+                      {filteredBrowseSections.length}টির মধ্যে {(safeBrowsePage - 1) * browsePageSize + 1}-{Math.min(safeBrowsePage * browsePageSize, filteredBrowseSections.length)} দেখানো হচ্ছে
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" disabled={safeBrowsePage <= 1} onClick={() => setBrowsePage((value) => Math.max(1, value - 1))}>আগে</Button>
+                      <span className="inline-flex h-8 items-center px-2 text-sm font-semibold text-fg">{safeBrowsePage}/{browseTotalPages}</span>
+                      <Button variant="secondary" size="sm" disabled={safeBrowsePage >= browseTotalPages} onClick={() => setBrowsePage((value) => Math.min(browseTotalPages, value + 1))}>পরে</Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </Card>
       </section>
