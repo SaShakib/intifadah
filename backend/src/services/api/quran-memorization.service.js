@@ -181,7 +181,7 @@ async function findAvailableReviewDate(userId, earliestDate, excludeSectionId = 
   }
 
   let candidate = String(earliestDate).slice(0, 10);
-  while ((counts.get(candidate) || 0) >= 3) {
+  while ((counts.get(candidate) || 0) >= 1) {
     candidate = addDays(candidate, 1);
   }
   return candidate;

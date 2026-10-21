@@ -123,7 +123,7 @@ export default function MemorizationSection() {
       });
   }, [sections]);
 
-  const queuedDueSections = useMemo(() => (showAllDue ? dueSections : dueSections.slice(0, 3)), [dueSections, showAllDue]);
+  const queuedDueSections = useMemo(() => (showAllDue ? dueSections : dueSections.slice(0, 1)), [dueSections, showAllDue]);
 
   const weakSections = useMemo(
     () => sections.filter((item) => item.recall_quality === 'weak' || item.recall_quality === 'failed' || item.error_count > 0).slice(0, 8),
@@ -415,7 +415,7 @@ export default function MemorizationSection() {
           {dueSections.length > 3 && (
             <div className="mt-3 flex justify-center">
               <Button variant="secondary" size="sm" onClick={() => setShowAllDue((value) => !value)}>
-                {showAllDue ? 'কম দেখুন' : `আরও ${dueSections.length - 3}টি due দেখুন`}
+                {showAllDue ? 'কম দেখুন' : `আরও ${dueSections.length - 1}টি due দেখুন`}
               </Button>
             </div>
           )}
