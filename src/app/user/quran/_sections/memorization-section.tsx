@@ -86,6 +86,15 @@ export default function MemorizationSection() {
   const [filterRecall, setFilterRecall] = useState('all');
   const [browsePage, setBrowsePage] = useState(1);
   const [showAllDue, setShowAllDue] = useState(false);
+  const [maxDailyReviews, setMaxDailyReviews] = useState<number>(() => {
+    try {
+      const saved = window.localStorage.getItem('quran-max-daily-reviews');
+      const parsed = saved ? Number(saved) : 3;
+      return Number.isInteger(parsed) && parsed > 0 && parsed <= 10 ? parsed : 3;
+    } catch {
+      return 3;
+    }
+  });
 
   const loadSections = useCallback(async () => {
     const rows = await getUserQuranMemorizationSections();
@@ -157,17 +166,17 @@ export default function MemorizationSection() {
     pickOne(tier1, `${todayText}:weak`);
     pickOne(tier2, `${todayText}:other`);
 
-    if (selected.length < 3) {
+    if (selected.length < maxDailyReviews) {
       const remaining = dueSections.filter((item) => !used.has(String(item.id)));
       for (const item of shuffle(remaining, `${todayText}:fill`)) {
-        if (selected.length >= 3) break;
+        if (selected.length >= maxDailyReviews) break;
         selected.push(item);
         used.add(String(item.id));
       }
     }
 
     return selected;
-  }, [dueSections, showAllDue]);
+  }, [dueSections, showAllDue, maxDailyReviews]);
 
   const weakSections = useMemo(
     () => sections.filter((item) => item.recall_quality === 'weak' || item.recall_quality === 'failed' || item.error_count > 0).slice(0, 8),
@@ -348,7 +357,19 @@ export default function MemorizationSection() {
               <p className="mt-1 text-sm text-fg-2">প্রতিটি হাফ-পৃষ্ঠা আলাদা ট্র্যাক করুন, আজকের রিভিউ কিউ দেখুন এবং ফলাফল অনুযায়ী পরবর্তী বিরতি ঠিক করুন।</p>
             </div>
           </div>
-          <Button onClick={openAdd} disabled={busy}><Plus className="h-4 w-4" />নতুন সেকশন</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-fg-2">
+              দৈনিক সর্বোচ্চ
+              <Input type="number" min="1" max="10" value={maxDailyReviews} onChange={(event) => {
+                const value = Number(event.target.value);
+                if (Number.isInteger(value) && value > 0 && value <= 10) {
+                  setMaxDailyReviews(value);
+                  try { window.localStorage.setItem('quran-max-daily-reviews', String(value)); } catch { /* ignore */ }
+                }
+              }} className="h-8 w-16" />
+            </label>
+            <Button onClick={openAdd} disabled={busy}><Plus className="h-4 w-4" />নতুন সেকশন</Button>
+          </div>
         </div>
       </Card>
 
@@ -456,10 +477,10 @@ export default function MemorizationSection() {
               })}
             </div>
           )}
-          {dueSections.length > 3 && (
+          {dueSections.length > maxDailyReviews && (
             <div className="mt-3 flex justify-center">
               <Button variant="secondary" size="sm" onClick={() => setShowAllDue((value) => !value)}>
-                {showAllDue ? 'কম দেখুন' : `আরও ${dueSections.length - 1}টি due দেখুন`}
+                {showAllDue ? 'কম দেখুন' : `আরও ${dueSections.length - maxDailyReviews}টি due দেখুন`}
               </Button>
             </div>
           )}
