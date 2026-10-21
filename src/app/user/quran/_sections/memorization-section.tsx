@@ -123,7 +123,51 @@ export default function MemorizationSection() {
       });
   }, [sections]);
 
-  const queuedDueSections = useMemo(() => (showAllDue ? dueSections : dueSections.slice(0, 1)), [dueSections, showAllDue]);
+  const queuedDueSections = useMemo(() => {
+    if (showAllDue) return dueSections;
+    const todayText = today();
+    const tier0 = dueSections.filter((section) => daysBetween(section.memorized_date, todayText) <= 1);
+    const tier1 = dueSections.filter((section) => !tier0.includes(section) && (section.recall_quality === 'weak' || section.recall_quality === 'failed' || section.error_count > 0));
+    const tier2 = dueSections.filter((section) => !tier0.includes(section) && !tier1.includes(section));
+
+    const shuffle = (items: ApiQuranMemorizationSectionRow[], seed: string) => {
+      const result = [...items];
+      let hash = 0;
+      for (let i = 0; i < seed.length; i += 1) {
+        hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+      }
+      for (let i = result.length - 1; i > 0; i -= 1) {
+        hash = (hash * 1664525 + 1013904223) >>> 0;
+        const j = hash % (i + 1);
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    };
+
+    const selected: ApiQuranMemorizationSectionRow[] = [];
+    const used = new Set<string>();
+    const pickOne = (pool: ApiQuranMemorizationSectionRow[], seed: string) => {
+      const available = shuffle(pool, seed).filter((item) => !used.has(String(item.id)));
+      if (available.length === 0) return;
+      selected.push(available[0]);
+      used.add(String(available[0].id));
+    };
+
+    pickOne(tier0, `${todayText}:recent`);
+    pickOne(tier1, `${todayText}:weak`);
+    pickOne(tier2, `${todayText}:other`);
+
+    if (selected.length < 3) {
+      const remaining = dueSections.filter((item) => !used.has(String(item.id)));
+      for (const item of shuffle(remaining, `${todayText}:fill`)) {
+        if (selected.length >= 3) break;
+        selected.push(item);
+        used.add(String(item.id));
+      }
+    }
+
+    return selected;
+  }, [dueSections, showAllDue]);
 
   const weakSections = useMemo(
     () => sections.filter((item) => item.recall_quality === 'weak' || item.recall_quality === 'failed' || item.error_count > 0).slice(0, 8),
