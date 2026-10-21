@@ -85,6 +85,7 @@ export default function MemorizationSection() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRecall, setFilterRecall] = useState('all');
   const [browsePage, setBrowsePage] = useState(1);
+  const [showAllDue, setShowAllDue] = useState(false);
 
   const loadSections = useCallback(async () => {
     const rows = await getUserQuranMemorizationSections();
@@ -112,12 +113,17 @@ export default function MemorizationSection() {
     return sections
       .filter((item) => item.next_review_date <= todayText)
       .sort((a, b) => {
+        const recentDiff = (daysBetween(a.memorized_date, today()) <= 1 ? 0 : 1) - (daysBetween(b.memorized_date, today()) <= 1 ? 0 : 1);
+        if (recentDiff !== 0) return recentDiff;
         const severityDiff = (RESULT_SEVERITY[a.recall_quality ?? 'strong'] ?? 3) - (RESULT_SEVERITY[b.recall_quality ?? 'strong'] ?? 3);
         if (severityDiff !== 0) return severityDiff;
-        if (a.next_review_date !== b.next_review_date) return a.next_review_date.localeCompare(b.next_review_date);
+        const overdueDiff = daysBetween(b.next_review_date, today()) - daysBetween(a.next_review_date, today());
+        if (overdueDiff !== 0) return overdueDiff;
         return b.memorized_date.localeCompare(a.memorized_date);
       });
   }, [sections]);
+
+  const queuedDueSections = useMemo(() => (showAllDue ? dueSections : dueSections.slice(0, 3)), [dueSections, showAllDue]);
 
   const weakSections = useMemo(
     () => sections.filter((item) => item.recall_quality === 'weak' || item.recall_quality === 'failed' || item.error_count > 0).slice(0, 8),
@@ -388,7 +394,7 @@ export default function MemorizationSection() {
             </div>
           ) : (
             <div className="space-y-3">
-              {dueSections.map((section) => {
+              {queuedDueSections.map((section) => {
                 const overdueDays = daysBetween(section.next_review_date, today());
                 return (
                   <div key={section.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-2/40 px-4 py-3">
@@ -404,6 +410,13 @@ export default function MemorizationSection() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {dueSections.length > 3 && (
+            <div className="mt-3 flex justify-center">
+              <Button variant="secondary" size="sm" onClick={() => setShowAllDue((value) => !value)}>
+                {showAllDue ? 'কম দেখুন' : `আরও ${dueSections.length - 3}টি due দেখুন`}
+              </Button>
             </div>
           )}
         </Card>

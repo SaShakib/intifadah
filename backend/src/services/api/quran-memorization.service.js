@@ -168,13 +168,32 @@ async function getSection(userId, sectionId) {
   return row;
 }
 
+
+async function findAvailableReviewDate(userId, earliestDate, excludeSectionId = null) {
+  const sections = await quranMemorizationRepository.listSections({ userId });
+  const counts = new Map();
+  for (const section of sections) {
+    if (excludeSectionId !== null && String(section.id) === String(excludeSectionId)) {
+      continue;
+    }
+    const date = String(section.next_review_date).slice(0, 10);
+    counts.set(date, (counts.get(date) || 0) + 1);
+  }
+
+  let candidate = String(earliestDate).slice(0, 10);
+  while ((counts.get(candidate) || 0) >= 3) {
+    candidate = addDays(candidate, 1);
+  }
+  return candidate;
+}
+
 async function createSection(userId, input) {
   if (typeof input !== 'object' || input === null) {
     input = {};
   }
 
   const memorizedDate = parseDate(input.memorizedDate, dateTextInTimezone());
-  const nextReviewDate = addDays(memorizedDate, 1);
+  const nextReviewDate = await findAvailableReviewDate(userId, addDays(memorizedDate, 1));
   const row = await quranMemorizationRepository.createSection({
     userId,
     surahName: parseRequiredText(input.surahName, 'surahName', 120),
@@ -292,7 +311,7 @@ async function createReview(userId, sectionId, input) {
 
   const currentLevel = existing.interval_level ?? 0;
   const { intervalDays, level } = calculateNextReview(currentLevel, result);
-  const nextReviewDate = addDays(reviewDate, intervalDays);
+  const nextReviewDate = await findAvailableReviewDate(userId, addDays(reviewDate, intervalDays), sectionId);
   const totalErrors = (existing.error_count ?? 0) + errorCount;
   const status = statusFromResultAndLevel(result, level);
 
