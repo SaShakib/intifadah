@@ -30,6 +30,13 @@ function dateTextInTimezone(value = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function daysBetween(fromDate, toDate) {
+  const from = new Date(`${fromDate}T00:00:00.000Z`).getTime();
+  const to = new Date(`${toDate}T00:00:00.000Z`).getTime();
+  if (Number.isNaN(from) || Number.isNaN(to)) return 0;
+  return Math.round((to - from) / 86400000);
+}
+
 function addDays(dateText, days) {
   const date = new Date(`${dateText}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) {
@@ -193,7 +200,11 @@ async function createSection(userId, input) {
   }
 
   const memorizedDate = parseDate(input.memorizedDate, dateTextInTimezone());
-  const nextReviewDate = await findAvailableReviewDate(userId, addDays(memorizedDate, 1));
+  const todayText = dateTextInTimezone();
+  const isRecent = Math.abs(daysBetween(memorizedDate, todayText)) <= 1;
+  const nextReviewDate = isRecent
+    ? addDays(memorizedDate, 1)
+    : await findAvailableReviewDate(userId, addDays(memorizedDate, 1));
   const row = await quranMemorizationRepository.createSection({
     userId,
     surahName: parseRequiredText(input.surahName, 'surahName', 120),
